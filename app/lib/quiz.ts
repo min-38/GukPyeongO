@@ -31,6 +31,9 @@ export interface TypeStat {
   total: number;
 }
 
+// 채점 결과를 테스트 화면 → 결과 페이지로 전달하는 sessionStorage 키
+export const RESULT_STORAGE_KEY = "gukpyeongo:result";
+
 // 채점 결과
 export interface ScoreResult {
   grade: number; // 1~9
