@@ -2,15 +2,31 @@
 
 :root {
   /* surfaces */
-  --background: #f4f4f5;
+  --background: #f6f3ff;
   --surface: #ffffff;
-  --foreground: #18181b;
-  --muted: #71717a;
-  --border: #e4e4e7;
+  --surface-muted: #f4f1fd;
+  --foreground: #1b1630;
+  --muted: #6b7280;
+  --border: #ebe6f9;
 
   /* brand */
-  --brand: #4f46e5;
+  --brand: #7c3aed;
+  --brand-strong: #6d28d9;
   --brand-foreground: #ffffff;
+
+  /* accent (fun pop) */
+  --accent: #facc15;
+  --accent-foreground: #2a2300;
+
+  /* decorative page backdrop (shown around the app card on larger screens) */
+  --backdrop: radial-gradient(
+      1200px 600px at 15% -10%,
+      #ddd6fe 0%,
+      transparent 55%
+    ),
+    radial-gradient(900px 600px at 110% 10%, #fde68a 0%, transparent 50%),
+    radial-gradient(900px 700px at 50% 120%, #fbcfe8 0%, transparent 55%),
+    var(--background);
 
   /* layout */
   --app-max-width: 480px;
@@ -19,30 +35,94 @@
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
   --color-brand-foreground: var(--brand-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: "Black Han Sans", var(--font-geist-sans), sans-serif;
+
+  --animate-pop: pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-rise: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #09090b;
-    --surface: #18181b;
-    --foreground: #fafafa;
-    --muted: #a1a1aa;
-    --border: #27272a;
-    --brand: #818cf8;
-    --brand-foreground: #09090b;
+    --background: #0d0a18;
+    --surface: #17132a;
+    --surface-muted: #1f1a38;
+    --foreground: #f4f2ff;
+    --muted: #a39fc0;
+    --border: #2a2447;
+    --brand: #a78bfa;
+    --brand-strong: #8b5cf6;
+    --brand-foreground: #160f2b;
+    --accent: #fbbf24;
+    --accent-foreground: #2a2300;
+    --backdrop: radial-gradient(
+        1200px 600px at 15% -10%,
+        #2e1065 0%,
+        transparent 55%
+      ),
+      radial-gradient(900px 600px at 110% 10%, #422006 0%, transparent 50%),
+      radial-gradient(900px 700px at 50% 120%, #4a044e 0%, transparent 55%),
+      var(--background);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
 body {
-  background: var(--background);
+  background: var(--backdrop) fixed;
   color: var(--foreground);
   font-family: var(--font-sans), "Apple SD Gothic Neo", "Malgun Gothic",
     system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

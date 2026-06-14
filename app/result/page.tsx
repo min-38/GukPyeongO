@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 
 import {
+  gradeTheme,
   QUESTION_TYPE_LABELS,
   RESULT_STORAGE_KEY,
   type ScoreResponse,
@@ -70,11 +71,14 @@ export default function ResultPage() {
   // 결과 없이 직접 접근한 경우
   if (!result) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-        <p className="text-base text-muted">아직 응시한 결과가 없어요.</p>
+      <main className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+        <span className="text-5xl">🧐</span>
+        <p className="text-base font-medium text-muted">
+          아직 응시한 결과가 없어요.
+        </p>
         <Link
           href="/test"
-          className="flex h-12 items-center justify-center rounded-2xl bg-brand px-6 text-base font-semibold text-brand-foreground active:opacity-80"
+          className="flex h-12 items-center justify-center rounded-2xl bg-brand px-6 text-base font-bold text-brand-foreground shadow-lg shadow-brand/30 active:scale-95"
         >
           테스트 하러 가기
         </Link>
@@ -82,55 +86,64 @@ export default function ResultPage() {
     );
   }
 
+  const theme = gradeTheme(result.grade);
   const avgSec = (result.avgReactionMs / 1000).toFixed(1);
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-10">
-      <div className="flex flex-col items-center text-center">
-        <p className="text-sm font-medium tracking-widest text-brand">
-          나의 문해력 등급
+    <main className="flex flex-1 flex-col px-6 py-8">
+      <div className="animate-pop flex flex-col items-center text-center">
+        <span className="text-6xl">{theme.emoji}</span>
+        <p className="mt-3 text-sm font-bold tracking-widest text-muted">
+          나의 문해력
         </p>
-        <p className="mt-3 text-6xl font-bold tracking-tight">
+        <p
+          className="font-display text-[5.5rem] leading-none tracking-tight"
+          style={{ color: theme.color }}
+        >
           {result.grade}
-          <span className="text-3xl font-semibold text-muted">등급</span>
+          <span className="ml-1 align-top text-3xl">등급</span>
         </p>
-        <p className="mt-4 rounded-full bg-background px-4 py-1.5 text-base font-semibold">
+        <p
+          className="mt-1 rounded-full px-5 py-2 text-lg font-extrabold text-white"
+          style={{ backgroundColor: theme.color }}
+        >
           {result.title}
         </p>
+        <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
       </div>
 
-      <dl className="mt-10 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <dt className="text-sm text-muted">맞힌 문제</dt>
-          <dd className="mt-1 text-2xl font-bold">
+      <dl className="mt-8 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-surface-muted p-4">
+          <dt className="text-sm font-medium text-muted">맞힌 문제</dt>
+          <dd className="mt-1 text-2xl font-extrabold">
             {result.correctCount}
-            <span className="text-base font-medium text-muted">
+            <span className="text-base font-bold text-muted">
               {" / "}
               {result.totalCount}
             </span>
           </dd>
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-4">
-          <dt className="text-sm text-muted">평균 반응속도</dt>
-          <dd className="mt-1 text-2xl font-bold">
+        <div className="rounded-2xl bg-surface-muted p-4">
+          <dt className="text-sm font-medium text-muted">평균 반응속도</dt>
+          <dd className="mt-1 text-2xl font-extrabold">
             {avgSec}
-            <span className="text-base font-medium text-muted"> 초</span>
+            <span className="text-base font-bold text-muted"> 초</span>
           </dd>
         </div>
       </dl>
 
-      <div className="mt-3 rounded-2xl border border-border bg-surface p-4">
-        <p className="text-sm text-muted">취약 유형</p>
+      <div className="mt-3 rounded-2xl bg-surface-muted p-4">
+        <p className="text-sm font-medium text-muted">취약 유형</p>
         {result.weakTypes.length === 0 ? (
-          <p className="mt-2 text-base font-medium">
-            약점이 안 보여요. 고르게 잘 봤네요.
+          <p className="mt-2 text-base font-bold">
+            🎯 약점이 안 보여요. 고르게 잘 봤네요!
           </p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
             {result.weakTypes.map((type) => (
               <span
                 key={type}
-                className="rounded-full bg-background px-3 py-1 text-sm font-medium"
+                className="rounded-full bg-surface px-3 py-1 text-sm font-bold"
               >
                 {QUESTION_TYPE_LABELS[type]}
               </span>
@@ -142,14 +155,14 @@ export default function ResultPage() {
       <button
         type="button"
         onClick={handleShare}
-        className="mt-6 flex h-12 w-full items-center justify-center rounded-2xl border border-brand text-base font-semibold text-brand transition-opacity active:opacity-80"
+        className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
       >
-        {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
+        {copied ? "✅ 링크가 복사됐어요!" : "📣 결과 공유하기"}
       </button>
 
       <Link
         href="/test"
-        className="mt-8 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-brand-foreground transition-opacity active:opacity-80"
+        className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-border text-base font-bold transition-colors hover:bg-surface-muted active:scale-[0.99]"
       >
         다시 도전
       </Link>

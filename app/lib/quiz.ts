@@ -77,3 +77,26 @@ export const GRADE_TITLES: Record<number, string> = {
   8: "공지문 생존 위기",
   9: "사흘 피해자 모임",
 };
+
+// 등급별 시각 테마 (결과 화면 표현용 — 컬러/이모지/한줄평)
+export interface GradeTheme {
+  color: string; // 큰 등급 숫자·강조 컬러
+  emoji: string;
+  blurb: string; // 가벼운 한줄평 (모욕 금지)
+}
+
+const GRADE_THEMES: Record<number, GradeTheme> = {
+  1: { color: "#f59e0b", emoji: "🏆", blurb: "검색 없이 이 정도면 진짜 고수." },
+  2: { color: "#10b981", emoji: "🎉", blurb: "공지문 정도는 가뿐하네요." },
+  3: { color: "#14b8a6", emoji: "✨", blurb: "사흘이 며칠인지 확실히 아는 사람." },
+  4: { color: "#6366f1", emoji: "🙂", blurb: "안정권. 살짝만 더 가면 상위권." },
+  5: { color: "#7c3aed", emoji: "😐", blurb: "딱 평균, 그래서 국평오." },
+  6: { color: "#f97316", emoji: "😅", blurb: "가끔 헷갈리는 그 느낌 아니까." },
+  7: { color: "#fb7185", emoji: "😬", blurb: "'금일'에서 한 번 흔들렸죠?" },
+  8: { color: "#ef4444", emoji: "🫠", blurb: "공지문이 좀 어려웠나 봐요." },
+  9: { color: "#dc2626", emoji: "😭", blurb: "괜찮아요, 다시 도전하면 됩니다." },
+};
+
+export function gradeTheme(grade: number): GradeTheme {
+  return GRADE_THEMES[grade] ?? GRADE_THEMES[5];
+}

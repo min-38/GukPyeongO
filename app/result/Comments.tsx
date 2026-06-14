@@ -90,15 +90,17 @@ export default function Comments({
   }
 
   const tabClass = (active: boolean) =>
-    `flex-1 rounded-xl py-2 text-sm font-semibold transition-colors ${
-      active ? "bg-brand text-brand-foreground" : "bg-background text-muted"
+    `flex-1 rounded-full py-2.5 text-sm font-bold transition-colors ${
+      active
+        ? "bg-brand text-brand-foreground shadow-sm"
+        : "bg-surface-muted text-muted hover:text-foreground"
     }`;
 
   return (
-    <section className="mt-8">
-      <h3 className="text-lg font-bold">댓글</h3>
+    <section className="mt-10">
+      <h3 className="text-xl font-extrabold">💬 댓글</h3>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex gap-2 rounded-full bg-surface-muted p-1">
         <button
           type="button"
           onClick={() => switchTab("all")}
@@ -122,30 +124,30 @@ export default function Comments({
           maxLength={MAX_COMMENT_LENGTH}
           rows={2}
           placeholder="가볍게 한마디 남겨보세요"
-          className="w-full resize-none rounded-2xl border border-border bg-surface px-4 py-3 text-base outline-none focus:border-brand"
+          className="w-full resize-none rounded-2xl border-2 border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-brand"
         />
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-xs text-muted">
+          <span className="text-xs font-medium text-muted">
             {content.length} / {MAX_COMMENT_LENGTH}
           </span>
           <button
             type="submit"
             disabled={posting || content.trim().length === 0}
-            className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground transition-opacity active:opacity-80 disabled:opacity-40"
+            className="rounded-xl bg-brand px-5 py-2 text-sm font-bold text-brand-foreground transition-all hover:bg-brand-strong active:scale-95 disabled:opacity-40"
           >
             {posting ? "등록 중..." : "등록"}
           </button>
         </div>
       </form>
 
-      {error && <p className="mt-2 text-sm text-brand">{error}</p>}
+      {error && <p className="mt-2 text-sm font-medium text-red-500">{error}</p>}
 
       <ul className="mt-4 flex flex-col gap-3">
         {loading ? (
           <li className="py-6 text-center text-sm text-muted">불러오는 중...</li>
         ) : comments.length === 0 ? (
           <li className="py-6 text-center text-sm text-muted">
-            아직 댓글이 없어요. 첫 댓글을 남겨보세요.
+            아직 댓글이 없어요. 첫 댓글을 남겨보세요. ✍️
           </li>
         ) : (
           comments.map((c) => (
@@ -153,9 +155,11 @@ export default function Comments({
               key={c.id}
               className="rounded-2xl border border-border bg-surface p-4"
             >
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span className="font-semibold text-brand">{c.grade}등급</span>
-                <span>{timeAgo(c.createdAt)}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 font-bold text-brand">
+                  {c.grade}등급
+                </span>
+                <span className="text-muted">{timeAgo(c.createdAt)}</span>
               </div>
               <p className="mt-2 whitespace-pre-wrap break-words text-base">
                 {c.content}
