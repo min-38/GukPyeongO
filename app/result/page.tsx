@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import {
   QUESTION_TYPE_LABELS,
@@ -38,6 +38,32 @@ function readResult(): ScoreResult | null {
 
 export default function ResultPage() {
   const result = useSyncExternalStore(subscribe, readResult, () => null);
+  const [copied, setCopied] = useState(false);
+
+  // 결과 공유: 지원 기기는 네이티브 공유 시트, 아니면 링크 복사 폴백.
+  // 개인정보는 담지 않고 사이트 진입 경로(랜딩)만 공유한다.
+  async function handleShare() {
+    if (!result) return;
+    const url = window.location.origin;
+    const text = `국평오 테스트 결과: ${result.grade}등급 "${result.title}"! 검색 없이 10문제, 당신의 문해력은?`;
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "국평오 테스트", text, url });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 복사도 불가한 환경은 조용히 무시
+    }
+  }
 
   // 결과 없이 직접 접근한 경우
   if (!result) {
@@ -111,9 +137,17 @@ export default function ResultPage() {
         )}
       </div>
 
-      {/* 공유(#7)·댓글(#8) 영역 placeholder */}
+      <button
+        type="button"
+        onClick={handleShare}
+        className="mt-6 flex h-12 w-full items-center justify-center rounded-2xl border border-brand text-base font-semibold text-brand transition-opacity active:opacity-80"
+      >
+        {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
+      </button>
+
+      {/* 댓글(#8) 영역 placeholder */}
       <div className="mt-3 rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted">
-        결과 공유·댓글 기능은 곧 추가됩니다.
+        댓글 기능은 곧 추가됩니다.
       </div>
 
       <Link
