@@ -1,0 +1,340 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import {
+  type AdminQuestion,
+  type Comment,
+  QUESTION_TYPE_LABELS,
+  type QuestionType,
+} from "@/app/lib/quiz";
+
+const TYPES = Object.keys(QUESTION_TYPE_LABELS) as QuestionType[];
+
+function QuestionForm({
+  initial,
+  onSaved,
+  onCancel,
+}: {
+  initial: AdminQuestion | null;
+  onSaved: (q: AdminQuestion) => void;
+  onCancel: () => void;
+}) {
+  const isNew = initial === null;
+  const [id, setId] = useState(initial?.id ?? "");
+  const [type, setType] = useState<QuestionType>(initial?.type ?? "notice");
+  const [prompt, setPrompt] = useState(initial?.prompt ?? "");
+  const [choices, setChoices] = useState<string[]>(initial?.choices ?? ["", ""]);
+  const [answerIndex, setAnswerIndex] = useState(initial?.answerIndex ?? 0);
+  const [timeLimitSec, setTimeLimitSec] = useState(initial?.timeLimitSec ?? 20);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/questions", {
+        method: isNew ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          type,
+          prompt,
+          choices,
+          answerIndex,
+          timeLimitSec,
+        }),
+      });
+      const data = (await res.json()) as {
+        question?: AdminQuestion;
+        error?: string;
+      };
+      if (!res.ok || !data.question) {
+        setError(data.error ?? "저장에 실패했습니다.");
+        return;
+      }
+      onSaved(data.question);
+    } catch {
+      setError("저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={save}
+      className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand bg-surface p-4"
+    >
+      <label className="flex flex-col gap-1 text-sm">
+        ID
+        <input
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+          disabled={!isNew}
+          placeholder="q11"
+          className="h-10 rounded-xl border border-border px-3 disabled:bg-background disabled:text-muted"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        유형
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value as QuestionType)}
+          className="h-10 rounded-xl border border-border px-3"
+        >
+          {TYPES.map((t) => (
+            <option key={t} value={t}>
+              {QUESTION_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        문제
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={2}
+          className="resize-none rounded-xl border border-border px-3 py-2"
+        />
+      </label>
+
+      <div className="flex flex-col gap-2 text-sm">
+        <span>보기 (정답 라디오 선택)</span>
+        {choices.map((choice, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="answer"
+              checked={answerIndex === i}
+              onChange={() => setAnswerIndex(i)}
+            />
+            <input
+              value={choice}
+              onChange={(e) =>
+                setChoices((cs) => cs.map((c, idx) => (idx === i ? e.target.value : c)))
+              }
+              className="h-10 flex-1 rounded-xl border border-border px-3"
+            />
+            {choices.length > 2 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setChoices((cs) => cs.filter((_, idx) => idx !== i));
+                  setAnswerIndex((a) => (a >= i && a > 0 ? a - 1 : a));
+                }}
+                className="text-muted"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setChoices((cs) => [...cs, ""])}
+          className="self-start text-sm text-brand"
+        >
+          + 보기 추가
+        </button>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        제한시간(초)
+        <input
+          type="number"
+          value={timeLimitSec}
+          onChange={(e) => setTimeLimitSec(Number(e.target.value))}
+          className="h-10 w-24 rounded-xl border border-border px-3"
+        />
+      </label>
+
+      {error && <p className="text-sm text-brand">{error}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+        >
+          {saving ? "저장 중..." : "저장"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl bg-background px-4 py-2 text-sm font-medium text-muted"
+        >
+          취소
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function AdminDashboard() {
+  const [questions, setQuestions] = useState<AdminQuestion[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<AdminQuestion | "new" | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch("/api/admin/questions").then(
+        (r) => r.json() as Promise<{ questions: AdminQuestion[] }>
+      ),
+      fetch("/api/admin/comments").then(
+        (r) => r.json() as Promise<{ comments: Comment[] }>
+      ),
+    ])
+      .then(([q, c]) => {
+        if (!active) return;
+        setQuestions(q.questions ?? []);
+        setComments(c.comments ?? []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function handleSaved(q: AdminQuestion) {
+    setQuestions((prev) =>
+      prev.some((p) => p.id === q.id)
+        ? prev.map((p) => (p.id === q.id ? q : p))
+        : [...prev, q]
+    );
+    setEditing(null);
+  }
+
+  async function deleteComment(id: string) {
+    const res = await fetch(`/api/admin/comments?id=${id}`, { method: "DELETE" });
+    if (res.ok) setComments((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    window.location.href = "/admin/login";
+  }
+
+  if (loading) {
+    return (
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-sm text-muted">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex flex-1 flex-col px-6 py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">관리자</h1>
+        <button onClick={logout} className="text-sm font-medium text-muted">
+          로그아웃
+        </button>
+      </div>
+
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">문제 ({questions.length})</h2>
+          {editing === null && (
+            <button
+              onClick={() => setEditing("new")}
+              className="rounded-xl bg-brand px-3 py-1.5 text-sm font-semibold text-brand-foreground"
+            >
+              + 추가
+            </button>
+          )}
+        </div>
+
+        {editing === "new" && (
+          <QuestionForm
+            initial={null}
+            onSaved={handleSaved}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+
+        <ul className="mt-4 flex flex-col gap-3">
+          {questions.map((q) =>
+            editing !== "new" && editing?.id === q.id ? (
+              <QuestionForm
+                key={q.id}
+                initial={q}
+                onSaved={handleSaved}
+                onCancel={() => setEditing(null)}
+              />
+            ) : (
+              <li
+                key={q.id}
+                className="rounded-2xl border border-border bg-surface p-4"
+              >
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <span>
+                    {q.id} · {QUESTION_TYPE_LABELS[q.type]} · {q.timeLimitSec}s
+                  </span>
+                  <button
+                    onClick={() => setEditing(q)}
+                    className="font-medium text-brand"
+                  >
+                    수정
+                  </button>
+                </div>
+                <p className="mt-2 font-medium">{q.prompt}</p>
+                <ol className="mt-2 list-decimal pl-5 text-sm">
+                  {q.choices.map((c, i) => (
+                    <li
+                      key={i}
+                      className={i === q.answerIndex ? "font-bold text-brand" : ""}
+                    >
+                      {c}
+                      {i === q.answerIndex && " ✓"}
+                    </li>
+                  ))}
+                </ol>
+              </li>
+            )
+          )}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-bold">댓글 ({comments.length})</h2>
+        <ul className="mt-4 flex flex-col gap-3">
+          {comments.length === 0 ? (
+            <li className="py-4 text-center text-sm text-muted">댓글이 없습니다.</li>
+          ) : (
+            comments.map((c) => (
+              <li
+                key={c.id}
+                className="rounded-2xl border border-border bg-surface p-4"
+              >
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <span className="font-semibold text-brand">{c.grade}등급</span>
+                  <button
+                    onClick={() => deleteComment(c.id)}
+                    className="font-medium text-red-500"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap break-words text-base">
+                  {c.content}
+                </p>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+    </main>
+  );
+}

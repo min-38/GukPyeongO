@@ -50,6 +50,11 @@ export interface ScoreResponse extends ScoreResult {
   gradeToken: string;
 }
 
+// 관리자 화면용 문제 형태 (정답 포함 — 인증된 관리자에게만 노출)
+export interface AdminQuestion extends PublicQuestion {
+  answerIndex: number;
+}
+
 // 댓글
 export const MAX_COMMENT_LENGTH = 300;
 

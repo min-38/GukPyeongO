@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { type Comment, MAX_COMMENT_LENGTH } from "@/app/lib/quiz";
 import { getSigningSecret, verifyGradeToken } from "@/app/lib/score-token";
+import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 import { getSupabase } from "@/app/lib/supabase.server";
 
 const LIST_LIMIT = 50;
@@ -110,7 +111,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = getSupabase();
+  // 작성은 service-role로 수행 (anon 직접 쓰기는 RLS로 차단됨)
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("comments")
     .insert({ content: trimmed, grade })

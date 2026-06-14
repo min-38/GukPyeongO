@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const result = scoreSubmission(getAnswerKey(), items);
+  const result = scoreSubmission(await getAnswerKey(), items);
   const gradeToken = createGradeToken(result.grade, getSigningSecret());
   return NextResponse.json({ ...result, gradeToken });
 }

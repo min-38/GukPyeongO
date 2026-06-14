@@ -14,17 +14,12 @@ create index if not exists comments_grade_created_at_idx
 
 alter table public.comments enable row level security;
 
--- 비로그인 서비스: anon 키로 조회/작성. 작성 검증(등급 토큰·길이·빈도)은 라우트에서 수행.
--- NOTE: anon 키는 공개 키이므로 RLS의 CHECK는 최소 방어선이다. 완전한 강제는
---       service-role 키 + anon insert 차단(추후) 으로 가능.
+-- 조회는 anon 공개. 작성/삭제는 서버(service-role)에서만 수행하므로 anon insert/delete 정책은 두지 않는다.
 drop policy if exists "comments_select" on public.comments;
 create policy "comments_select"
   on public.comments for select
   to anon
   using (true);
 
+-- (구버전에서 만들었다면) anon insert 정책 제거
 drop policy if exists "comments_insert" on public.comments;
-create policy "comments_insert"
-  on public.comments for insert
-  to anon
-  with check (char_length(content) between 1 and 300 and grade between 1 and 9);
