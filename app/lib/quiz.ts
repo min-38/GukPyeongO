@@ -16,3 +16,41 @@ export interface PublicQuestion {
   choices: string[];
   timeLimitSec: number;
 }
+
+// 채점 요청: 문제별 사용자의 선택과 반응속도
+export interface ScoreRequestItem {
+  questionId: string;
+  choiceIndex: number | null; // null = 미응답/시간초과
+  reactionMs: number;
+}
+
+// 유형별 정답 통계 (취약 유형 산출 근거)
+export interface TypeStat {
+  type: QuestionType;
+  correct: number;
+  total: number;
+}
+
+// 채점 결과
+export interface ScoreResult {
+  grade: number; // 1~9
+  title: string;
+  correctCount: number;
+  totalCount: number;
+  avgReactionMs: number;
+  weakTypes: QuestionType[];
+  typeStats: TypeStat[];
+}
+
+// 등급별 칭호 (톤앤매너: 놀리되 모욕하지 않기)
+export const GRADE_TITLES: Record<number, string> = {
+  1: "국평오 정복자",
+  2: "공지문 마스터",
+  3: "사흘 완벽 이해",
+  4: "금일 안정권",
+  5: "딱 평균, 국평오",
+  6: "가끔 흔들리는 중",
+  7: "금일에서 흔들림",
+  8: "공지문 생존 위기",
+  9: "사흘 피해자 모임",
+};

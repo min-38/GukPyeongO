@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PublicQuestion } from "./quiz";
+import type { AnswerKey } from "./scoring";
 
 // 정답을 포함한 서버 전용 문제 형태. 이 모듈은 server-only로 보호되어
 // 클라이언트 번들에 포함되지 않는다.
@@ -108,6 +109,15 @@ const questions: Question[] = [
 
 export function getQuestions(): Question[] {
   return questions;
+}
+
+// 채점용 정답키 (questionId -> 유형/정답). 서버에서만 사용한다.
+export function getAnswerKey(): AnswerKey {
+  const key: AnswerKey = {};
+  for (const q of questions) {
+    key[q.id] = { type: q.type, answerIndex: q.answerIndex };
+  }
+  return key;
 }
 
 // 정답(answerIndex)을 제거한 형태로만 반환한다.
