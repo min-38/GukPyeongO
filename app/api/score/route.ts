@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAnswerKey } from "@/app/lib/questions.server";
 import type { ScoreRequestItem } from "@/app/lib/quiz";
+import { createGradeToken, getSigningSecret } from "@/app/lib/score-token";
 import { scoreSubmission } from "@/app/lib/scoring";
 
 function isValidItem(value: unknown): value is ScoreRequestItem {
@@ -28,5 +29,6 @@ export async function POST(request: Request) {
   }
 
   const result = scoreSubmission(getAnswerKey(), items);
-  return NextResponse.json(result);
+  const gradeToken = createGradeToken(result.grade, getSigningSecret());
+  return NextResponse.json({ ...result, gradeToken });
 }

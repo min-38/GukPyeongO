@@ -45,6 +45,21 @@ export interface ScoreResult {
   typeStats: TypeStat[];
 }
 
+// /api/score 응답: 채점 결과 + 등급 서명 토큰 (댓글 작성 시 등급 신뢰용)
+export interface ScoreResponse extends ScoreResult {
+  gradeToken: string;
+}
+
+// 댓글
+export const MAX_COMMENT_LENGTH = 300;
+
+export interface Comment {
+  id: string;
+  content: string;
+  grade: number;
+  createdAt: string;
+}
+
 // 등급별 칭호 (톤앤매너: 놀리되 모욕하지 않기)
 export const GRADE_TITLES: Record<number, string> = {
   1: "국평오 정복자",

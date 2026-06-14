@@ -8,7 +8,7 @@ import {
   RESULT_STORAGE_KEY,
   type PublicQuestion,
   type ScoreRequestItem,
-  type ScoreResult,
+  type ScoreResponse,
 } from "@/app/lib/quiz";
 
 type Phase = "loading" | "playing" | "submitting" | "error";
@@ -57,7 +57,7 @@ export default function TestPage() {
           body: JSON.stringify({ items }),
         });
         if (!res.ok) throw new Error();
-        const result: ScoreResult = await res.json();
+        const result: ScoreResponse = await res.json();
         sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(result));
         router.push("/result");
       } catch {

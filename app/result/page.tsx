@@ -6,20 +6,22 @@ import { useState, useSyncExternalStore } from "react";
 import {
   QUESTION_TYPE_LABELS,
   RESULT_STORAGE_KEY,
-  type ScoreResult,
+  type ScoreResponse,
 } from "@/app/lib/quiz";
+
+import Comments from "./Comments";
 
 // sessionStorage의 채점 결과를 읽는다. getSnapshot은 참조가 안정적이어야 하므로
 // raw 문자열이 같으면 파싱 결과를 캐시해 동일 객체를 반환한다.
 let cachedRaw: string | null = null;
-let cachedResult: ScoreResult | null = null;
+let cachedResult: ScoreResponse | null = null;
 
 function subscribe() {
   // 결과는 마운트 후 바뀌지 않으므로 구독은 비워둔다.
   return () => {};
 }
 
-function readResult(): ScoreResult | null {
+function readResult(): ScoreResponse | null {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(RESULT_STORAGE_KEY);
@@ -29,7 +31,7 @@ function readResult(): ScoreResult | null {
   if (raw === cachedRaw) return cachedResult;
   cachedRaw = raw;
   try {
-    cachedResult = raw ? (JSON.parse(raw) as ScoreResult) : null;
+    cachedResult = raw ? (JSON.parse(raw) as ScoreResponse) : null;
   } catch {
     cachedResult = null;
   }
@@ -145,17 +147,14 @@ export default function ResultPage() {
         {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
       </button>
 
-      {/* 댓글(#8) 영역 placeholder */}
-      <div className="mt-3 rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted">
-        댓글 기능은 곧 추가됩니다.
-      </div>
-
       <Link
         href="/test"
         className="mt-8 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-brand-foreground transition-opacity active:opacity-80"
       >
         다시 도전
       </Link>
+
+      <Comments grade={result.grade} gradeToken={result.gradeToken} />
     </main>
   );
 }
