@@ -6,15 +6,22 @@ export default function Home() {
       {/* 왼쪽: 히어로 + CTA */}
       <div className="flex flex-1 flex-col lg:flex-none">
         <div className="flex flex-1 flex-col items-center justify-center gap-7 text-center lg:flex-none lg:items-start lg:gap-8 lg:text-left">
-          <span className="animate-float inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-accent-foreground shadow-sm">
-            🔍 검색 금지 · 1분 컷
-          </span>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
+            <span className="rounded-full bg-brand/10 px-4 py-1.5 text-sm font-bold text-brand">
+              국평오 테스트
+            </span>
+            <span className="animate-float inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-accent-foreground shadow-sm">
+              🔍 검색 금지 · 1분 컷
+            </span>
+          </div>
 
           <div className="flex flex-col items-center gap-4 lg:items-start">
-            <h1 className="font-display text-6xl leading-[0.95] tracking-tight text-brand lg:text-8xl">
-              국평오
+            <h1 className="font-display text-5xl leading-[1.2] tracking-tight lg:text-7xl">
+              <span className="text-brand">국</span>민 문해력
               <br />
-              테스트
+              <span className="text-brand">평</span>균을
+              <br />
+              <span className="text-brand">오</span>르게
             </h1>
             <p className="text-2xl font-extrabold leading-snug lg:text-4xl">
               검색 없이 10문제,
@@ -27,21 +34,6 @@ export default function Home() {
             회원가입 없이 바로 시작. 1~9등급으로 결과가 딱 나와요. 친구랑 점수로
             승부 보세요.
           </p>
-
-          <div className="flex flex-col items-center gap-1 rounded-2xl bg-surface-muted px-5 py-3 lg:items-start">
-            <p className="text-xs font-bold tracking-widest text-muted">
-              국평오 삼행시
-            </p>
-            <p className="text-base font-bold leading-snug lg:text-lg">
-              <span className="text-brand">국</span>민 문해력
-            </p>
-            <p className="text-base font-bold leading-snug lg:text-lg">
-              <span className="text-brand">평</span>균을
-            </p>
-            <p className="text-base font-bold leading-snug lg:text-lg">
-              <span className="text-brand">오</span>르게
-            </p>
-          </div>
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
