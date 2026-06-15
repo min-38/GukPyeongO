@@ -25,17 +25,22 @@ export default function TestPage() {
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
   const lockRef = useRef(false); // 한 문제당 한 번만 응답 처리
+  const quizTokenRef = useRef(""); // 출제 세트 서명 토큰 (#18)
 
-  // 문제 로드 (#3 API)
+  // 문제 로드 (무작위 출제 + 출제 세트 토큰)
   useEffect(() => {
     let active = true;
     fetch("/api/questions")
       .then((res) => {
         if (!res.ok) throw new Error();
-        return res.json() as Promise<{ questions: PublicQuestion[] }>;
+        return res.json() as Promise<{
+          questions: PublicQuestion[];
+          quizToken: string;
+        }>;
       })
       .then((data) => {
         if (!active) return;
+        quizTokenRef.current = data.quizToken;
         setQuestions(data.questions);
         setRemaining(data.questions[0]?.timeLimitSec ?? 0);
         setPhase("playing");
@@ -48,7 +53,7 @@ export default function TestPage() {
     };
   }, []);
 
-  // 결과 제출 (#5 채점 API)
+  // 결과 제출 (#5 채점 API) — 출제 세트 토큰을 함께 보내 출제 세트 기준 채점
   const submit = useCallback(
     async (items: ScoreRequestItem[]) => {
       setPhase("submitting");
@@ -56,7 +61,7 @@ export default function TestPage() {
         const res = await fetch("/api/score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items }),
+          body: JSON.stringify({ items, quizToken: quizTokenRef.current }),
         });
         if (!res.ok) throw new Error();
         const result: ScoreResponse = await res.json();

@@ -42,6 +42,42 @@ export function verifyGradeToken(
   return grade;
 }
 
+// 출제 세트 토큰: 무작위 출제된 문제 id 목록을 서명한다.
+// /api/questions가 발급하고 /api/score가 검증해, 채점을 "실제 출제된 세트"
+// 기준으로만 수행한다(문항 일부만 제출해 등급 부풀리기 등 변조 방지).
+// uuid는 '.'을 포함하지 않으므로 '.' 구분자와 충돌하지 않는다.
+export function createQuizToken(
+  questionIds: string[],
+  secret: string,
+  now = Date.now()
+): string {
+  const exp = now + TOKEN_TTL_MS;
+  const payload = `${questionIds.join(",")}.${exp}`;
+  return `${payload}.${sign(payload, secret)}`;
+}
+
+// 유효하면 출제된 문제 id 배열을 반환, 아니면 null.
+export function verifyQuizToken(
+  token: string,
+  secret: string,
+  now = Date.now()
+): string[] | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [ids, expStr, sig] = parts;
+
+  const expected = sign(`${ids}.${expStr}`, secret);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  const exp = Number(expStr);
+  if (!Number.isFinite(exp) || exp < now) return null;
+
+  if (ids.length === 0) return null;
+  return ids.split(",");
+}
+
 export function getSigningSecret(): string {
   const secret = process.env.SCORE_SIGNING_SECRET;
   if (!secret) throw new Error("SCORE_SIGNING_SECRET is not set");

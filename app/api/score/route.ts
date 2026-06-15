@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 
 import {
   bumpQuestionStats,
-  getAnswerKey,
+  getAnswerKeyForIds,
 } from "@/app/lib/questions.server";
 import type { ScoreRequestItem } from "@/app/lib/quiz";
-import { createGradeToken, getSigningSecret } from "@/app/lib/score-token";
+import {
+  createGradeToken,
+  getSigningSecret,
+  verifyQuizToken,
+} from "@/app/lib/score-token";
 import { perQuestionResults, scoreSubmission } from "@/app/lib/scoring";
 
 function isValidItem(value: unknown): value is ScoreRequestItem {
@@ -34,7 +38,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const answerKey = await getAnswerKey();
+  // 출제 세트 토큰 검증 — 채점은 실제 출제된 문제 세트 기준으로만 수행한다.
+  const quizToken = (body as { quizToken?: unknown }).quizToken;
+  const servedIds =
+    typeof quizToken === "string"
+      ? verifyQuizToken(quizToken, getSigningSecret())
+      : null;
+  if (!servedIds) {
+    return NextResponse.json(
+      { error: "출제 정보가 유효하지 않습니다. 테스트를 다시 시작해주세요." },
+      { status: 400 }
+    );
+  }
+
+  const answerKey = await getAnswerKeyForIds(servedIds);
   const result = scoreSubmission(answerKey, items);
 
   // 문항별 통계 집계 (실패해도 채점 결과 반환에는 영향 주지 않음)

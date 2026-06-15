@@ -119,3 +119,44 @@ export async function getPublicQuestions(): Promise<PublicQuestion[]> {
     timeLimitSec: q.timeLimitSec,
   }));
 }
+
+// 문제 풀에서 무작위로 n개 출제 (정답 제외). 풀이 n보다 적으면 있는 만큼.
+export async function getRandomPublicQuestions(
+  n: number
+): Promise<PublicQuestion[]> {
+  const all = await getPublicQuestions();
+  // Fisher-Yates shuffle
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all.slice(0, Math.max(0, Math.min(n, all.length)));
+}
+
+// 특정 문제 id들의 채점용 정답키 (출제 세트 채점에 사용).
+export async function getAnswerKeyForIds(ids: string[]): Promise<AnswerKey> {
+  if (ids.length === 0) return {};
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("questions")
+    .select("id, type, format, answer_index, answers")
+    .in("id", ids);
+  if (error) throw new Error("문제를 불러오지 못했습니다.");
+
+  const key: AnswerKey = {};
+  for (const row of (data ?? []) as Array<{
+    id: string;
+    type: string;
+    format: string | null;
+    answer_index: number;
+    answers: string[] | null;
+  }>) {
+    key[row.id] = {
+      type: row.type as QuestionType,
+      format: (row.format ?? "multiple_choice") as QuestionFormat,
+      answerIndex: row.answer_index,
+      answers: row.answers ?? [],
+    };
+  }
+  return key;
+}

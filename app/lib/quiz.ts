@@ -16,6 +16,9 @@ export const QUESTION_FORMAT_LABELS: Record<QuestionFormat, string> = {
   short_answer: "단답형",
 };
 
+// 한 응시당 문제 풀에서 무작위로 출제하는 문제 수
+export const QUIZ_SIZE = 10;
+
 // 클라이언트로 내려보내도 되는 문제 형태 (정답 제외)
 // short_answer는 choices가 비어 있고 정답은 서버에만 존재한다.
 export interface PublicQuestion {
