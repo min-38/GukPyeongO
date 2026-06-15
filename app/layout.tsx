@@ -62,11 +62,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="flex min-h-full justify-center sm:p-6">
-        <div className="flex min-h-[100dvh] w-full max-w-[var(--app-max-width)] flex-col bg-surface shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)] sm:min-h-[calc(100dvh-3rem)] sm:overflow-hidden sm:rounded-[2rem] sm:border sm:border-border">
-          {children}
-        </div>
-      </body>
+      {/* 카드 셸은 각 라우트 그룹 레이아웃에서 폭을 다르게 적용한다
+          (공개 페이지: 폰 프레임 / 관리자: 넓은 레이아웃) */}
+      <body className="flex min-h-full justify-center sm:p-6">{children}</body>
     </html>
   );
 }
