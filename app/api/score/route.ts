@@ -11,6 +11,9 @@ function isValidItem(value: unknown): value is ScoreRequestItem {
   return (
     typeof it.questionId === "string" &&
     (it.choiceIndex === null || typeof it.choiceIndex === "number") &&
+    (it.text === null ||
+      it.text === undefined ||
+      typeof it.text === "string") &&
     typeof it.reactionMs === "number"
   );
 }

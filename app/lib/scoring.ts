@@ -1,5 +1,6 @@
 import {
   GRADE_TITLES,
+  type QuestionFormat,
   type QuestionType,
   type ScoreRequestItem,
   type ScoreResult,
@@ -9,10 +10,37 @@ import {
 // 채점에 필요한 문제별 정답 정보 (route handler가 서버 전용 데이터에서 주입)
 export interface AnswerKeyEntry {
   type: QuestionType;
-  answerIndex: number;
+  format: QuestionFormat;
+  answerIndex: number; // 객관식 정답 인덱스
+  answers: string[]; // 단답형 허용 정답 목록
 }
 
 export type AnswerKey = Record<string, AnswerKeyEntry>;
+
+// 단답형 비교용 정규화: 앞뒤/내부 공백 제거 + 소문자화.
+// "2일 뒤" == "2일뒤", "Today" == "today" 처럼 관대하게 채점한다.
+function normalize(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+// 한 문항의 응답 여부와 정답 여부를 형식에 맞게 판정한다.
+function judge(
+  key: AnswerKeyEntry,
+  item: ScoreRequestItem | undefined
+): { answered: boolean; correct: boolean } {
+  if (!item) return { answered: false, correct: false };
+  if (key.format === "short_answer") {
+    const text = item.text;
+    if (text == null || text.trim().length === 0)
+      return { answered: false, correct: false };
+    const norm = normalize(text);
+    const correct = key.answers.some((a) => normalize(a) === norm);
+    return { answered: true, correct };
+  }
+  // multiple_choice
+  if (item.choiceIndex === null) return { answered: false, correct: false };
+  return { answered: true, correct: item.choiceIndex === key.answerIndex };
+}
 
 // 맞힌 개수(0~total)를 1~9 등급으로 환산한다.
 // 만점에 가까울수록 1등급, 적게 맞힐수록 9등급.
@@ -44,12 +72,12 @@ export function scoreSubmission(
     stat.total += 1;
 
     const item = submitted.get(questionId);
-    const isCorrect = item != null && item.choiceIndex === key.answerIndex;
-    if (isCorrect) {
+    const { answered, correct } = judge(key, item);
+    if (correct) {
       stat.correct += 1;
       correctCount += 1;
     }
-    if (item != null && item.choiceIndex !== null && item.reactionMs > 0) {
+    if (item != null && answered && item.reactionMs > 0) {
       reactionSum += item.reactionMs;
       reactionCount += 1;
     }

@@ -8,19 +8,30 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   confusable: "혼동 표현",
 };
 
+// 문제 형식: 객관식(보기 선택) / 단답형(직접 입력)
+export type QuestionFormat = "multiple_choice" | "short_answer";
+
+export const QUESTION_FORMAT_LABELS: Record<QuestionFormat, string> = {
+  multiple_choice: "객관식",
+  short_answer: "단답형",
+};
+
 // 클라이언트로 내려보내도 되는 문제 형태 (정답 제외)
+// short_answer는 choices가 비어 있고 정답은 서버에만 존재한다.
 export interface PublicQuestion {
   id: string;
   type: QuestionType;
+  format: QuestionFormat;
   prompt: string;
   choices: string[];
   timeLimitSec: number;
 }
 
-// 채점 요청: 문제별 사용자의 선택과 반응속도
+// 채점 요청: 문제별 사용자의 선택/입력과 반응속도
 export interface ScoreRequestItem {
   questionId: string;
-  choiceIndex: number | null; // null = 미응답/시간초과
+  choiceIndex: number | null; // 객관식 선택 (null = 미응답)
+  text: string | null; // 단답형 입력 (null = 미응답)
   reactionMs: number;
 }
 
@@ -51,8 +62,10 @@ export interface ScoreResponse extends ScoreResult {
 }
 
 // 관리자 화면용 문제 형태 (정답 포함 — 인증된 관리자에게만 노출)
+// answerIndex는 객관식 정답, answers는 단답형 허용 정답 목록.
 export interface AdminQuestion extends PublicQuestion {
   answerIndex: number;
+  answers: string[];
 }
 
 // 댓글

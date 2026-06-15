@@ -20,6 +20,7 @@ export default function TestPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [textInput, setTextInput] = useState(""); // 단답형 입력
 
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
@@ -68,24 +69,26 @@ export default function TestPage() {
     [router]
   );
 
-  // 응답 처리(클릭/시간초과 공통)
+  // 응답 처리(객관식 클릭 / 단답형 제출 / 시간초과 공통)
   const answer = useCallback(
-    (choiceIndex: number | null) => {
+    (choiceIndex: number | null, text: string | null) => {
       if (lockRef.current) return;
       lockRef.current = true;
 
       const q = questions[index];
-      const reactionMs =
-        choiceIndex === null
-          ? 0
-          : Math.round(performance.now() - startRef.current);
+      const answered =
+        choiceIndex !== null || (text !== null && text.length > 0);
+      const reactionMs = answered
+        ? Math.round(performance.now() - startRef.current)
+        : 0;
       const items: ScoreRequestItem[] = [
         ...answersRef.current,
-        { questionId: q.id, choiceIndex, reactionMs },
+        { questionId: q.id, choiceIndex, text, reactionMs },
       ];
       answersRef.current = items;
 
       if (index + 1 < questions.length) {
+        setTextInput("");
         setRemaining(questions[index + 1].timeLimitSec);
         setIndex(index + 1);
       } else {
@@ -106,7 +109,7 @@ export default function TestPage() {
       () => setRemaining((r) => (r > 0 ? r - 1 : 0)),
       1000
     );
-    const deadline = setTimeout(() => answer(null), limit * 1000);
+    const deadline = setTimeout(() => answer(null, null), limit * 1000);
 
     return () => {
       clearInterval(tick);
@@ -180,21 +183,47 @@ export default function TestPage() {
           {q.prompt}
         </h2>
 
-        <div className="mt-7 flex flex-col gap-3">
-          {q.choices.map((choice, i) => (
+        {q.format === "short_answer" ? (
+          <form
+            className="mt-7 flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const t = textInput.trim();
+              answer(null, t.length > 0 ? t : null);
+            }}
+          >
+            <input
+              autoFocus
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="정답을 입력하세요"
+              className="h-14 w-full rounded-2xl border-2 border-border bg-surface px-4 text-lg font-medium outline-none transition-colors focus:border-brand"
+            />
             <button
-              key={i}
-              type="button"
-              onClick={() => answer(i)}
-              className="group flex w-full items-center gap-3 rounded-2xl border-2 border-border bg-surface px-4 py-4 text-left transition-all hover:border-brand hover:bg-surface-muted active:scale-[0.99]"
+              type="submit"
+              disabled={textInput.trim().length === 0}
+              className="flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] disabled:opacity-40"
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-muted text-sm font-bold text-muted transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
-                {String.fromCharCode(65 + i)}
-              </span>
-              <span className="text-base font-medium">{choice}</span>
+              제출
             </button>
-          ))}
-        </div>
+          </form>
+        ) : (
+          <div className="mt-7 flex flex-col gap-3">
+            {q.choices.map((choice, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => answer(i, null)}
+                className="group flex w-full items-center gap-3 rounded-2xl border-2 border-border bg-surface px-4 py-4 text-left transition-all hover:border-brand hover:bg-surface-muted active:scale-[0.99]"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-muted text-sm font-bold text-muted transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="text-base font-medium">{choice}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

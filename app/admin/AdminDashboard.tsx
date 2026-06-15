@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import {
   type AdminQuestion,
   type Comment,
+  QUESTION_FORMAT_LABELS,
+  type QuestionFormat,
   QUESTION_TYPE_LABELS,
   type QuestionType,
 } from "@/app/lib/quiz";
 
 const TYPES = Object.keys(QUESTION_TYPE_LABELS) as QuestionType[];
+const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
 
 function QuestionForm({
   initial,
@@ -21,11 +24,16 @@ function QuestionForm({
   onCancel: () => void;
 }) {
   const isNew = initial === null;
-  const [id, setId] = useState(initial?.id ?? "");
   const [type, setType] = useState<QuestionType>(initial?.type ?? "notice");
+  const [format, setFormat] = useState<QuestionFormat>(
+    initial?.format ?? "multiple_choice"
+  );
   const [prompt, setPrompt] = useState(initial?.prompt ?? "");
   const [choices, setChoices] = useState<string[]>(initial?.choices ?? ["", ""]);
   const [answerIndex, setAnswerIndex] = useState(initial?.answerIndex ?? 0);
+  const [answers, setAnswers] = useState<string[]>(
+    initial?.answers && initial.answers.length > 0 ? initial.answers : [""]
+  );
   const [timeLimitSec, setTimeLimitSec] = useState(initial?.timeLimitSec ?? 20);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,11 +48,14 @@ function QuestionForm({
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id,
+          // 신규는 id 없이 생성(uuid 자동), 수정은 기존 uuid로 식별
+          ...(isNew ? {} : { id: initial.id }),
           type,
+          format,
           prompt,
           choices,
           answerIndex,
+          answers,
           timeLimitSec,
         }),
       });
@@ -69,31 +80,37 @@ function QuestionForm({
       onSubmit={save}
       className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand bg-surface p-4"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        ID
-        <input
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-          disabled={!isNew}
-          placeholder="q11"
-          className="h-10 rounded-xl border border-border px-3 disabled:bg-background disabled:text-muted"
-        />
-      </label>
+      <div className="flex gap-3">
+        <label className="flex flex-1 flex-col gap-1 text-sm">
+          유형
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as QuestionType)}
+            className="h-10 rounded-xl border border-border px-3"
+          >
+            {TYPES.map((t) => (
+              <option key={t} value={t}>
+                {QUESTION_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        유형
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as QuestionType)}
-          className="h-10 rounded-xl border border-border px-3"
-        >
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {QUESTION_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="flex flex-1 flex-col gap-1 text-sm">
+          형식
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value as QuestionFormat)}
+            className="h-10 rounded-xl border border-border px-3"
+          >
+            {FORMATS.map((f) => (
+              <option key={f} value={f}>
+                {QUESTION_FORMAT_LABELS[f]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <label className="flex flex-col gap-1 text-sm">
         문제
@@ -105,45 +122,85 @@ function QuestionForm({
         />
       </label>
 
-      <div className="flex flex-col gap-2 text-sm">
-        <span>보기 (정답 라디오 선택)</span>
-        {choices.map((choice, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="answer"
-              checked={answerIndex === i}
-              onChange={() => setAnswerIndex(i)}
-            />
-            <input
-              value={choice}
-              onChange={(e) =>
-                setChoices((cs) => cs.map((c, idx) => (idx === i ? e.target.value : c)))
-              }
-              className="h-10 flex-1 rounded-xl border border-border px-3"
-            />
-            {choices.length > 2 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setChoices((cs) => cs.filter((_, idx) => idx !== i));
-                  setAnswerIndex((a) => (a >= i && a > 0 ? a - 1 : a));
-                }}
-                className="text-muted"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => setChoices((cs) => [...cs, ""])}
-          className="self-start text-sm text-brand"
-        >
-          + 보기 추가
-        </button>
-      </div>
+      {format === "short_answer" ? (
+        <div className="flex flex-col gap-2 text-sm">
+          <span>허용 정답 (하나라도 일치하면 정답, 공백·대소문자 무시)</span>
+          {answers.map((ans, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={ans}
+                onChange={(e) =>
+                  setAnswers((as) =>
+                    as.map((a, idx) => (idx === i ? e.target.value : a))
+                  )
+                }
+                placeholder="예: 오늘"
+                className="h-10 flex-1 rounded-xl border border-border px-3"
+              />
+              {answers.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAnswers((as) => as.filter((_, idx) => idx !== i))
+                  }
+                  className="text-muted"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setAnswers((as) => [...as, ""])}
+            className="self-start text-sm text-brand"
+          >
+            + 정답 추가
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 text-sm">
+          <span>보기 (정답 라디오 선택)</span>
+          {choices.map((choice, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="answer"
+                checked={answerIndex === i}
+                onChange={() => setAnswerIndex(i)}
+              />
+              <input
+                value={choice}
+                onChange={(e) =>
+                  setChoices((cs) =>
+                    cs.map((c, idx) => (idx === i ? e.target.value : c))
+                  )
+                }
+                className="h-10 flex-1 rounded-xl border border-border px-3"
+              />
+              {choices.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChoices((cs) => cs.filter((_, idx) => idx !== i));
+                    setAnswerIndex((a) => (a >= i && a > 0 ? a - 1 : a));
+                  }}
+                  className="text-muted"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setChoices((cs) => [...cs, ""])}
+            className="self-start text-sm text-brand"
+          >
+            + 보기 추가
+          </button>
+        </div>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
         제한시간(초)
@@ -280,7 +337,8 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-center justify-between text-xs text-muted">
                   <span>
-                    {q.id} · {QUESTION_TYPE_LABELS[q.type]} · {q.timeLimitSec}s
+                    {QUESTION_TYPE_LABELS[q.type]} ·{" "}
+                    {QUESTION_FORMAT_LABELS[q.format]} · {q.timeLimitSec}s
                   </span>
                   <button
                     onClick={() => setEditing(q)}
@@ -290,17 +348,28 @@ export default function AdminDashboard() {
                   </button>
                 </div>
                 <p className="mt-2 font-medium">{q.prompt}</p>
-                <ol className="mt-2 list-decimal pl-5 text-sm">
-                  {q.choices.map((c, i) => (
-                    <li
-                      key={i}
-                      className={i === q.answerIndex ? "font-bold text-brand" : ""}
-                    >
-                      {c}
-                      {i === q.answerIndex && " ✓"}
-                    </li>
-                  ))}
-                </ol>
+                {q.format === "short_answer" ? (
+                  <p className="mt-2 text-sm">
+                    정답:{" "}
+                    <span className="font-bold text-brand">
+                      {q.answers.join(", ")}
+                    </span>
+                  </p>
+                ) : (
+                  <ol className="mt-2 list-decimal pl-5 text-sm">
+                    {q.choices.map((c, i) => (
+                      <li
+                        key={i}
+                        className={
+                          i === q.answerIndex ? "font-bold text-brand" : ""
+                        }
+                      >
+                        {c}
+                        {i === q.answerIndex && " ✓"}
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </li>
             )
           )}

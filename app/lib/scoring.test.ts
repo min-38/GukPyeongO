@@ -3,16 +3,31 @@ import { describe, expect, it } from "vitest";
 import type { ScoreRequestItem } from "./quiz";
 import { type AnswerKey, gradeForCorrect, scoreSubmission } from "./scoring";
 
+const mc = (type: AnswerKey[string]["type"], answerIndex: number) =>
+  ({ type, format: "multiple_choice", answerIndex, answers: [] }) as const;
+
 const answerKey: AnswerKey = {
-  q1: { type: "time", answerIndex: 0 },
-  q2: { type: "time", answerIndex: 1 },
-  q3: { type: "hanja", answerIndex: 0 },
-  q4: { type: "hanja", answerIndex: 1 },
-  q5: { type: "notice", answerIndex: 0 },
+  q1: mc("time", 0),
+  q2: mc("time", 1),
+  q3: mc("hanja", 0),
+  q4: mc("hanja", 1),
+  q5: mc("notice", 0),
 };
 
-function pick(questionId: string, choiceIndex: number | null, reactionMs = 1000): ScoreRequestItem {
-  return { questionId, choiceIndex, reactionMs };
+function pick(
+  questionId: string,
+  choiceIndex: number | null,
+  reactionMs = 1000
+): ScoreRequestItem {
+  return { questionId, choiceIndex, text: null, reactionMs };
+}
+
+function typeText(
+  questionId: string,
+  text: string | null,
+  reactionMs = 1000
+): ScoreRequestItem {
+  return { questionId, choiceIndex: null, text, reactionMs };
 }
 
 describe("gradeForCorrect", () => {
@@ -83,5 +98,51 @@ describe("scoreSubmission", () => {
     ];
     const r = scoreSubmission(answerKey, items);
     expect(r.avgReactionMs).toBe(2000);
+  });
+});
+
+describe("scoreSubmission - 단답형(short_answer)", () => {
+  const saKey: AnswerKey = {
+    s1: {
+      type: "time",
+      format: "short_answer",
+      answerIndex: 0,
+      answers: ["오늘"],
+    },
+    s2: {
+      type: "time",
+      format: "short_answer",
+      answerIndex: 0,
+      answers: ["2일 뒤", "이틀 뒤"],
+    },
+  };
+
+  it("정규화(공백/대소문자) 후 일치하면 정답", () => {
+    const r = scoreSubmission(saKey, [
+      typeText("s1", "  오늘 "), // 공백 무시 → 정답
+      typeText("s2", "2일뒤"), // 공백 제거 후 "2일 뒤"와 일치 → 정답
+    ]);
+    expect(r.correctCount).toBe(2);
+  });
+
+  it("허용 정답 목록 중 하나라도 맞으면 정답", () => {
+    const r = scoreSubmission(saKey, [typeText("s2", "이틀 뒤")]);
+    expect(r.correctCount).toBe(1);
+  });
+
+  it("빈 문자열/오답은 오답 처리", () => {
+    const r = scoreSubmission(saKey, [
+      typeText("s1", "  "), // 공백만 → 미응답
+      typeText("s2", "내일"), // 오답
+    ]);
+    expect(r.correctCount).toBe(0);
+  });
+
+  it("객관식과 단답형 혼합 채점", () => {
+    const mixed: AnswerKey = { q1: mc("time", 0), s1: saKey.s1 };
+    const r = scoreSubmission(mixed, [pick("q1", 0), typeText("s1", "오늘")]);
+    expect(r.correctCount).toBe(2);
+    expect(r.totalCount).toBe(2);
+    expect(r.grade).toBe(1);
   });
 });
