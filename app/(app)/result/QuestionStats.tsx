@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   MAX_REPORT_DETAIL_LENGTH,
   QUESTION_TYPE_LABELS,
+  type QuestionResult,
   type QuestionStat,
   REPORT_REASONS,
   type ReportReason,
@@ -95,11 +96,18 @@ function ReportForm({
   );
 }
 
-export default function QuestionStats() {
+export default function QuestionStats({
+  results = [],
+}: {
+  results?: QuestionResult[];
+}) {
   const [stats, setStats] = useState<QuestionStat[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reported, setReported] = useState<Record<string, true>>({});
+
+  // 내가 푼 문항의 정답 여부 맵
+  const myCorrect = new Map(results.map((r) => [r.questionId, r.correct]));
 
   useEffect(() => {
     let active = true;
@@ -122,20 +130,34 @@ export default function QuestionStats() {
 
   if (failed) return null;
 
+  // 내가 푼 문항만(있으면) 출제 순서대로, 없으면 전체
+  const displayed =
+    stats === null
+      ? null
+      : results.length > 0
+        ? results
+            .map((r) => stats.find((s) => s.id === r.questionId))
+            .filter((s): s is QuestionStat => Boolean(s))
+        : stats;
+
   return (
     <section className="mt-10">
       <h3 className="text-xl font-extrabold">📊 다른 사람들은?</h3>
-      <p className="mt-1 text-sm text-muted">문제별 정답률이에요.</p>
+      <p className="mt-1 text-sm text-muted">
+        {results.length > 0
+          ? "내가 푼 문제의 정답률이에요."
+          : "문제별 정답률이에요."}
+      </p>
 
       <ul className="mt-4 flex flex-col gap-3">
-        {stats === null
+        {displayed === null
           ? Array.from({ length: 3 }).map((_, i) => (
               <li
                 key={i}
                 className="h-20 animate-pulse rounded-2xl bg-surface-muted"
               />
             ))
-          : stats.map((s, i) => (
+          : displayed.map((s, i) => (
               <li
                 key={s.id}
                 className="rounded-2xl border border-border bg-surface p-4"
@@ -145,9 +167,22 @@ export default function QuestionStats() {
                     <span className="text-muted">Q{i + 1}. </span>
                     {s.prompt}
                   </p>
-                  <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
-                    {QUESTION_TYPE_LABELS[s.type]}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
+                      {QUESTION_TYPE_LABELS[s.type]}
+                    </span>
+                    {myCorrect.has(s.id) && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                          myCorrect.get(s.id)
+                            ? "bg-green-500/15 text-green-600"
+                            : "bg-red-500/10 text-red-500"
+                        }`}
+                      >
+                        {myCorrect.get(s.id) ? "내가 맞힘 ✅" : "내가 틀림"}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">

@@ -173,7 +173,7 @@ export default function ResultPage() {
 
      {/* 오른쪽: 문항 통계 + 댓글 */}
      <div className="lg:[&>section:first-child]:mt-0">
-      <QuestionStats />
+      <QuestionStats results={result.perQuestion} />
 
       <Comments grade={result.grade} gradeToken={result.gradeToken} />
      </div>

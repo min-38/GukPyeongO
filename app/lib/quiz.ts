@@ -59,9 +59,16 @@ export interface ScoreResult {
   typeStats: TypeStat[];
 }
 
-// /api/score 응답: 채점 결과 + 등급 서명 토큰 (댓글 작성 시 등급 신뢰용)
+// 문항별 내 정답 여부 (결과 화면 표시용 — 정답 내용은 포함하지 않음)
+export interface QuestionResult {
+  questionId: string;
+  correct: boolean;
+}
+
+// /api/score 응답: 채점 결과 + 등급 서명 토큰 + 문항별 내 정답 여부
 export interface ScoreResponse extends ScoreResult {
   gradeToken: string;
+  perQuestion: QuestionResult[];
 }
 
 // 관리자 화면용 문제 형태 (정답 포함 — 인증된 관리자에게만 노출)

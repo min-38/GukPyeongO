@@ -53,14 +53,19 @@ export async function POST(request: Request) {
 
   const answerKey = await getAnswerKeyForIds(servedIds);
   const result = scoreSubmission(answerKey, items);
+  const perQ = perQuestionResults(answerKey, items);
 
   // 문항별 통계 집계 (실패해도 채점 결과 반환에는 영향 주지 않음)
   try {
-    await bumpQuestionStats(perQuestionResults(answerKey, items));
+    await bumpQuestionStats(perQ);
   } catch {
     // 통계 갱신 실패는 무시
   }
 
   const gradeToken = createGradeToken(result.grade, getSigningSecret());
-  return NextResponse.json({ ...result, gradeToken });
+  const perQuestion = perQ.map((p) => ({
+    questionId: p.questionId,
+    correct: p.correct,
+  }));
+  return NextResponse.json({ ...result, gradeToken, perQuestion });
 }
