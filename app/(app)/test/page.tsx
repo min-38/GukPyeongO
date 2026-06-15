@@ -310,9 +310,16 @@ export default function TestPage() {
         <span className="w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
           {QUESTION_TYPE_LABELS[q.type]}
         </span>
-        <h2 className="mt-4 text-2xl font-extrabold leading-relaxed">
-          {q.prompt}
-        </h2>
+        {q.type === "literary" ? (
+          // 문학 긴 지문: 큰 제목 폰트 대신 읽기 좋은 본문 + 스크롤 가능 영역
+          <div className="mt-4 max-h-[40vh] overflow-y-auto whitespace-pre-wrap rounded-2xl bg-surface-muted p-4 text-base font-medium leading-relaxed lg:text-lg">
+            {q.prompt}
+          </div>
+        ) : (
+          <h2 className="mt-4 text-2xl font-extrabold leading-relaxed">
+            {q.prompt}
+          </h2>
+        )}
 
         {feedback?.correct != null && (
           <div
