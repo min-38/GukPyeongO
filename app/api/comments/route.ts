@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { type Comment, MAX_COMMENT_LENGTH } from "@/app/lib/quiz";
+import {
+  type Comment,
+  MAX_COMMENT_LENGTH,
+  MAX_NICKNAME_LENGTH,
+  maskIp,
+  randomNickname,
+} from "@/app/lib/quiz";
 import { getSigningSecret, verifyGradeToken } from "@/app/lib/score-token";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
-import { getSupabase } from "@/app/lib/supabase.server";
 
 const LIST_LIMIT = 50;
 const POST_COOLDOWN_MS = 10_000;
@@ -22,24 +27,31 @@ function toComment(row: {
   id: string;
   content: string;
   grade: number;
+  nickname: string | null;
+  ip_masked: string | null;
   created_at: string;
 }): Comment {
   return {
     id: row.id,
     content: row.content,
     grade: row.grade,
+    nickname: row.nickname ?? "아무개",
+    ipMasked: row.ip_masked ?? "비공개",
     createdAt: row.created_at,
   };
 }
+
+const COLS = "id, content, grade, nickname, ip_masked, created_at";
 
 // 댓글 조회: ?grade=all (전체) | 1~9 (같은 등급 댓글방)
 export async function GET(request: Request) {
   const gradeParam = new URL(request.url).searchParams.get("grade") ?? "all";
 
-  const supabase = getSupabase();
+  // ip_masked는 이미 마스킹된 값이라 공개 안전. service-role로 조회.
+  const supabase = getSupabaseAdmin();
   let query = supabase
     .from("comments")
-    .select("id, content, grade, created_at")
+    .select(COLS)
     .order("created_at", { ascending: false })
     .limit(LIST_LIMIT);
 
@@ -71,9 +83,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const { content, gradeToken } = (body ?? {}) as {
+  const { content, gradeToken, nickname } = (body ?? {}) as {
     content?: unknown;
     gradeToken?: unknown;
+    nickname?: unknown;
   };
 
   if (typeof gradeToken !== "string") {
@@ -101,6 +114,13 @@ export async function POST(request: Request) {
     );
   }
 
+  // 닉네임: 입력값 사용, 비어 있으면 랜덤 폴백, 길이 제한 (중복 허용)
+  const rawNick = typeof nickname === "string" ? nickname.trim() : "";
+  const nick = (rawNick.length > 0 ? rawNick : randomNickname()).slice(
+    0,
+    MAX_NICKNAME_LENGTH
+  );
+
   const ip = clientIp(request);
   const now = Date.now();
   const last = lastPostByIp.get(ip);
@@ -111,12 +131,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // 작성은 service-role로 수행 (anon 직접 쓰기는 RLS로 차단됨)
+  // 작성은 service-role로 수행 (anon 직접 쓰기는 RLS로 차단됨).
+  // 닉네임은 서버에서 자동 생성, IP는 원본을 저장하지 않고 마스킹값만 저장한다.
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("comments")
-    .insert({ content: trimmed, grade })
-    .select("id, content, grade, created_at")
+    .insert({
+      content: trimmed,
+      grade,
+      nickname: nick,
+      ip_masked: maskIp(ip),
+    })
+    .select(COLS)
     .single();
 
   if (error || !data) {

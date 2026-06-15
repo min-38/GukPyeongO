@@ -97,12 +97,41 @@ export interface QuestionStat {
 
 // 댓글
 export const MAX_COMMENT_LENGTH = 300;
+export const MAX_NICKNAME_LENGTH = 16;
 
 export interface Comment {
   id: string;
   content: string;
   grade: number;
+  nickname: string;
+  ipMasked: string; // 마스킹된 IP (원본은 서버에 저장하지 않음)
   createdAt: string;
+}
+
+// IPv4를 앞 2옥텟만 남기고 마스킹 (123.45.67.89 → 123.45.*.*)
+export function maskIp(ip: string | null | undefined): string {
+  if (!ip) return "비공개";
+  const v4 = ip.trim().split(".");
+  if (v4.length === 4 && v4.every((p) => /^\d{1,3}$/.test(p))) {
+    return `${v4[0]}.${v4[1]}.*.*`;
+  }
+  return "비공개"; // IPv6 등은 비공개 처리
+}
+
+// 기본 닉네임 생성 (랜덤 단어 + 숫자 조합, 중복 허용). 예: 아무개1235, 행인4821
+const NICKNAME_WORDS = [
+  "아무개",
+  "행인",
+  "익명",
+  "나그네",
+  "구경꾼",
+  "지나가던이",
+  "손님",
+  "불특정",
+];
+export function randomNickname(): string {
+  const word = NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
+  return `${word}${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 // 문제 오류 신고

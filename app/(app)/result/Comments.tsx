@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { type Comment, MAX_COMMENT_LENGTH } from "@/app/lib/quiz";
+import {
+  type Comment,
+  MAX_COMMENT_LENGTH,
+  MAX_NICKNAME_LENGTH,
+  randomNickname,
+} from "@/app/lib/quiz";
 
 type Tab = "all" | "grade";
 
@@ -26,6 +31,8 @@ export default function Comments({
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
+  // 기본값: 랜덤 단어+숫자 (수정 가능, 중복 허용). Comments는 결과 존재 시 클라이언트에서만 마운트됨.
+  const [nickname, setNickname] = useState(() => randomNickname());
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +79,7 @@ export default function Comments({
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed, gradeToken }),
+        body: JSON.stringify({ content: trimmed, gradeToken, nickname }),
       });
       const data = (await res.json()) as { comment?: Comment; error?: string };
       if (!res.ok || !data.comment) {
@@ -118,6 +125,14 @@ export default function Comments({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-4">
+        <input
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          maxLength={MAX_NICKNAME_LENGTH}
+          placeholder="닉네임"
+          aria-label="닉네임"
+          className="mb-2 h-10 w-full rounded-xl border-2 border-border bg-surface px-3 text-sm font-bold outline-none transition-colors focus:border-brand sm:w-48"
+        />
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -155,11 +170,17 @@ export default function Comments({
               key={c.id}
               className="rounded-2xl border border-border bg-surface p-4"
             >
-              <div className="flex items-center justify-between text-xs">
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 font-bold text-brand">
-                  {c.grade}등급
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 font-bold text-brand">
+                    {c.grade}등급
+                  </span>
+                  <span className="truncate font-bold">{c.nickname}</span>
+                  <span className="shrink-0 text-muted">{c.ipMasked}</span>
                 </span>
-                <span className="text-muted">{timeAgo(c.createdAt)}</span>
+                <span className="shrink-0 text-muted">
+                  {timeAgo(c.createdAt)}
+                </span>
               </div>
               <p className="mt-2 whitespace-pre-wrap break-words text-base">
                 {c.content}

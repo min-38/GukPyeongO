@@ -8,12 +8,16 @@ function toComment(row: {
   id: string;
   content: string;
   grade: number;
+  nickname: string | null;
+  ip_masked: string | null;
   created_at: string;
 }): Comment {
   return {
     id: row.id,
     content: row.content,
     grade: row.grade,
+    nickname: row.nickname ?? "아무개",
+    ipMasked: row.ip_masked ?? "비공개",
     createdAt: row.created_at,
   };
 }
@@ -25,7 +29,7 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("comments")
-    .select("id, content, grade, created_at")
+    .select("id, content, grade, nickname, ip_masked, created_at")
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) {

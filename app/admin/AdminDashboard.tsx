@@ -487,7 +487,15 @@ export default function AdminDashboard() {
                 className="rounded-2xl border border-border bg-surface p-4"
               >
                 <div className="flex items-center justify-between text-xs text-muted">
-                  <span className="font-semibold text-brand">{c.grade}등급</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-semibold text-brand">
+                      {c.grade}등급
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {c.nickname}
+                    </span>
+                    <span>{c.ipMasked}</span>
+                  </span>
                   <button
                     onClick={() => deleteComment(c.id)}
                     className="font-medium text-red-500"

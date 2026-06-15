@@ -5,6 +5,8 @@ create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   content text not null check (char_length(content) between 1 and 300),
   grade smallint not null check (grade between 1 and 9),
+  nickname text not null default '아무개',
+  ip_masked text, -- 마스킹된 IP만 저장(원본 미보관). 작성 시 서버에서 마스킹.
   created_at timestamptz not null default now()
 );
 
