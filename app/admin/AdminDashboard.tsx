@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import {
   type AdminQuestion,
   type AdminReport,
+  AUDIT_ACTION_LABELS,
   type Comment,
   QUESTION_FORMAT_LABELS,
+  type QuestionAudit,
   type QuestionFormat,
   QUESTION_TYPE_LABELS,
   type QuestionType,
@@ -239,6 +241,7 @@ export default function AdminDashboard() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [reports, setReports] = useState<AdminReport[]>([]);
+  const [audits, setAudits] = useState<QuestionAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminQuestion | "new" | null>(null);
 
@@ -254,12 +257,16 @@ export default function AdminDashboard() {
       fetch("/api/admin/reports").then(
         (r) => r.json() as Promise<{ reports: AdminReport[] }>
       ),
+      fetch("/api/admin/audit").then(
+        (r) => r.json() as Promise<{ audits: QuestionAudit[] }>
+      ),
     ])
-      .then(([q, c, rp]) => {
+      .then(([q, c, rp, a]) => {
         if (!active) return;
         setQuestions(q.questions ?? []);
         setComments(c.comments ?? []);
         setReports(rp.reports ?? []);
+        setAudits(a.audits ?? []);
         setLoading(false);
       })
       .catch(() => {
@@ -269,6 +276,25 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
+
+  async function refreshAudit() {
+    const r = await fetch("/api/admin/audit");
+    if (r.ok) {
+      const data = (await r.json()) as { audits: QuestionAudit[] };
+      setAudits(data.audits ?? []);
+    }
+  }
+
+  async function deleteQuestion(q: AdminQuestion) {
+    if (!confirm(`문제를 삭제할까요?\n\n${q.prompt}`)) return;
+    const res = await fetch(`/api/admin/questions?id=${q.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setQuestions((prev) => prev.filter((p) => p.id !== q.id));
+      void refreshAudit();
+    }
+  }
 
   async function setReportStatus(id: string, status: "open" | "resolved") {
     const res = await fetch("/api/admin/reports", {
@@ -289,6 +315,7 @@ export default function AdminDashboard() {
         : [...prev, q]
     );
     setEditing(null);
+    void refreshAudit();
   }
 
   async function deleteComment(id: string) {
@@ -358,12 +385,20 @@ export default function AdminDashboard() {
                     {QUESTION_TYPE_LABELS[q.type]} ·{" "}
                     {QUESTION_FORMAT_LABELS[q.format]} · {q.timeLimitSec}s
                   </span>
-                  <button
-                    onClick={() => setEditing(q)}
-                    className="font-medium text-brand"
-                  >
-                    수정
-                  </button>
+                  <span className="flex gap-3">
+                    <button
+                      onClick={() => setEditing(q)}
+                      className="font-medium text-brand"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => deleteQuestion(q)}
+                      className="font-medium text-red-500"
+                    >
+                      삭제
+                    </button>
+                  </span>
                 </div>
                 <p className="mt-2 font-medium">{q.prompt}</p>
                 {q.format === "short_answer" ? (
@@ -463,6 +498,45 @@ export default function AdminDashboard() {
                 <p className="mt-2 whitespace-pre-wrap break-words text-base">
                   {c.content}
                 </p>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-bold">변경 로그 ({audits.length})</h2>
+        <ul className="mt-4 flex flex-col gap-2">
+          {audits.length === 0 ? (
+            <li className="py-4 text-center text-sm text-muted">
+              변경 이력이 없습니다.
+            </li>
+          ) : (
+            audits.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm"
+              >
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${
+                    a.action === "delete"
+                      ? "bg-red-500/10 text-red-500"
+                      : "bg-brand/10 text-brand"
+                  }`}
+                >
+                  {AUDIT_ACTION_LABELS[a.action]}
+                </span>
+                <span className="flex-1 truncate text-muted">
+                  {a.snapshot?.prompt ?? "(삭제된 문제)"}
+                </span>
+                <span className="shrink-0 text-xs text-muted">
+                  {new Date(a.createdAt).toLocaleString("ko-KR", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </li>
             ))
           )}

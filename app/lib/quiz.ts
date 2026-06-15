@@ -68,6 +68,23 @@ export interface AdminQuestion extends PublicQuestion {
   answers: string[];
 }
 
+// 문제 변경 로그 (감사 로그)
+export type AuditAction = "create" | "update" | "delete";
+
+export interface QuestionAudit {
+  id: string;
+  action: AuditAction;
+  questionId: string | null;
+  snapshot: AdminQuestion | null; // 변경 후(생성/수정) 또는 삭제된 문제 스냅샷
+  createdAt: string;
+}
+
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  create: "생성",
+  update: "수정",
+  delete: "삭제",
+};
+
 // 문제별 통계 (맞춘 사람 수·정답률) — 공개 노출용, 정답은 포함하지 않는다.
 export interface QuestionStat {
   id: string;

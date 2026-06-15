@@ -3,10 +3,29 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/app/lib/admin-session.server";
 import {
   type AdminQuestion,
+  type AuditAction,
   type QuestionFormat,
   type QuestionType,
 } from "@/app/lib/quiz";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
+
+type Db = ReturnType<typeof getSupabaseAdmin>;
+
+// 문제 변경 로그 기록 (best-effort — 실패해도 본 작업에는 영향 주지 않음)
+async function logAudit(
+  supabase: Db,
+  action: AuditAction,
+  questionId: string,
+  snapshot: AdminQuestion | null
+) {
+  try {
+    await supabase
+      .from("question_audit")
+      .insert({ action, question_id: questionId, snapshot });
+  } catch {
+    // 로그 실패 무시
+  }
+}
 
 const TYPES: QuestionType[] = ["notice", "hanja", "time", "confusable"];
 const FORMATS: QuestionFormat[] = ["multiple_choice", "short_answer"];
@@ -155,7 +174,9 @@ export async function POST(request: Request) {
   if (error || !data) {
     return NextResponse.json({ error: "저장에 실패했습니다." }, { status: 400 });
   }
-  return NextResponse.json({ question: toAdminQuestion(data) }, { status: 201 });
+  const created = toAdminQuestion(data);
+  await logAudit(supabase, "create", created.id, created);
+  return NextResponse.json({ question: created }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -190,5 +211,38 @@ export async function PATCH(request: Request) {
       { status: 400 }
     );
   }
-  return NextResponse.json({ question: toAdminQuestion(data) });
+  const updated = toAdminQuestion(data);
+  await logAudit(supabase, "update", updated.id, updated);
+  return NextResponse.json({ question: updated });
+}
+
+export async function DELETE(request: Request) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
+  }
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "id가 필요합니다." }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+  // 삭제 전 스냅샷 확보 (로그용)
+  const { data: existing } = await supabase
+    .from("questions")
+    .select(COLS)
+    .eq("id", id)
+    .single();
+
+  const { error } = await supabase.from("questions").delete().eq("id", id);
+  if (error) {
+    return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
+  }
+
+  await logAudit(
+    supabase,
+    "delete",
+    id,
+    existing ? toAdminQuestion(existing) : null
+  );
+  return NextResponse.json({ ok: true });
 }
