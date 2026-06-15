@@ -63,9 +63,9 @@ export default function Comments({
 
   function switchTab(next: Tab) {
     if (next === tab) return;
+    // 이전 목록을 유지한 채 새 데이터로 교체 → 탭 전환 시 깜빡임 방지.
+    // (목록 비우기/로딩 치환을 하지 않음. 로딩 표시는 최초 마운트에만.)
     setError(null);
-    setComments([]);
-    setLoading(true);
     setTab(next);
   }
 
