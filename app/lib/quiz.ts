@@ -177,36 +177,36 @@ export interface AdminReport extends Report {
   questionPrompt: string;
 }
 
-// 등급별 칭호 (톤앤매너: 놀리되 모욕하지 않기)
+// 등급별 페르소나(캐릭터/별명) — 결과 화면의 메인. 톤: 성장/도전, 모욕 금지.
 export const GRADE_TITLES: Record<number, string> = {
-  1: "국평오 정복자",
-  2: "공지문 마스터",
-  3: "사흘 완벽 이해",
-  4: "금일 안정권",
-  5: "딱 평균, 국평오",
-  6: "가끔 흔들리는 중",
-  7: "금일에서 흔들림",
-  8: "공지문 생존 위기",
-  9: "사흘 피해자 모임",
+  1: "어휘 마스터",
+  2: "문해력 우등생",
+  3: "어휘 수집가",
+  4: "성장형 독서가",
+  5: "균형 잡힌 탐독가",
+  6: "문해력 새싹",
+  7: "도전하는 새내기",
+  8: "어휘 탐험가",
+  9: "무한 성장 캐릭터",
 };
 
 // 등급별 시각 테마 (결과 화면 표현용 — 컬러/이모지/한줄평)
 export interface GradeTheme {
-  color: string; // 큰 등급 숫자·강조 컬러
+  color: string; // 페르소나 이름·강조 컬러
   emoji: string;
-  blurb: string; // 가벼운 한줄평 (모욕 금지)
+  blurb: string; // 가벼운 한줄평 (성장/도전 톤, 모욕 금지)
 }
 
 const GRADE_THEMES: Record<number, GradeTheme> = {
-  1: { color: "#f59e0b", emoji: "🏆", blurb: "검색 없이 이 정도면 진짜 고수." },
-  2: { color: "#10b981", emoji: "🎉", blurb: "공지문 정도는 가뿐하네요." },
+  1: { color: "#f59e0b", emoji: "🦉", blurb: "검색 없이 이 정도면 진짜 고수." },
+  2: { color: "#10b981", emoji: "🎓", blurb: "공지문 정도는 가뿐하죠." },
   3: { color: "#14b8a6", emoji: "✨", blurb: "사흘이 며칠인지 확실히 아는 사람." },
-  4: { color: "#6366f1", emoji: "🙂", blurb: "안정권. 살짝만 더 가면 상위권." },
-  5: { color: "#7c3aed", emoji: "😐", blurb: "딱 평균, 그래서 국평오." },
-  6: { color: "#f97316", emoji: "😅", blurb: "가끔 헷갈리는 그 느낌 아니까." },
-  7: { color: "#fb7185", emoji: "😬", blurb: "'금일'에서 한 번 흔들렸죠?" },
-  8: { color: "#ef4444", emoji: "🫠", blurb: "공지문이 좀 어려웠나 봐요." },
-  9: { color: "#dc2626", emoji: "😭", blurb: "괜찮아요, 다시 도전하면 됩니다." },
+  4: { color: "#6366f1", emoji: "🚀", blurb: "상위권이 코앞! 조금만 더." },
+  5: { color: "#7c3aed", emoji: "🧐", blurb: "딱 중간, 여기서부터 치고 올라가요." },
+  6: { color: "#f97316", emoji: "🌱", blurb: "감 잡는 중. 가능성이 보여요." },
+  7: { color: "#fb7185", emoji: "🐣", blurb: "한 끗 차이! 다시 보면 보여요." },
+  8: { color: "#ef4444", emoji: "📚", blurb: "새로운 단어를 만나는 중, 그게 성장." },
+  9: { color: "#dc2626", emoji: "🔥", blurb: "시작이 반! 올라갈 일만 남았어요." },
 };
 
 export function gradeTheme(grade: number): GradeTheme {

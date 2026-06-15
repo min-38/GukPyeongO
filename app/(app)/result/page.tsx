@@ -49,7 +49,7 @@ export default function ResultPage() {
   async function handleShare() {
     if (!result) return;
     const url = window.location.origin;
-    const text = `국평오 테스트 결과: ${result.grade}등급 "${result.title}"! 검색 없이 10문제, 당신의 문해력은?`;
+    const text = `국평오 테스트: 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -95,22 +95,21 @@ export default function ResultPage() {
      {/* 왼쪽 위: 등급·통계·공유 카드 */}
      <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="animate-pop flex flex-col items-center text-center">
-        <span className="text-6xl">{theme.emoji}</span>
+        <span className="text-7xl">{theme.emoji}</span>
         <p className="mt-3 text-sm font-bold tracking-widest text-muted">
-          나의 문해력
+          나의 문해력 캐릭터
         </p>
         <p
-          className="font-display text-[5.5rem] leading-none tracking-tight"
+          className="mt-1 font-display text-5xl leading-tight tracking-tight lg:text-6xl"
           style={{ color: theme.color }}
         >
-          {result.grade}
-          <span className="ml-1 align-top text-3xl">등급</span>
+          {result.title}
         </p>
         <p
-          className="mt-1 rounded-full px-5 py-2 text-lg font-extrabold text-white"
+          className="mt-3 rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
           style={{ backgroundColor: theme.color }}
         >
-          {result.title}
+          {result.grade}등급 · 9등급 중
         </p>
         <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
       </div>

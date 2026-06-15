@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 const title = "국평오 테스트 — 검색 없이 10문제";
 const description =
-  "검색 없이 10문제. 당신의 문해력은 몇 등급? 친구와 점수로 승부 보세요.";
+  "검색 없이 10문제. 당신의 문해력은 몇 등급?";
 
 export const metadata: Metadata = {
   title,
