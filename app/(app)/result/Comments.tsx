@@ -125,14 +125,20 @@ export default function Comments({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-4">
+        <label className="mb-1 block text-xs font-bold text-muted">
+          닉네임
+        </label>
         <input
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           maxLength={MAX_NICKNAME_LENGTH}
           placeholder="닉네임"
           aria-label="닉네임"
-          className="mb-2 h-10 w-full rounded-xl border-2 border-border bg-surface px-3 text-sm font-bold outline-none transition-colors focus:border-brand sm:w-48"
+          className="h-10 w-full rounded-xl border-2 border-border bg-surface px-3 text-sm font-bold outline-none transition-colors focus:border-brand sm:w-48"
         />
+        <label className="mb-1 mt-3 block text-xs font-bold text-muted">
+          댓글
+        </label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
