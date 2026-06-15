@@ -28,6 +28,21 @@ export default function Home() {
             승부 보세요.
           </p>
 
+          <div className="flex flex-col items-center gap-1 rounded-2xl bg-surface-muted px-5 py-3 lg:items-start">
+            <p className="text-xs font-bold tracking-widest text-muted">
+              국평오 삼행시
+            </p>
+            <p className="text-base font-bold leading-snug lg:text-lg">
+              <span className="text-brand">국</span>민 문해력
+            </p>
+            <p className="text-base font-bold leading-snug lg:text-lg">
+              <span className="text-brand">평</span>균을
+            </p>
+            <p className="text-base font-bold leading-snug lg:text-lg">
+              <span className="text-brand">오</span>르게
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
               <span
