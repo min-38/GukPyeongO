@@ -2,11 +2,104 @@
 
 import { useEffect, useState } from "react";
 
-import { QUESTION_TYPE_LABELS, type QuestionStat } from "@/app/lib/quiz";
+import {
+  MAX_REPORT_DETAIL_LENGTH,
+  QUESTION_TYPE_LABELS,
+  type QuestionStat,
+  REPORT_REASONS,
+  type ReportReason,
+} from "@/app/lib/quiz";
+
+function ReportForm({
+  questionId,
+  onClose,
+  onReported,
+}: {
+  questionId: string;
+  onClose: () => void;
+  onReported: () => void;
+}) {
+  const [reason, setReason] = useState<ReportReason | null>(null);
+  const [detail, setDetail] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (reason === null || posting) return;
+    setPosting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, reason, detail: detail.trim() }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error ?? "신고에 실패했어요.");
+        return;
+      }
+      onReported();
+    } catch {
+      setError("신고에 실패했어요.");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-surface-muted p-3">
+      <div className="flex flex-wrap gap-1.5">
+        {REPORT_REASONS.map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setReason(r)}
+            className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+              reason === r
+                ? "bg-brand text-brand-foreground"
+                : "bg-surface text-muted"
+            }`}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={detail}
+        onChange={(e) => setDetail(e.target.value)}
+        maxLength={MAX_REPORT_DETAIL_LENGTH}
+        rows={2}
+        placeholder="(선택) 자세한 내용을 적어주세요"
+        className="mt-2 w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+      />
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      <div className="mt-2 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-3 py-1.5 text-xs font-bold text-muted"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={reason === null || posting}
+          className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-brand-foreground active:scale-95 disabled:opacity-40"
+        >
+          {posting ? "접수 중..." : "신고하기"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function QuestionStats() {
   const [stats, setStats] = useState<QuestionStat[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reported, setReported] = useState<Record<string, true>>({});
 
   useEffect(() => {
     let active = true;
@@ -69,11 +162,39 @@ export default function QuestionStats() {
                   </span>
                 </div>
 
-                <p className="mt-1.5 text-xs text-muted">
-                  {s.attempts === 0
-                    ? "아직 응답이 없어요"
-                    : `${s.attempts}명 중 ${s.correctCount}명 정답`}
-                </p>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <p className="text-xs text-muted">
+                    {s.attempts === 0
+                      ? "아직 응답이 없어요"
+                      : `${s.attempts}명 중 ${s.correctCount}명 정답`}
+                  </p>
+                  {reported[s.id] ? (
+                    <span className="text-xs font-bold text-muted">
+                      신고 접수됨 ✓
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setReportingId((cur) => (cur === s.id ? null : s.id))
+                      }
+                      className="text-xs font-bold text-muted transition-colors hover:text-brand"
+                    >
+                      🚩 신고
+                    </button>
+                  )}
+                </div>
+
+                {reportingId === s.id && !reported[s.id] && (
+                  <ReportForm
+                    questionId={s.id}
+                    onClose={() => setReportingId(null)}
+                    onReported={() => {
+                      setReported((prev) => ({ ...prev, [s.id]: true }));
+                      setReportingId(null);
+                    }}
+                  />
+                )}
               </li>
             ))}
       </ul>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   type AdminQuestion,
+  type AdminReport,
   type Comment,
   QUESTION_FORMAT_LABELS,
   type QuestionFormat,
@@ -237,6 +238,7 @@ function QuestionForm({
 export default function AdminDashboard() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [reports, setReports] = useState<AdminReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminQuestion | "new" | null>(null);
 
@@ -249,11 +251,15 @@ export default function AdminDashboard() {
       fetch("/api/admin/comments").then(
         (r) => r.json() as Promise<{ comments: Comment[] }>
       ),
+      fetch("/api/admin/reports").then(
+        (r) => r.json() as Promise<{ reports: AdminReport[] }>
+      ),
     ])
-      .then(([q, c]) => {
+      .then(([q, c, rp]) => {
         if (!active) return;
         setQuestions(q.questions ?? []);
         setComments(c.comments ?? []);
+        setReports(rp.reports ?? []);
         setLoading(false);
       })
       .catch(() => {
@@ -263,6 +269,18 @@ export default function AdminDashboard() {
       active = false;
     };
   }, []);
+
+  async function setReportStatus(id: string, status: "open" | "resolved") {
+    const res = await fetch("/api/admin/reports", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok)
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status } : r))
+      );
+  }
 
   function handleSaved(q: AdminQuestion) {
     setQuestions((prev) =>
@@ -372,6 +390,52 @@ export default function AdminDashboard() {
                 )}
               </li>
             )
+          )}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-bold">
+          신고 ({reports.filter((r) => r.status === "open").length} / {reports.length})
+        </h2>
+        <ul className="mt-4 flex flex-col gap-3">
+          {reports.length === 0 ? (
+            <li className="py-4 text-center text-sm text-muted">
+              신고가 없습니다.
+            </li>
+          ) : (
+            reports.map((r) => (
+              <li
+                key={r.id}
+                className={`rounded-2xl border bg-surface p-4 ${
+                  r.status === "open" ? "border-red-300" : "border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-red-500">{r.reason}</span>
+                  <button
+                    onClick={() =>
+                      setReportStatus(
+                        r.id,
+                        r.status === "open" ? "resolved" : "open"
+                      )
+                    }
+                    className="font-medium text-brand"
+                  >
+                    {r.status === "open" ? "처리 완료로" : "미처리로"}
+                  </button>
+                </div>
+                <p className="mt-2 text-sm font-medium">{r.questionPrompt}</p>
+                {r.detail && (
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted">
+                    {r.detail}
+                  </p>
+                )}
+                <span className="mt-2 inline-block text-xs text-muted">
+                  {r.status === "open" ? "🔴 미처리" : "✅ 처리됨"}
+                </span>
+              </li>
+            ))
           )}
         </ul>
       </section>

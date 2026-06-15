@@ -88,6 +88,30 @@ export interface Comment {
   createdAt: string;
 }
 
+// 문제 오류 신고
+export const REPORT_REASONS = [
+  "정답이 이상해요",
+  "오타·표현 오류",
+  "문제가 모호해요",
+  "기타",
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+export const MAX_REPORT_DETAIL_LENGTH = 200;
+
+export interface Report {
+  id: string;
+  questionId: string;
+  reason: string;
+  detail: string | null;
+  status: "open" | "resolved";
+  createdAt: string;
+}
+
+// 관리자 신고 목록용 (어떤 문제인지 prompt 동봉)
+export interface AdminReport extends Report {
+  questionPrompt: string;
+}
+
 // 등급별 칭호 (톤앤매너: 놀리되 모욕하지 않기)
 export const GRADE_TITLES: Record<number, string> = {
   1: "국평오 정복자",
