@@ -92,8 +92,8 @@ export default function ResultPage() {
 
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
-     {/* 왼쪽: 등급·통계·공유 (데스크톱에서 sticky 카드) */}
-     <div className="lg:sticky lg:top-12 lg:self-start lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+     {/* 왼쪽 위: 등급·통계·공유 카드 */}
+     <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="animate-pop flex flex-col items-center text-center">
         <span className="text-6xl">{theme.emoji}</span>
         <p className="mt-3 text-sm font-bold tracking-widest text-muted">
@@ -171,10 +171,13 @@ export default function ResultPage() {
       </Link>
      </div>
 
-     {/* 오른쪽: 문항 통계 + 댓글 */}
-     <div className="lg:[&>section:first-child]:mt-0">
+     {/* 오른쪽 전체: 댓글 (데스크톱) */}
+     <div className="lg:col-start-2 lg:row-span-2 lg:[&>section]:mt-0">
       <Comments grade={result.grade} gradeToken={result.gradeToken} />
+     </div>
 
+     {/* 왼쪽 아래: 문항 통계 */}
+     <div className="lg:col-start-1 lg:row-start-2 lg:[&>section]:mt-0">
       <QuestionStats results={result.perQuestion} />
      </div>
     </main>
