@@ -91,7 +91,9 @@ export default function ResultPage() {
   const avgSec = (result.avgReactionMs / 1000).toFixed(1);
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-8">
+    <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
+     {/* 왼쪽: 등급·통계·공유 (데스크톱에서 sticky 카드) */}
+     <div className="lg:sticky lg:top-12 lg:self-start lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="animate-pop flex flex-col items-center text-center">
         <span className="text-6xl">{theme.emoji}</span>
         <p className="mt-3 text-sm font-bold tracking-widest text-muted">
@@ -167,10 +169,14 @@ export default function ResultPage() {
       >
         다시 도전
       </Link>
+     </div>
 
+     {/* 오른쪽: 문항 통계 + 댓글 */}
+     <div className="lg:[&>section:first-child]:mt-0">
       <QuestionStats />
 
       <Comments grade={result.grade} gradeToken={result.gradeToken} />
+     </div>
     </main>
   );
 }

@@ -151,7 +151,8 @@ export default function TestPage() {
   const progress = (index / questions.length) * 100;
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-7">
+    <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
+     <div className="flex w-full flex-1 flex-col lg:max-w-2xl lg:flex-none lg:rounded-[2.5rem] lg:border lg:border-border lg:bg-surface lg:p-12 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-bold tabular-nums">
           {index + 1}
@@ -208,7 +209,7 @@ export default function TestPage() {
             </button>
           </form>
         ) : (
-          <div className="mt-7 flex flex-col gap-3">
+          <div className="mt-7 flex flex-col gap-3 lg:grid lg:grid-cols-2">
             {q.choices.map((choice, i) => (
               <button
                 key={i}
@@ -225,6 +226,7 @@ export default function TestPage() {
           </div>
         )}
       </div>
+     </div>
     </main>
   );
 }
