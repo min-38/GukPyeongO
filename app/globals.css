@@ -18,15 +18,15 @@
   --accent: #facc15;
   --accent-foreground: #2a2300;
 
-  /* decorative page backdrop (shown around the app card on larger screens) */
+  /* decorative page backdrop (gradient layers only; base color set separately).
+     뷰포트에 고정(no-repeat/cover)해 긴 페이지에서도 반복되지 않게 한다. */
   --backdrop: radial-gradient(
       1200px 600px at 15% -10%,
       #ddd6fe 0%,
       transparent 55%
     ),
     radial-gradient(900px 600px at 110% 10%, #fde68a 0%, transparent 50%),
-    radial-gradient(900px 700px at 50% 120%, #fbcfe8 0%, transparent 55%),
-    var(--background);
+    radial-gradient(900px 700px at 50% 120%, #fbcfe8 0%, transparent 55%);
 
   /* layout */
   --app-max-width: 480px;
@@ -73,8 +73,7 @@
         transparent 55%
       ),
       radial-gradient(900px 600px at 110% 10%, #422006 0%, transparent 50%),
-      radial-gradient(900px 700px at 50% 120%, #4a044e 0%, transparent 55%),
-      var(--background);
+      radial-gradient(900px 700px at 50% 120%, #4a044e 0%, transparent 55%);
   }
 }
 
@@ -111,7 +110,11 @@
 }
 
 body {
-  background: var(--backdrop) fixed;
+  background-color: var(--background);
+  background-image: var(--backdrop);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: var(--foreground);
   font-family: var(--font-sans), "Apple SD Gothic Neo", "Malgun Gothic",
     system-ui, sans-serif;
