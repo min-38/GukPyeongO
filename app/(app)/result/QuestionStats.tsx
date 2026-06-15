@@ -157,32 +157,24 @@ export default function QuestionStats({
                 className="h-20 animate-pulse rounded-2xl bg-surface-muted"
               />
             ))
-          : displayed.map((s, i) => (
-              <li
-                key={s.id}
-                className="rounded-2xl border border-border bg-surface p-4"
-              >
+          : displayed.map((s, i) => {
+              const mine = myCorrect.get(s.id); // true/false/undefined
+              const cardCls =
+                mine === undefined
+                  ? "border-border bg-surface"
+                  : mine
+                    ? "border-green-500/50 bg-green-500/10"
+                    : "border-red-500/50 bg-red-500/10";
+              return (
+              <li key={s.id} className={`rounded-2xl border p-4 ${cardCls}`}>
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium leading-snug">
                     <span className="text-muted">Q{i + 1}. </span>
                     {s.prompt}
                   </p>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
-                      {QUESTION_TYPE_LABELS[s.type]}
-                    </span>
-                    {myCorrect.has(s.id) && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                          myCorrect.get(s.id)
-                            ? "bg-green-500/15 text-green-600"
-                            : "bg-red-500/10 text-red-500"
-                        }`}
-                      >
-                        {myCorrect.get(s.id) ? "내가 맞힘 ✅" : "내가 틀림"}
-                      </span>
-                    )}
-                  </div>
+                  <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
+                    {QUESTION_TYPE_LABELS[s.type]}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">
@@ -231,7 +223,8 @@ export default function QuestionStats({
                   />
                 )}
               </li>
-            ))}
+              );
+            })}
       </ul>
     </section>
   );
