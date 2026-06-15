@@ -10,9 +10,10 @@ drop table if exists public.questions cascade;
 
 create table public.questions (
   id uuid primary key default gen_random_uuid(),
-  type text not null check (type in ('notice', 'hanja', 'time', 'confusable')),
+  type text not null
+    check (type in ('notice', 'hanja', 'time', 'confusable', 'idiom', 'literary')),
   format text not null default 'multiple_choice'
-    check (format in ('multiple_choice', 'short_answer')),
+    check (format in ('multiple_choice', 'short_answer', 'spacing')),
   prompt text not null,
   choices jsonb not null,
   answer_index smallint not null check (answer_index >= 0),

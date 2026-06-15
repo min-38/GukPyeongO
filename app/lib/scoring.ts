@@ -23,18 +23,29 @@ function normalize(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
 }
 
+// 띄어쓰기 비교용 정규화: 띄어쓰기가 정답 기준이므로 공백을 제거하지 않는다.
+// 앞뒤 공백 제거 + 중복 공백 1칸 + 소문자화만 적용한다.
+function normalizeSpacing(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 // 한 문항의 응답 여부와 정답 여부를 형식에 맞게 판정한다.
 function judge(
   key: AnswerKeyEntry,
   item: ScoreRequestItem | undefined
 ): { answered: boolean; correct: boolean } {
   if (!item) return { answered: false, correct: false };
-  if (key.format === "short_answer") {
+  if (key.format === "short_answer" || key.format === "spacing") {
     const text = item.text;
     if (text == null || text.trim().length === 0)
       return { answered: false, correct: false };
-    const norm = normalize(text);
-    const correct = key.answers.some((a) => normalize(a) === norm);
+    const norm =
+      key.format === "spacing" ? normalizeSpacing(text) : normalize(text);
+    const correct = key.answers.some((a) =>
+      key.format === "spacing"
+        ? normalizeSpacing(a) === norm
+        : normalize(a) === norm
+    );
     return { answered: true, correct };
   }
   // multiple_choice

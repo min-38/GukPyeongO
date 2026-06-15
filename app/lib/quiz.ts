@@ -1,19 +1,28 @@
-// 문제 유형: 공지문, 한자어, 시간 표현, 혼동 표현
-export type QuestionType = "notice" | "hanja" | "time" | "confusable";
+// 문제 유형: 공지문, 한자어, 시간 표현, 혼동 표현, 사자성어, 문학
+export type QuestionType =
+  | "notice"
+  | "hanja"
+  | "time"
+  | "confusable"
+  | "idiom"
+  | "literary";
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   notice: "공지문",
   hanja: "한자어",
   time: "시간 표현",
   confusable: "혼동 표현",
+  idiom: "사자성어",
+  literary: "문학",
 };
 
-// 문제 형식: 객관식(보기 선택) / 단답형(직접 입력)
-export type QuestionFormat = "multiple_choice" | "short_answer";
+// 문제 형식: 객관식(보기 선택) / 단답형(직접 입력) / 띄어쓰기(문장 교정)
+export type QuestionFormat = "multiple_choice" | "short_answer" | "spacing";
 
 export const QUESTION_FORMAT_LABELS: Record<QuestionFormat, string> = {
   multiple_choice: "객관식",
   short_answer: "단답형",
+  spacing: "띄어쓰기",
 };
 
 // 한 응시당 문제 풀에서 무작위로 출제하는 문제 수

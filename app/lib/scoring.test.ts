@@ -146,3 +146,24 @@ describe("scoreSubmission - 단답형(short_answer)", () => {
     expect(r.grade).toBe(1);
   });
 });
+
+describe("scoreSubmission - 띄어쓰기(spacing)", () => {
+  const spKey: AnswerKey = {
+    p1: {
+      type: "confusable",
+      format: "spacing",
+      answerIndex: 0,
+      answers: ["나는 학교에 간다"],
+    },
+  };
+
+  it("띄어쓰기가 정확하면 정답 (앞뒤/중복 공백은 관대)", () => {
+    const r = scoreSubmission(spKey, [typeText("p1", "  나는  학교에 간다 ")]);
+    expect(r.correctCount).toBe(1);
+  });
+
+  it("띄어쓰기가 틀리면 오답 (공백을 무시하지 않음)", () => {
+    const r = scoreSubmission(spKey, [typeText("p1", "나는학교에간다")]);
+    expect(r.correctCount).toBe(0);
+  });
+});

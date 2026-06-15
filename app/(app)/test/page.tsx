@@ -326,7 +326,7 @@ export default function TestPage() {
           </div>
         )}
 
-        {q.format === "short_answer" ? (
+        {q.format !== "multiple_choice" ? (
           <form
             className="mt-7 flex flex-col gap-3"
             onSubmit={(e) => {
@@ -335,12 +335,21 @@ export default function TestPage() {
               answer(null, t.length > 0 ? t : null);
             }}
           >
+            {q.format === "spacing" && (
+              <p className="text-sm font-medium text-muted">
+                ✍️ 띄어쓰기를 바르게 고쳐 문장을 다시 입력하세요.
+              </p>
+            )}
             <input
               autoFocus
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               disabled={feedback != null}
-              placeholder="정답을 입력하세요"
+              placeholder={
+                q.format === "spacing"
+                  ? "띄어쓰기를 고쳐 입력"
+                  : "정답을 입력하세요"
+              }
               className="h-14 w-full rounded-2xl border-2 border-border bg-surface px-4 text-lg font-medium outline-none transition-colors focus:border-brand disabled:opacity-60"
             />
             <button
