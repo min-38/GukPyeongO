@@ -234,7 +234,7 @@ export default function TestPage() {
         ),
         emoji: "✅",
         title: "바로 채점돼요",
-        desc: "답을 고르면 정답/오답을 즉시 알려줘요. 틀려도 정답은 비밀!",
+        desc: "답을 고르면 정답/오답을 즉시 알려줘요.\n틀려도 정답은 비밀!",
       },
       {
         visual: (
@@ -295,15 +295,26 @@ export default function TestPage() {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              isLast ? dismissIntro() : setIntroStep((s) => s + 1)
-            }
-            className="mt-5 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
-          >
-            {isLast ? "시작하기" : "다음"}
-          </button>
+          <div className="mt-5 flex gap-3">
+            {introStep > 0 && (
+              <button
+                type="button"
+                onClick={() => setIntroStep((s) => s - 1)}
+                className="flex h-14 items-center justify-center rounded-2xl border-2 border-border px-6 text-lg font-bold transition-colors hover:bg-surface-muted active:scale-[0.98]"
+              >
+                이전
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                isLast ? dismissIntro() : setIntroStep((s) => s + 1)
+              }
+              className="flex h-14 flex-1 items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+            >
+              {isLast ? "시작하기" : "다음"}
+            </button>
+          </div>
         </div>
       </main>
     );

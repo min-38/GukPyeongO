@@ -1,6 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+
+import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 
 export default function Home() {
+  // 등급 배지 호버(데스크톱)/탭(모바일·태블릿) 시 미리보기에 표시할 등급
+  const [activeGrade, setActiveGrade] = useState(5);
+  const theme = gradeTheme(activeGrade);
+
   return (
     <main className="flex flex-1 flex-col px-6 pb-8 pt-12 lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-16 lg:py-0">
       {/* 왼쪽: 히어로 + CTA */}
@@ -31,18 +40,29 @@ export default function Home() {
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
-              <span
+              <button
                 key={g}
-                className={`grid h-8 w-8 place-items-center rounded-lg text-sm font-bold lg:h-10 lg:w-10 lg:text-base ${
-                  g === 5
+                type="button"
+                onMouseEnter={() => setActiveGrade(g)}
+                onClick={() => setActiveGrade(g)}
+                className={`grid h-8 w-8 place-items-center rounded-lg text-sm font-bold transition-colors lg:h-10 lg:w-10 lg:text-base ${
+                  g === activeGrade
                     ? "bg-brand text-brand-foreground"
                     : "bg-surface-muted text-muted"
                 }`}
               >
                 {g}
-              </span>
+              </button>
             ))}
           </div>
+
+          {/* 모바일·태블릿: 탭한 등급의 캐릭터 미리보기 (데스크톱은 오른쪽 카드로 표시) */}
+          <p className="text-sm font-bold text-muted lg:hidden">
+            {activeGrade}등급 ·{" "}
+            <span style={{ color: theme.color }}>
+              {theme.emoji} {GRADE_TITLES[activeGrade]}
+            </span>
+          </p>
         </div>
 
         <Link
@@ -60,18 +80,24 @@ export default function Home() {
       {/* 오른쪽: 데스크톱 전용 비주얼 (샘플 결과 카드) */}
       <div className="hidden lg:flex lg:items-center lg:justify-center">
         <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 text-center shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-          <span className="text-7xl">🧐</span>
+          <span className="text-7xl">{theme.emoji}</span>
           <p className="mt-3 text-sm font-bold tracking-widest text-muted">
             나의 문해력 캐릭터
           </p>
-          <p className="mt-1 font-display text-5xl leading-tight tracking-tight text-brand">
-            균형 잡힌 탐독가
+          <p
+            className="mt-1 font-display text-5xl leading-tight tracking-tight transition-colors"
+            style={{ color: theme.color }}
+          >
+            {GRADE_TITLES[activeGrade]}
           </p>
-          <p className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-sm font-extrabold text-brand-foreground">
-            5등급 · 9등급 중
+          <p
+            className="mt-3 inline-block rounded-full px-4 py-1.5 text-sm font-extrabold text-white transition-colors"
+            style={{ backgroundColor: theme.color }}
+          >
+            {activeGrade}등급
           </p>
           <p className="mt-4 text-sm text-muted">
-            결과는 이렇게 나와요. 당신은?
+            등급 배지에 마우스를 올려보세요. 당신은?
           </p>
         </div>
       </div>
