@@ -26,6 +26,8 @@ export default function TestPage() {
     selectedIndex: number | null;
     correct: boolean | null;
   } | null>(null);
+  // 객관식 보기 표시 순서 (문제별 1회 셔플, 원래 인덱스 배열). questions와 같은 인덱스로 대응.
+  const [choiceOrders, setChoiceOrders] = useState<number[][]>([]);
 
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
@@ -47,6 +49,16 @@ export default function TestPage() {
         if (!active) return;
         quizTokenRef.current = data.quizToken;
         setQuestions(data.questions);
+        setChoiceOrders(
+          data.questions.map((qq) => {
+            const order = qq.choices.map((_, i) => i);
+            for (let i = order.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [order[i], order[j]] = [order[j], order[i]];
+            }
+            return order;
+          })
+        );
         setRemaining(data.questions[0]?.timeLimitSec ?? 0);
         setPhase("playing");
       })
@@ -189,6 +201,7 @@ export default function TestPage() {
 
   const q = questions[index];
   const progress = (index / questions.length) * 100;
+  const order = choiceOrders[index] ?? q.choices.map((_, i) => i);
 
   return (
     <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
@@ -263,8 +276,9 @@ export default function TestPage() {
           </form>
         ) : (
           <div className="mt-7 flex flex-col gap-3 lg:grid lg:grid-cols-2">
-            {q.choices.map((choice, i) => {
-              const sel = feedback?.selectedIndex === i;
+            {order.map((originalIndex, pos) => {
+              const choice = q.choices[originalIndex];
+              const sel = feedback?.selectedIndex === originalIndex;
               let state =
                 "border-border bg-surface hover:border-brand hover:bg-surface-muted";
               if (feedback) {
@@ -278,14 +292,14 @@ export default function TestPage() {
               }
               return (
                 <button
-                  key={i}
+                  key={originalIndex}
                   type="button"
                   disabled={feedback != null}
-                  onClick={() => answer(i, null)}
+                  onClick={() => answer(originalIndex, null)}
                   className={`group flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-4 text-left transition-all active:scale-[0.99] ${state}`}
                 >
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-muted text-sm font-bold text-muted">
-                    {String.fromCharCode(65 + i)}
+                    {String.fromCharCode(65 + pos)}
                   </span>
                   <span className="text-base font-medium">{choice}</span>
                 </button>
