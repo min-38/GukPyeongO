@@ -40,6 +40,7 @@ export default function TestPage() {
       return true;
     }
   });
+  const [introStep, setIntroStep] = useState(0); // 튜토리얼 단계(0-base)
 
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
@@ -192,55 +193,117 @@ export default function TestPage() {
   }
 
   if (showIntro) {
+    const steps = [
+      {
+        visual: (
+          <div className="flex flex-wrap justify-center gap-2">
+            {["객관식", "단답형", "띄어쓰기"].map((t) => (
+              <span
+                key={t}
+                className="rounded-full bg-brand/10 px-4 py-2 text-sm font-bold text-brand"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        ),
+        emoji: "🧐",
+        title: "이렇게 출제돼요",
+        desc: "객관식, 단답형, 띄어쓰기 등 다양한 형식으로 문제가 나와요.",
+      },
+      {
+        visual: (
+          <span className="inline-flex animate-pulse items-center gap-1 rounded-full bg-red-500 px-5 py-2 text-lg font-bold tabular-nums text-white">
+            ⏱ 5s
+          </span>
+        ),
+        emoji: "⏱️",
+        title: "시간 제한이 있어요",
+        desc: "문제마다 제한 시간이 있어요. 시간이 지나면 자동으로 다음 문제!",
+      },
+      {
+        visual: (
+          <div className="flex flex-wrap justify-center gap-2">
+            <span className="rounded-2xl bg-green-500/10 px-4 py-2 text-base font-extrabold text-green-600">
+              정답이에요! 🎉
+            </span>
+            <span className="rounded-2xl bg-red-500/10 px-4 py-2 text-base font-extrabold text-red-500">
+              틀렸어요 😅
+            </span>
+          </div>
+        ),
+        emoji: "✅",
+        title: "바로 채점돼요",
+        desc: "답을 고르면 정답/오답을 즉시 알려줘요. 틀려도 정답은 비밀!",
+      },
+      {
+        visual: (
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-4xl">🦉</span>
+            <span className="font-display text-2xl text-brand">어휘 마스터</span>
+            <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-brand-foreground">
+              1등급
+            </span>
+          </div>
+        ),
+        emoji: "🏆",
+        title: "캐릭터로 결과 확인",
+        desc: "다 풀면 내 문해력 캐릭터와 등급(1~9)을 확인하고 공유할 수 있어요.",
+      },
+    ];
+    const step = steps[introStep];
+    const isLast = introStep === steps.length - 1;
+
     return (
       <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
         <div className="flex w-full flex-1 flex-col lg:max-w-2xl lg:flex-none lg:rounded-[2.5rem] lg:border lg:border-border lg:bg-surface lg:p-12 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-          <div className="animate-rise flex flex-1 flex-col">
-            <span className="w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
-              안내
+          {/* 상단: 단계 표시 + 건너뛰기 */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-widest text-muted">
+              {introStep + 1} / {steps.length}
             </span>
-            <h2 className="mt-4 text-2xl font-extrabold leading-relaxed">
-              📖 시작하기 전에
-            </h2>
-
-            <ul className="mt-7 flex flex-col gap-3">
-              {[
-                "문제는 객관식 또는 단답형으로 출제돼요.",
-                "문제마다 제한 시간이 있어요. 시간이 지나면 자동으로 다음 문제로 넘어가요.",
-                "답을 고르면 정답/오답이 바로 표시돼요. (틀려도 정답은 알려주지 않아요!)",
-                "10문제를 모두 풀면 1~9등급 결과를 확인할 수 있어요.",
-              ].map((line, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 rounded-2xl bg-surface-muted px-4 py-3"
-                >
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="text-base font-medium leading-relaxed">
-                    {line}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-auto flex flex-col gap-3 pt-8 lg:flex-row-reverse">
-              <button
-                type="button"
-                onClick={dismissIntro}
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
-              >
-                시작하기
-              </button>
-              <button
-                type="button"
-                onClick={dismissIntro}
-                className="flex h-14 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-2xl border-2 border-border text-base font-bold text-muted transition-colors hover:bg-surface-muted active:scale-[0.99] lg:w-auto lg:px-8"
-              >
-                건너뛰기
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={dismissIntro}
+              className="text-sm font-bold text-muted transition-colors hover:text-foreground"
+            >
+              건너뛰기
+            </button>
           </div>
+
+          <div
+            key={introStep}
+            className="animate-rise mt-6 flex flex-1 flex-col items-center justify-center text-center"
+          >
+            <span className="text-6xl">{step.emoji}</span>
+            <h2 className="mt-5 text-2xl font-extrabold">{step.title}</h2>
+            <p className="mt-3 max-w-xs text-base leading-relaxed text-muted">
+              {step.desc}
+            </p>
+            <div className="mt-8">{step.visual}</div>
+          </div>
+
+          {/* 단계 인디케이터(점) */}
+          <div className="mt-8 flex justify-center gap-2">
+            {steps.map((_, i) => (
+              <span
+                key={i}
+                className={`h-2 rounded-full transition-all ${
+                  i === introStep ? "w-6 bg-brand" : "w-2 bg-border"
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              isLast ? dismissIntro() : setIntroStep((s) => s + 1)
+            }
+            className="mt-5 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+          >
+            {isLast ? "시작하기" : "다음"}
+          </button>
         </div>
       </main>
     );
