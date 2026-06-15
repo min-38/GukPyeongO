@@ -14,6 +14,9 @@ import {
 
 type Phase = "loading" | "playing" | "submitting" | "error";
 
+// 튜토리얼을 본 적이 있으면 다음부터는 자동으로 건너뛴다.
+const TUTORIAL_SEEN_KEY = "gukpyeongo:tutorial-seen";
+
 export default function TestPage() {
   const router = useRouter();
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
@@ -28,6 +31,15 @@ export default function TestPage() {
   } | null>(null);
   // 객관식 보기 표시 순서 (문제별 1회 셔플, 원래 인덱스 배열). questions와 같은 인덱스로 대응.
   const [choiceOrders, setChoiceOrders] = useState<number[][]>([]);
+  // 시작 전 튜토리얼 표시 여부 (건너뛰기 가능, 한 번 보면 다음부터 자동 생략)
+  const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return localStorage.getItem(TUTORIAL_SEEN_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
 
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
@@ -151,8 +163,9 @@ export default function TestPage() {
   );
 
   // 문제별 제한시간 타이머 (표시용 카운트다운 + 시간초과 자동 진행)
+  // 튜토리얼이 떠 있는 동안은 타이머를 시작하지 않는다.
   useEffect(() => {
-    if (phase !== "playing" || questions.length === 0) return;
+    if (phase !== "playing" || questions.length === 0 || showIntro) return;
     lockRef.current = false;
     startRef.current = performance.now();
     const limit = questions[index].timeLimitSec;
@@ -167,7 +180,71 @@ export default function TestPage() {
       clearInterval(tick);
       clearTimeout(deadline);
     };
-  }, [index, phase, questions, answer]);
+  }, [index, phase, questions, answer, showIntro]);
+
+  function dismissIntro() {
+    setShowIntro(false);
+    try {
+      localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+    } catch {
+      /* localStorage 접근 불가 시 무시 */
+    }
+  }
+
+  if (showIntro) {
+    return (
+      <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
+        <div className="flex w-full flex-1 flex-col lg:max-w-2xl lg:flex-none lg:rounded-[2.5rem] lg:border lg:border-border lg:bg-surface lg:p-12 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+          <div className="animate-rise flex flex-1 flex-col">
+            <span className="w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+              안내
+            </span>
+            <h2 className="mt-4 text-2xl font-extrabold leading-relaxed">
+              📖 시작하기 전에
+            </h2>
+
+            <ul className="mt-7 flex flex-col gap-3">
+              {[
+                "문제는 객관식 또는 단답형으로 출제돼요.",
+                "문제마다 제한 시간이 있어요. 시간이 지나면 자동으로 다음 문제로 넘어가요.",
+                "답을 고르면 정답/오답이 바로 표시돼요. (틀려도 정답은 알려주지 않아요!)",
+                "10문제를 모두 풀면 1~9등급 결과를 확인할 수 있어요.",
+              ].map((line, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 rounded-2xl bg-surface-muted px-4 py-3"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="text-base font-medium leading-relaxed">
+                    {line}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-auto flex flex-col gap-3 pt-8 lg:flex-row-reverse">
+              <button
+                type="button"
+                onClick={dismissIntro}
+                className="flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+              >
+                시작하기
+              </button>
+              <button
+                type="button"
+                onClick={dismissIntro}
+                className="flex h-14 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-2xl border-2 border-border text-base font-bold text-muted transition-colors hover:bg-surface-muted active:scale-[0.99] lg:w-auto lg:px-8"
+              >
+                건너뛰기
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (phase === "loading" || phase === "submitting") {
     return (
