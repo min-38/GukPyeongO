@@ -21,6 +21,11 @@ export default function TestPage() {
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [textInput, setTextInput] = useState(""); // 단답형 입력
+  // 풀이 직후 정답/오답 피드백 (correct=null이면 확인 중). 정답 내용은 받지 않음.
+  const [feedback, setFeedback] = useState<{
+    selectedIndex: number | null;
+    correct: boolean | null;
+  } | null>(null);
 
   const answersRef = useRef<ScoreRequestItem[]>([]);
   const startRef = useRef(0);
@@ -74,6 +79,18 @@ export default function TestPage() {
     [router]
   );
 
+  // 다음 문항으로 진행 (마지막이면 제출)
+  const advance = useCallback(() => {
+    setFeedback(null);
+    if (index + 1 < questions.length) {
+      setTextInput("");
+      setRemaining(questions[index + 1].timeLimitSec);
+      setIndex(index + 1);
+    } else {
+      void submit(answersRef.current);
+    }
+  }, [index, questions, submit]);
+
   // 응답 처리(객관식 클릭 / 단답형 제출 / 시간초과 공통)
   const answer = useCallback(
     (choiceIndex: number | null, text: string | null) => {
@@ -86,21 +103,39 @@ export default function TestPage() {
       const reactionMs = answered
         ? Math.round(performance.now() - startRef.current)
         : 0;
-      const items: ScoreRequestItem[] = [
+      answersRef.current = [
         ...answersRef.current,
         { questionId: q.id, choiceIndex, text, reactionMs },
       ];
-      answersRef.current = items;
 
-      if (index + 1 < questions.length) {
-        setTextInput("");
-        setRemaining(questions[index + 1].timeLimitSec);
-        setIndex(index + 1);
-      } else {
-        void submit(items);
+      // 미응답(시간초과)은 피드백 없이 바로 진행
+      if (!answered) {
+        advance();
+        return;
       }
+
+      // 선택 즉시 표시 후, 서버에서 정답/오답만 확인 (정답 내용은 받지 않음)
+      setFeedback({ selectedIndex: choiceIndex, correct: null });
+      fetch("/api/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: q.id,
+          choiceIndex,
+          text,
+          quizToken: quizTokenRef.current,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((d: { correct: boolean }) =>
+          setFeedback({ selectedIndex: choiceIndex, correct: d.correct })
+        )
+        .catch(() => {
+          /* 확인 실패 시 그대로 진행 */
+        })
+        .finally(() => window.setTimeout(advance, 1100));
     },
-    [questions, index, submit]
+    [questions, index, advance]
   );
 
   // 문제별 제한시간 타이머 (표시용 카운트다운 + 시간초과 자동 진행)
@@ -189,6 +224,18 @@ export default function TestPage() {
           {q.prompt}
         </h2>
 
+        {feedback?.correct != null && (
+          <div
+            className={`mt-5 rounded-2xl px-4 py-3 text-center text-base font-extrabold ${
+              feedback.correct
+                ? "bg-green-500/10 text-green-600"
+                : "bg-red-500/10 text-red-500"
+            }`}
+          >
+            {feedback.correct ? "정답이에요! 🎉" : "틀렸어요 😅"}
+          </div>
+        )}
+
         {q.format === "short_answer" ? (
           <form
             className="mt-7 flex flex-col gap-3"
@@ -202,12 +249,13 @@ export default function TestPage() {
               autoFocus
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
+              disabled={feedback != null}
               placeholder="정답을 입력하세요"
-              className="h-14 w-full rounded-2xl border-2 border-border bg-surface px-4 text-lg font-medium outline-none transition-colors focus:border-brand"
+              className="h-14 w-full rounded-2xl border-2 border-border bg-surface px-4 text-lg font-medium outline-none transition-colors focus:border-brand disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={textInput.trim().length === 0}
+              disabled={feedback != null || textInput.trim().length === 0}
               className="flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] disabled:opacity-40"
             >
               제출
@@ -215,19 +263,34 @@ export default function TestPage() {
           </form>
         ) : (
           <div className="mt-7 flex flex-col gap-3 lg:grid lg:grid-cols-2">
-            {q.choices.map((choice, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => answer(i, null)}
-                className="group flex w-full items-center gap-3 rounded-2xl border-2 border-border bg-surface px-4 py-4 text-left transition-all hover:border-brand hover:bg-surface-muted active:scale-[0.99]"
-              >
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-muted text-sm font-bold text-muted transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
-                  {String.fromCharCode(65 + i)}
-                </span>
-                <span className="text-base font-medium">{choice}</span>
-              </button>
-            ))}
+            {q.choices.map((choice, i) => {
+              const sel = feedback?.selectedIndex === i;
+              let state =
+                "border-border bg-surface hover:border-brand hover:bg-surface-muted";
+              if (feedback) {
+                state = sel
+                  ? feedback.correct == null
+                    ? "border-brand bg-brand/5"
+                    : feedback.correct
+                      ? "border-green-500 bg-green-500/10"
+                      : "border-red-500 bg-red-500/10"
+                  : "border-border opacity-50";
+              }
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={feedback != null}
+                  onClick={() => answer(i, null)}
+                  className={`group flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-4 text-left transition-all active:scale-[0.99] ${state}`}
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-muted text-sm font-bold text-muted">
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="text-base font-medium">{choice}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
