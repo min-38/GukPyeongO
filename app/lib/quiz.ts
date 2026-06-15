@@ -68,6 +68,16 @@ export interface AdminQuestion extends PublicQuestion {
   answers: string[];
 }
 
+// 문제별 통계 (맞춘 사람 수·정답률) — 공개 노출용, 정답은 포함하지 않는다.
+export interface QuestionStat {
+  id: string;
+  type: QuestionType;
+  prompt: string;
+  attempts: number;
+  correctCount: number;
+  correctRate: number; // 0~100 정수 (attempts가 0이면 0)
+}
+
 // 댓글
 export const MAX_COMMENT_LENGTH = 300;
 

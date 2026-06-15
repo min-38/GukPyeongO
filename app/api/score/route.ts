@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getAnswerKey } from "@/app/lib/questions.server";
+import {
+  bumpQuestionStats,
+  getAnswerKey,
+} from "@/app/lib/questions.server";
 import type { ScoreRequestItem } from "@/app/lib/quiz";
 import { createGradeToken, getSigningSecret } from "@/app/lib/score-token";
-import { scoreSubmission } from "@/app/lib/scoring";
+import { perQuestionResults, scoreSubmission } from "@/app/lib/scoring";
 
 function isValidItem(value: unknown): value is ScoreRequestItem {
   if (typeof value !== "object" || value === null) return false;
@@ -31,7 +34,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const result = scoreSubmission(await getAnswerKey(), items);
+  const answerKey = await getAnswerKey();
+  const result = scoreSubmission(answerKey, items);
+
+  // 문항별 통계 집계 (실패해도 채점 결과 반환에는 영향 주지 않음)
+  try {
+    await bumpQuestionStats(perQuestionResults(answerKey, items));
+  } catch {
+    // 통계 갱신 실패는 무시
+  }
+
   const gradeToken = createGradeToken(result.grade, getSigningSecret());
   return NextResponse.json({ ...result, gradeToken });
 }

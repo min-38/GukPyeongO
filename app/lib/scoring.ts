@@ -52,6 +52,24 @@ export function gradeForCorrect(correct: number, total: number): number {
   return Math.min(9, Math.max(1, grade));
 }
 
+// 문항별 응답/정답 여부 (통계 집계용). 정답 내용은 노출하지 않는다.
+export interface PerQuestionResult {
+  questionId: string;
+  answered: boolean;
+  correct: boolean;
+}
+
+export function perQuestionResults(
+  answerKey: AnswerKey,
+  items: ScoreRequestItem[]
+): PerQuestionResult[] {
+  const submitted = new Map(items.map((it) => [it.questionId, it]));
+  return Object.entries(answerKey).map(([questionId, key]) => {
+    const { answered, correct } = judge(key, submitted.get(questionId));
+    return { questionId, answered, correct };
+  });
+}
+
 export function scoreSubmission(
   answerKey: AnswerKey,
   items: ScoreRequestItem[]

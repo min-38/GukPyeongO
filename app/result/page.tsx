@@ -11,6 +11,7 @@ import {
 } from "@/app/lib/quiz";
 
 import Comments from "./Comments";
+import QuestionStats from "./QuestionStats";
 
 // sessionStorage의 채점 결과를 읽는다. getSnapshot은 참조가 안정적이어야 하므로
 // raw 문자열이 같으면 파싱 결과를 캐시해 동일 객체를 반환한다.
@@ -166,6 +167,8 @@ export default function ResultPage() {
       >
         다시 도전
       </Link>
+
+      <QuestionStats />
 
       <Comments grade={result.grade} gradeToken={result.gradeToken} />
     </main>

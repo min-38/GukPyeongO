@@ -1,7 +1,12 @@
 import "server-only";
 
-import type { PublicQuestion, QuestionFormat, QuestionType } from "./quiz";
-import type { AnswerKey } from "./scoring";
+import type {
+  PublicQuestion,
+  QuestionFormat,
+  QuestionStat,
+  QuestionType,
+} from "./quiz";
+import type { AnswerKey, PerQuestionResult } from "./scoring";
 import { getSupabaseAdmin } from "./supabase-admin.server";
 
 // 정답을 포함한 서버 전용 문제 형태. service-role로만 조회하므로
@@ -63,6 +68,43 @@ export async function getAnswerKey(): Promise<AnswerKey> {
     };
   }
   return key;
+}
+
+// 문항별 통계 (공개용). 정답은 포함하지 않고 prompt/시도/정답수/정답률만 반환.
+export async function getQuestionStats(): Promise<QuestionStat[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("questions")
+    .select("id, type, prompt, attempts, correct_count")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error("통계를 불러오지 못했습니다.");
+
+  return (data ?? []).map((row) => {
+    const attempts = row.attempts ?? 0;
+    const correctCount = row.correct_count ?? 0;
+    return {
+      id: row.id as string,
+      type: row.type as QuestionType,
+      prompt: row.prompt as string,
+      attempts,
+      correctCount,
+      correctRate:
+        attempts > 0 ? Math.round((correctCount / attempts) * 100) : 0,
+    };
+  });
+}
+
+// 응답한 문항들의 통계를 원자적으로 증가시킨다 (best-effort).
+export async function bumpQuestionStats(
+  results: PerQuestionResult[]
+): Promise<void> {
+  const updates = results
+    .filter((r) => r.answered)
+    .map((r) => ({ id: r.questionId, correct: r.correct }));
+  if (updates.length === 0) return;
+  const supabase = getSupabaseAdmin();
+  await supabase.rpc("bump_question_stats", { updates });
 }
 
 // 정답(answerIndex/answers)을 제거한 형태로만 반환한다.

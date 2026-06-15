@@ -19,6 +19,8 @@ create table public.questions (
   answers jsonb not null default '[]'::jsonb,
   time_limit_sec smallint not null default 20,
   sort_order int not null default 0,
+  attempts int not null default 0,
+  correct_count int not null default 0,
   created_at timestamptz not null default now()
 );
 
