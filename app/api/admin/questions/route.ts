@@ -5,6 +5,7 @@ import {
   type AdminQuestion,
   type AuditAction,
   type QuestionFormat,
+  QUESTION_FORMAT_LABELS,
   type QuestionType,
 } from "@/app/lib/quiz";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
@@ -27,8 +28,9 @@ async function logAudit(
   }
 }
 
-const TYPES: QuestionType[] = ["notice", "hanja", "time", "confusable"];
-const FORMATS: QuestionFormat[] = ["multiple_choice", "short_answer"];
+// 유형(type)은 DB(question_types)에서 관리되며 FK로 검증된다(여기선 비어있지 않은지만 확인).
+// 형식(format)은 코드로 정의된다 — 라벨 맵에서 직접 도출.
+const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
 const COLS =
   "id, type, format, prompt, choices, answer_index, answers, time_limit_sec";
 
@@ -71,7 +73,8 @@ function parseInput(body: unknown): QuestionInput | string {
   if (typeof body !== "object" || body === null) return "잘못된 요청입니다.";
   const b = body as Record<string, unknown>;
 
-  if (!TYPES.includes(b.type as QuestionType)) return "유형이 올바르지 않습니다.";
+  if (typeof b.type !== "string" || b.type.trim().length === 0)
+    return "유형을 선택해주세요.";
   // format 미지정 시 객관식으로 간주 (하위 호환)
   const format = (b.format ?? "multiple_choice") as QuestionFormat;
   if (!FORMATS.includes(format)) return "문제 형식이 올바르지 않습니다.";
@@ -172,7 +175,11 @@ export async function POST(request: Request) {
     .select(COLS)
     .single();
   if (error || !data) {
-    return NextResponse.json({ error: "저장에 실패했습니다." }, { status: 400 });
+    const msg =
+      error?.code === "23503"
+        ? "선택한 유형이 존재하지 않습니다."
+        : "저장에 실패했습니다.";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
   const created = toAdminQuestion(data);
   await logAudit(supabase, "create", created.id, created);
@@ -206,10 +213,11 @@ export async function PATCH(request: Request) {
     .select(COLS)
     .single();
   if (error || !data) {
-    return NextResponse.json(
-      { error: "수정에 실패했습니다." },
-      { status: 400 }
-    );
+    const msg =
+      error?.code === "23503"
+        ? "선택한 유형이 존재하지 않습니다."
+        : "수정에 실패했습니다.";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
   const updated = toAdminQuestion(data);
   await logAudit(supabase, "update", updated.id, updated);
