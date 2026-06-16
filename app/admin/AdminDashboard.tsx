@@ -7,6 +7,7 @@ import {
   type AdminReport,
   AUDIT_ACTION_LABELS,
   type Comment,
+  DIFFICULTY_LABELS,
   QUESTION_FORMAT_LABELS,
   type QuestionAudit,
   type QuestionFormat,
@@ -16,6 +17,7 @@ import {
 } from "@/app/lib/quiz";
 
 const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
+const DIFFICULTIES = Object.keys(DIFFICULTY_LABELS).map(Number);
 
 type Tab = "questions" | "types" | "reports" | "comments" | "audit";
 
@@ -50,6 +52,7 @@ function QuestionForm({
     initial?.answers && initial.answers.length > 0 ? initial.answers : [""]
   );
   const [timeLimitSec, setTimeLimitSec] = useState(initial?.timeLimitSec ?? 20);
+  const [difficulty, setDifficulty] = useState(initial?.difficulty ?? 2);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +74,7 @@ function QuestionForm({
           answerIndex,
           answers,
           timeLimitSec,
+          difficulty,
         }),
       });
       const data = (await res.json()) as {
@@ -222,15 +226,31 @@ function QuestionForm({
         </div>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        제한시간(초)
-        <input
-          type="number"
-          value={timeLimitSec}
-          onChange={(e) => setTimeLimitSec(Number(e.target.value))}
-          className="h-10 w-24 rounded-xl border border-border bg-surface px-3"
-        />
-      </label>
+      <div className="flex gap-3">
+        <label className="flex flex-col gap-1 text-sm">
+          제한시간(초)
+          <input
+            type="number"
+            value={timeLimitSec}
+            onChange={(e) => setTimeLimitSec(Number(e.target.value))}
+            className="h-10 w-24 rounded-xl border border-border bg-surface px-3"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          난이도
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(Number(e.target.value))}
+            className="h-10 rounded-xl border border-border bg-surface px-3"
+          >
+            {DIFFICULTIES.map((d) => (
+              <option key={d} value={d}>
+                {DIFFICULTY_LABELS[d]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -663,6 +683,8 @@ export default function AdminDashboard() {
                         </span>
                         <span>
                           {QUESTION_FORMAT_LABELS[q.format]} · {q.timeLimitSec}s
+                          {" · "}
+                          {DIFFICULTY_LABELS[q.difficulty] ?? "보통"}
                         </span>
                       </span>
                       <span className="flex gap-3">

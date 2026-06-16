@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# 정답이 포함된 로컬 시드/문제 SQL (커밋 금지 — 정답 유출 방지)
+*.local.sql
+
 # vercel
 .vercel
 
@@ -40,6 +43,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-CODEX.md
+CLAUDE.md
 INTRODUCE.md
-/rules
+/rules/*
+!/rules/branch.md
+!/rules/commit.md
+!/rules/development.md
+!/rules/security.md
+!/rules/content.md
+!/rules/ui.md

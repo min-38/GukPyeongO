@@ -32,7 +32,7 @@ async function logAudit(
 // 형식(format)은 코드로 정의된다 — 라벨 맵에서 직접 도출.
 const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
 const COLS =
-  "id, type, format, prompt, choices, answer_index, answers, time_limit_sec";
+  "id, type, format, prompt, choices, answer_index, answers, time_limit_sec, difficulty";
 
 interface Row {
   id: string;
@@ -43,6 +43,7 @@ interface Row {
   answer_index: number;
   answers: string[] | null;
   time_limit_sec: number;
+  difficulty: number | null;
 }
 
 function toAdminQuestion(row: Row): AdminQuestion {
@@ -55,6 +56,7 @@ function toAdminQuestion(row: Row): AdminQuestion {
     answerIndex: row.answer_index,
     answers: row.answers ?? [],
     timeLimitSec: row.time_limit_sec,
+    difficulty: row.difficulty ?? 2,
   };
 }
 
@@ -66,6 +68,7 @@ interface QuestionInput {
   answer_index: number;
   answers: string[];
   time_limit_sec: number;
+  difficulty: number;
 }
 
 // 입력 검증. 유효하면 DB 컬럼 형태를 반환, 아니면 에러 메시지.
@@ -89,6 +92,16 @@ function parseInput(body: unknown): QuestionInput | string {
   )
     return "제한시간은 1초 이상이어야 합니다.";
 
+  // 난이도 미지정 시 보통(2)으로 간주 (하위 호환)
+  const difficulty = b.difficulty ?? 2;
+  if (
+    typeof difficulty !== "number" ||
+    !Number.isInteger(difficulty) ||
+    difficulty < 1 ||
+    difficulty > 3
+  )
+    return "난이도는 1~3 사이여야 합니다.";
+
   if (format === "short_answer") {
     if (
       !Array.isArray(b.answers) ||
@@ -104,6 +117,7 @@ function parseInput(body: unknown): QuestionInput | string {
       answer_index: 0,
       answers: (b.answers as string[]).map((a) => a.trim()),
       time_limit_sec: timeLimitSec,
+      difficulty,
     };
   }
 
@@ -131,6 +145,7 @@ function parseInput(body: unknown): QuestionInput | string {
     answer_index: answerIndex,
     answers: [],
     time_limit_sec: timeLimitSec,
+    difficulty,
   };
 }
 

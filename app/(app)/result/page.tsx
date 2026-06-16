@@ -5,9 +5,11 @@ import { useState, useSyncExternalStore } from "react";
 
 import {
   gradeTheme,
+  type QuizMode,
+  QUIZ_MODES,
   resolveTypeLabel,
   RESULT_STORAGE_KEY,
-  type ScoreResponse,
+  type StoredResult,
 } from "@/app/lib/quiz";
 
 import Comments from "./Comments";
@@ -16,14 +18,14 @@ import QuestionStats from "./QuestionStats";
 // sessionStorage의 채점 결과를 읽는다. getSnapshot은 참조가 안정적이어야 하므로
 // raw 문자열이 같으면 파싱 결과를 캐시해 동일 객체를 반환한다.
 let cachedRaw: string | null = null;
-let cachedResult: ScoreResponse | null = null;
+let cachedResult: StoredResult | null = null;
 
 function subscribe() {
   // 결과는 마운트 후 바뀌지 않으므로 구독은 비워둔다.
   return () => {};
 }
 
-function readResult(): ScoreResponse | null {
+function readResult(): StoredResult | null {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(RESULT_STORAGE_KEY);
@@ -33,11 +35,17 @@ function readResult(): ScoreResponse | null {
   if (raw === cachedRaw) return cachedResult;
   cachedRaw = raw;
   try {
-    cachedResult = raw ? (JSON.parse(raw) as ScoreResponse) : null;
+    cachedResult = raw ? (JSON.parse(raw) as StoredResult) : null;
   } catch {
     cachedResult = null;
   }
   return cachedResult;
+}
+
+// 응시 모드 해석. 저장된 mode가 없으면(구버전 데이터) 문항 수로 추정한다.
+function resultMode(r: StoredResult): QuizMode {
+  if (r.mode === "quick" || r.mode === "deep") return r.mode;
+  return r.totalCount >= QUIZ_MODES.deep.size ? "deep" : "quick";
 }
 
 export default function ResultPage() {
@@ -49,7 +57,8 @@ export default function ResultPage() {
   async function handleShare() {
     if (!result) return;
     const url = window.location.origin;
-    const text = `국평오 테스트: 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
+    const modeCfg = QUIZ_MODES[resultMode(result)];
+    const text = `국평오 ${modeCfg.label}(${result.totalCount}문제): 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -89,13 +98,17 @@ export default function ResultPage() {
 
   const theme = gradeTheme(result.grade);
   const avgSec = (result.avgReactionMs / 1000).toFixed(1);
+  const modeCfg = QUIZ_MODES[resultMode(result)];
 
   return (
     <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
      {/* 왼쪽 위: 등급·통계·공유 카드 */}
      <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="animate-pop flex flex-col items-center text-center">
-        <span className="text-7xl">{theme.emoji}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+          {modeCfg.emoji} {modeCfg.label} · {result.totalCount}문제
+        </span>
+        <span className="mt-4 text-7xl">{theme.emoji}</span>
         <p className="mt-3 text-sm font-bold tracking-widest text-muted">
           나의 문해력 캐릭터
         </p>

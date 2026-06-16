@@ -6,10 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type PublicQuestion,
+  type QuizMode,
+  QUIZ_MODES,
   resolveTypeLabel,
   RESULT_STORAGE_KEY,
   type ScoreRequestItem,
   type ScoreResponse,
+  type StoredResult,
 } from "@/app/lib/quiz";
 
 type Phase = "loading" | "playing" | "submitting" | "error";
@@ -19,6 +22,8 @@ const TUTORIAL_SEEN_KEY = "gukpyeongo:tutorial-seen";
 
 export default function TestPage() {
   const router = useRouter();
+  // 선택한 테스트 모드(빠른/정밀). 선택 전(null)에는 모드 선택 화면을 보여준다.
+  const [mode, setMode] = useState<QuizMode | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
@@ -67,10 +72,11 @@ export default function TestPage() {
     }
   }
 
-  // 문제 로드 (무작위 출제 + 출제 세트 토큰)
+  // 문제 로드 (모드 선택 후 해당 모드 문항 수만큼 무작위 출제 + 출제 세트 토큰)
   useEffect(() => {
+    if (mode === null) return;
     let active = true;
-    fetch("/api/questions")
+    fetch(`/api/questions?mode=${mode}`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json() as Promise<{
@@ -103,7 +109,7 @@ export default function TestPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [mode]);
 
   // 결과 제출 (#5 채점 API) — 출제 세트 토큰을 함께 보내 출제 세트 기준 채점
   const submit = useCallback(
@@ -117,13 +123,15 @@ export default function TestPage() {
         });
         if (!res.ok) throw new Error();
         const result: ScoreResponse = await res.json();
-        sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(result));
+        // 응시 모드를 함께 저장해 결과/인증샷에 빠른·정밀 구분을 표시한다.
+        const stored: StoredResult = { ...result, mode: mode ?? "quick" };
+        sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(stored));
         router.push("/result");
       } catch {
         setPhase("error");
       }
     },
-    [router]
+    [router, mode]
   );
 
   // 다음 문항으로 진행 (마지막이면 제출)
@@ -215,6 +223,54 @@ export default function TestPage() {
     } catch {
       /* localStorage 접근 불가 시 무시 */
     }
+  }
+
+  // 0단계: 테스트 모드 선택 (빠른 / 정밀). 선택해야 문제 로드가 시작된다.
+  if (mode === null) {
+    return (
+      <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
+        <div className="flex w-full flex-1 flex-col lg:max-w-2xl lg:flex-none">
+          <div className="text-center">
+            <h1 className="font-display text-3xl lg:text-4xl">
+              어떻게 풀어볼까요?
+            </h1>
+            <p className="mt-3 text-base text-muted">
+              모드를 고르면 바로 시작해요. 등급 채점 방식은 같아요.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-1 flex-col justify-center gap-4 lg:flex-none lg:grid lg:grid-cols-2">
+            {(Object.entries(QUIZ_MODES) as [QuizMode, (typeof QUIZ_MODES)[QuizMode]][]).map(
+              ([key, m]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMode(key)}
+                  className="group flex flex-col items-center gap-3 rounded-[2rem] border-2 border-border bg-surface p-8 text-center shadow-sm transition-all hover:border-brand hover:bg-surface-muted hover:shadow-lg active:scale-[0.98]"
+                >
+                  <span className="text-5xl">{m.emoji}</span>
+                  <span className="font-display text-2xl">{m.label}</span>
+                  <span className="rounded-full bg-brand/10 px-4 py-1.5 text-lg font-extrabold text-brand">
+                    {m.size}문제
+                  </span>
+                  <span className="text-sm text-muted">{m.tagline}</span>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-muted">
+                    ⏱ {m.estimate}
+                  </span>
+                </button>
+              )
+            )}
+          </div>
+
+          <Link
+            href="/"
+            className="mt-6 text-center text-sm font-bold text-muted transition-colors hover:text-foreground"
+          >
+            ← 처음으로
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (showIntro) {
@@ -409,8 +465,8 @@ export default function TestPage() {
         <span className="w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
           {resolveTypeLabel(q.type, typeLabels)}
         </span>
-        {q.type === "literary" ? (
-          // 문학 긴 지문: 안내 문구 + 읽기 좋은 본문 + 스크롤 가능 영역
+        {q.type === "reading" ? (
+          // 독해 지문: 안내 문구 + 읽기 좋은 본문 + 스크롤 가능 영역
           <div className="mt-4 flex flex-col gap-2">
             <p className="text-base font-bold text-muted">다음 글을 읽고 물음에 답하세요.</p>
             <div className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap rounded-2xl bg-surface-muted p-4 text-base font-medium leading-relaxed lg:text-lg">

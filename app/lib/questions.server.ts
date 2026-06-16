@@ -1,10 +1,12 @@
 import "server-only";
 
-import type {
-  PublicQuestion,
-  QuestionFormat,
-  QuestionStat,
-  QuestionType,
+import {
+  DIFFICULTY_MIX,
+  pickStratified,
+  type PublicQuestion,
+  type QuestionFormat,
+  type QuestionStat,
+  type QuestionType,
 } from "./quiz";
 import type { AnswerKey, PerQuestionResult } from "./scoring";
 import { getSupabaseAdmin } from "./supabase-admin.server";
@@ -14,6 +16,7 @@ import { getSupabaseAdmin } from "./supabase-admin.server";
 export interface Question extends PublicQuestion {
   answerIndex: number;
   answers: string[];
+  difficulty: number; // 1=쉬움, 2=보통, 3=어려움
 }
 
 interface QuestionRow {
@@ -25,6 +28,7 @@ interface QuestionRow {
   answer_index: number;
   answers: string[] | null;
   time_limit_sec: number;
+  difficulty: number | null;
 }
 
 async function fetchQuestions(): Promise<Question[]> {
@@ -32,7 +36,7 @@ async function fetchQuestions(): Promise<Question[]> {
   const { data, error } = await supabase
     .from("questions")
     .select(
-      "id, type, format, prompt, choices, answer_index, answers, time_limit_sec"
+      "id, type, format, prompt, choices, answer_index, answers, time_limit_sec, difficulty"
     )
     .order("sort_order", { ascending: true });
 
@@ -47,6 +51,7 @@ async function fetchQuestions(): Promise<Question[]> {
     answerIndex: row.answer_index,
     answers: row.answers ?? [],
     timeLimitSec: row.time_limit_sec,
+    difficulty: row.difficulty ?? 2,
   }));
 }
 
@@ -134,17 +139,21 @@ export async function getPublicQuestions(): Promise<PublicQuestion[]> {
   }));
 }
 
-// 문제 풀에서 무작위로 n개 출제 (정답 제외). 풀이 n보다 적으면 있는 만큼.
+// 문제 풀에서 n개 출제 (정답 제외). 난이도 분포·유형 분산을 보장하는 층화 샘플링.
+// mix는 난이도 목표 분포(모드별로 다름). 풀이 n보다 적으면 있는 만큼.
 export async function getRandomPublicQuestions(
-  n: number
+  n: number,
+  mix: Record<number, number> = DIFFICULTY_MIX
 ): Promise<PublicQuestion[]> {
-  const all = await getPublicQuestions();
-  // Fisher-Yates shuffle
-  for (let i = all.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [all[i], all[j]] = [all[j], all[i]];
-  }
-  return all.slice(0, Math.max(0, Math.min(n, all.length)));
+  const all = await fetchQuestions();
+  return pickStratified(all, n, mix).map((q) => ({
+    id: q.id,
+    type: q.type,
+    format: q.format,
+    prompt: q.prompt,
+    choices: q.choices,
+    timeLimitSec: q.timeLimitSec,
+  }));
 }
 
 // 특정 문제 id들의 채점용 정답키 (출제 세트 채점에 사용).

@@ -382,7 +382,7 @@ export default function Home() {
               나의 등급은 몇 등급일까요?
             </h2>
             <p className="mt-3 text-sm text-muted">
-              10문제 · 제한시간 · 즉시 채점 · 무료
+              빠른 10문제 · 정밀 30문제 · 즉시 채점 · 무료
             </p>
           </Reveal>
           <Reveal delay={200}>
