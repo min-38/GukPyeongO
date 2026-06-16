@@ -410,9 +410,12 @@ export default function TestPage() {
           {resolveTypeLabel(q.type, typeLabels)}
         </span>
         {q.type === "literary" ? (
-          // 문학 긴 지문: 큰 제목 폰트 대신 읽기 좋은 본문 + 스크롤 가능 영역
-          <div className="mt-4 max-h-[40vh] overflow-y-auto whitespace-pre-wrap rounded-2xl bg-surface-muted p-4 text-base font-medium leading-relaxed lg:text-lg">
-            {q.prompt}
+          // 문학 긴 지문: 안내 문구 + 읽기 좋은 본문 + 스크롤 가능 영역
+          <div className="mt-4 flex flex-col gap-2">
+            <p className="text-sm font-bold text-muted">다음 글을 읽고 물음에 답하세요.</p>
+            <div className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap rounded-2xl bg-surface-muted p-4 text-base font-medium leading-relaxed lg:text-lg">
+              {q.prompt}
+            </div>
           </div>
         ) : (
           <h2 className="mt-4 text-2xl font-extrabold leading-relaxed">
