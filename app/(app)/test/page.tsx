@@ -46,6 +46,24 @@ export default function TestPage() {
   const startRef = useRef(0);
   const lockRef = useRef(false); // 한 문제당 한 번만 응답 처리
   const quizTokenRef = useRef(""); // 출제 세트 서명 토큰 (#18)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  function playTick() {
+    if (typeof window === "undefined") return;
+    try {
+      const ctx = (audioCtxRef.current ??= new AudioContext());
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {
+      /* 오디오 재생 불가 시 무시 */
+    }
+  }
 
   // 문제 로드 (무작위 출제 + 출제 세트 토큰)
   useEffect(() => {
@@ -133,9 +151,10 @@ export default function TestPage() {
         { questionId: q.id, choiceIndex, text, reactionMs },
       ];
 
-      // 미응답(시간초과)은 피드백 없이 바로 진행
+      // 시간초과: 틀렸어요 피드백 표시 후 진행
       if (!answered) {
-        advance();
+        setFeedback({ selectedIndex: null, correct: false });
+        window.setTimeout(advance, 1100);
         return;
       }
 
@@ -171,10 +190,12 @@ export default function TestPage() {
     startRef.current = performance.now();
     const limit = questions[index].timeLimitSec;
 
-    const tick = setInterval(
-      () => setRemaining((r) => (r > 0 ? r - 1 : 0)),
-      1000
-    );
+    let secondsLeft = limit;
+    const tick = setInterval(() => {
+      secondsLeft -= 1;
+      setRemaining(secondsLeft > 0 ? secondsLeft : 0);
+      if (secondsLeft >= 1 && secondsLeft <= 5) playTick();
+    }, 1000);
     const deadline = setTimeout(() => answer(null, null), limit * 1000);
 
     return () => {
