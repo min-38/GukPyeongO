@@ -64,7 +64,9 @@ export default function RootLayout({
       </head>
       {/* 카드 셸은 각 라우트 그룹 레이아웃에서 폭을 다르게 적용한다
           (공개 페이지: 폰 프레임 / 관리자: 넓은 레이아웃) */}
-      <body className="flex min-h-full justify-center sm:p-6">{children}</body>
+      <body className="flex min-h-full justify-center overflow-x-hidden sm:p-6">
+        {children}
+      </body>
     </html>
   );
 }

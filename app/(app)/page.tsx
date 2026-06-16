@@ -33,6 +33,10 @@ const CASES = [
   },
 ];
 
+// 색 섹션을 데스크톱에서 화면 전체 폭으로 확장 (좌우 그라데이션 노출 방지).
+// 모바일/태블릿은 컨테이너(카드) 폭을 그대로 채운다.
+const FULL_BLEED = "lg:relative lg:left-1/2 lg:w-screen lg:-translate-x-1/2";
+
 // 스크롤 진입 시 한 번 트리거되는 훅
 function useScrollReveal(threshold = 0.2) {
   const ref = useRef<HTMLDivElement>(null);
@@ -166,6 +170,12 @@ export default function Home() {
             <p className="mt-3 text-center text-xs text-muted lg:text-left lg:text-sm">
               당신의 문해력 캐릭터는 무엇일까?
             </p>
+
+            {/* 모바일 스크롤 유도 (정상 흐름 — 캡션과 겹치지 않음) */}
+            <div className="mt-5 flex flex-col items-center gap-0.5 text-brand lg:hidden">
+              <span className="text-xs font-bold">아래로 더 있어요</span>
+              <span className="animate-bounce text-xl leading-none">↓</span>
+            </div>
           </div>
 
           {/* 데스크톱 우측 등급 미리보기 카드 */}
@@ -193,17 +203,63 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 스크롤 유도 */}
-          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-muted/50 lg:hidden">
-            <span className="text-xs font-medium">스크롤</span>
-            <span className="animate-bounce">↓</span>
+          {/* 데스크톱 스크롤 유도 (절대배치 — CTA가 좌측이라 하단 중앙 비어 있음) */}
+          <div className="pointer-events-none absolute bottom-5 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1 text-brand lg:flex">
+            <span className="text-xs font-bold">아래로 더 있어요</span>
+            <span className="animate-bounce text-xl leading-none">↓</span>
           </div>
         </section>
 
         {/* ────────────────────────────────────────────
-            2. 성인 문해력 평균 (라이트 테마로 통일)
+            2. 실제 논란 사례 (가장 와닿는 훅 → 맨 위)
         ──────────────────────────────────────────── */}
-        <section className="flex min-h-[80vh] flex-col items-center justify-center bg-surface-muted px-6 py-24 text-center">
+        <section
+          className={`flex min-h-[75vh] flex-col items-center justify-center bg-surface-muted px-6 py-24 ${FULL_BLEED}`}
+        >
+          <Reveal>
+            <h2 className="text-center font-display text-3xl lg:text-4xl">
+              이런 장면, 낯설지 않으시죠?
+            </h2>
+            <p className="mt-2 text-center text-sm text-muted">
+              온라인에서 우리 또래 사이에 벌어진 진짜 논란들
+            </p>
+          </Reveal>
+
+          <div className="mt-10 grid w-full max-w-2xl gap-4 sm:grid-cols-2">
+            {CASES.map((c, i) => (
+              <Reveal key={c.word} delay={i * 110}>
+                <div className="flex h-full flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm">
+                  <span className="w-fit rounded-full bg-brand/10 px-3 py-0.5 text-xs font-bold text-brand">
+                    "{c.word}"
+                  </span>
+                  <p className="text-sm text-muted">
+                    공지문:{" "}
+                    <span className="font-medium text-foreground">
+                      {c.prompt}
+                    </span>
+                  </p>
+                  <div className="rounded-xl bg-red-50 px-3 py-2.5 dark:bg-red-950/20">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      😤 {c.reaction}
+                    </p>
+                  </div>
+                  <p className="mt-auto text-xs text-muted">{c.fact}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={500}>
+            <p className="mt-8 text-center text-xs text-muted">
+              출처: 한국일보(2024.8), 아주경제(2024.4)
+            </p>
+          </Reveal>
+        </section>
+
+        {/* ────────────────────────────────────────────
+            3. 성인 문해력 평균 (투명 — 배경 그라데이션 위)
+        ──────────────────────────────────────────── */}
+        <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-24 text-center">
           <Reveal>
             <p className="text-xs font-bold tracking-[0.2em] text-brand">
               OECD PIAAC 2023 · 성인역량조사
@@ -262,9 +318,11 @@ export default function Home() {
         </section>
 
         {/* ────────────────────────────────────────────
-            3. "당신 세대도 예외가 아닙니다" (2030/10대 타깃)
+            4. "당신 세대도 예외가 아닙니다" (2030/10대 타깃)
         ──────────────────────────────────────────── */}
-        <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-24">
+        <section
+          className={`flex min-h-[80vh] flex-col items-center justify-center bg-surface-muted px-6 py-24 ${FULL_BLEED}`}
+        >
           <Reveal>
             <p className="text-center text-xs font-bold tracking-[0.2em] text-brand">
               윗세대 얘기가 아닙니다
@@ -308,50 +366,6 @@ export default function Home() {
           <Reveal delay={360}>
             <p className="mt-8 text-center text-xs text-muted">
               출처: OECD PIAAC 2023 · 경향신문(2025.1) · 한국교원단체총연합회 설문조사(2024.9)
-            </p>
-          </Reveal>
-        </section>
-
-        {/* ────────────────────────────────────────────
-            4. 실제 논란 사례
-        ──────────────────────────────────────────── */}
-        <section className="flex min-h-[75vh] flex-col items-center justify-center bg-surface-muted px-6 py-24">
-          <Reveal>
-            <h2 className="text-center font-display text-3xl lg:text-4xl">
-              이런 장면, 낯설지 않으시죠?
-            </h2>
-            <p className="mt-2 text-center text-sm text-muted">
-              온라인에서 우리 또래 사이에 벌어진 진짜 논란들
-            </p>
-          </Reveal>
-
-          <div className="mt-10 grid w-full max-w-2xl gap-4 sm:grid-cols-2">
-            {CASES.map((c, i) => (
-              <Reveal key={c.word} delay={i * 110}>
-                <div className="flex h-full flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm">
-                  <span className="w-fit rounded-full bg-brand/10 px-3 py-0.5 text-xs font-bold text-brand">
-                    "{c.word}"
-                  </span>
-                  <p className="text-sm text-muted">
-                    공지문:{" "}
-                    <span className="font-medium text-foreground">
-                      {c.prompt}
-                    </span>
-                  </p>
-                  <div className="rounded-xl bg-red-50 px-3 py-2.5 dark:bg-red-950/20">
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      😤 {c.reaction}
-                    </p>
-                  </div>
-                  <p className="mt-auto text-xs text-muted">{c.fact}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={500}>
-            <p className="mt-8 text-center text-xs text-muted">
-              출처: 한국일보(2024.8), 아주경제(2024.4)
             </p>
           </Reveal>
         </section>
