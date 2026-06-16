@@ -5,16 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 
-// OECD PIAAC 2023 한국 연령대별 문해력 점수
-const PIAAC_DATA = [
-  { age: "16~24세", score: 276 },
-  { age: "25~34세", score: 272 },
-  { age: "35~44세", score: 259 },
-  { age: "45~54세", score: 244 },
-  { age: "56~65세", score: 217 },
-];
-
-// 실제 문해력 논란 사례
+// 실제 문해력 논란 사례 (온라인에서 우리 또래 사이에 벌어진 일)
 const CASES = [
   {
     word: "사흘",
@@ -102,9 +93,6 @@ export default function Home() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // 차트 막대 애니메이션
-  const { ref: chartRef, visible: chartVisible } = useScrollReveal(0.3);
 
   return (
     <>
@@ -213,41 +201,40 @@ export default function Home() {
         </section>
 
         {/* ────────────────────────────────────────────
-            2. 충격 통계 — 어두운 배경
+            2. 성인 문해력 평균 (라이트 테마로 통일)
         ──────────────────────────────────────────── */}
-        <section className="flex min-h-[80vh] flex-col items-center justify-center bg-[#1b1630] px-6 py-24 text-center dark:bg-[#0d0a18]">
+        <section className="flex min-h-[80vh] flex-col items-center justify-center bg-surface-muted px-6 py-24 text-center">
           <Reveal>
             <p className="text-xs font-bold tracking-[0.2em] text-brand">
               OECD PIAAC 2023 · 성인역량조사
             </p>
           </Reveal>
           <Reveal delay={120}>
-            <p className="mt-3 text-base font-medium text-white/50">
+            <p className="mt-3 text-base font-medium text-muted">
               한국 성인 문해력 점수 (500점 만점)
             </p>
           </Reveal>
           <Reveal delay={260}>
-            <p className="mt-1 font-display leading-none text-white">
+            <p className="mt-1 font-display leading-none text-brand">
               <span className="text-[7rem] lg:text-[10rem]">249</span>
               <span className="text-4xl lg:text-5xl">점</span>
             </p>
           </Reveal>
           <Reveal delay={400}>
-            <p className="mt-4 text-lg text-white/60">
-              OECD 평균{" "}
-              <span className="font-bold text-white">260점</span>보다 낮습니다
-            </p>
-            <p className="mt-1 text-sm text-white/30">
-              31개국 참여 · 한국은 평균 이하
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-4 py-1.5 text-sm font-bold text-red-500">
+              ▼ OECD 평균 260점 아래
+            </span>
+            <p className="mt-3 text-sm text-muted">
+              31개국 중 10년 새 20점 이상 떨어진 4개국에 한국 포함
             </p>
           </Reveal>
           <Reveal delay={540}>
             <div className="mt-12 flex items-center gap-6 sm:gap-10">
               <div className="text-center">
-                <p className="font-display text-4xl text-white/70 sm:text-5xl">
+                <p className="font-display text-4xl text-muted sm:text-5xl">
                   13%
                 </p>
-                <p className="mt-1 text-xs text-white/40">
+                <p className="mt-1 text-xs text-muted">
                   2012년
                   <br />
                   기초 문해력 미달
@@ -255,79 +242,72 @@ export default function Home() {
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="text-2xl text-brand">→</span>
-                <span className="text-xs text-white/30">10년 뒤</span>
+                <span className="text-xs text-muted">10년 뒤</span>
               </div>
               <div className="text-center">
                 <p className="font-display text-4xl text-brand sm:text-5xl">
                   31%
                 </p>
-                <p className="mt-1 text-xs text-white/40">
+                <p className="mt-1 text-xs text-muted">
                   2023년
                   <br />
                   기초 문해력 미달
                 </p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-white/20">
+            <p className="mt-3 text-xs text-muted/70">
               기초 문해력 미달 성인 10년 사이 2.4배 증가
             </p>
           </Reveal>
         </section>
 
         {/* ────────────────────────────────────────────
-            3. 연령대별 차트
+            3. "당신 세대도 예외가 아닙니다" (2030/10대 타깃)
         ──────────────────────────────────────────── */}
-        <section className="flex min-h-[75vh] flex-col items-center justify-center px-6 py-24">
+        <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-24">
           <Reveal>
             <p className="text-center text-xs font-bold tracking-[0.2em] text-brand">
-              OECD PIAAC 2023 · 한국 연령대별
+              윗세대 얘기가 아닙니다
             </p>
-            <h2 className="mt-3 text-center font-display text-3xl lg:text-4xl">
-              나이가 들수록 낮아집니다
-            </h2>
-            <p className="mt-2 text-center text-sm text-muted">
-              25~34세(272점)와 56~65세(217점)의 격차는{" "}
-              <strong>55점</strong>
+            <h2 className="mt-3 text-center font-display text-3xl leading-snug lg:text-4xl">
+              당신 세대도
               <br />
-              <span className="text-xs">
-                OECD 평균 세대 간 격차는 30점
-              </span>
+              이미 떨어지고 있어요
+            </h2>
+            <p className="mt-3 max-w-sm text-center text-sm leading-relaxed text-muted">
+              "나는 괜찮겠지"가 가장 위험합니다. 지금 잘 읽는다고 계속
+              그러리란 보장은 없어요.
             </p>
           </Reveal>
 
-          <div ref={chartRef} className="mt-10 w-full max-w-md space-y-3">
-            {PIAAC_DATA.map((item, i) => {
-              const pct = (item.score / 330) * 100;
-              // 점수 높을수록 brand 색, 낮을수록 red 계열로 그라데이션
-              const hue = 260 - i * 18;
-              return (
-                <Reveal key={item.age} delay={i * 100}>
-                  <div className="flex items-center gap-3">
-                    <span className="w-16 shrink-0 text-right text-xs font-medium text-muted">
-                      {item.age}
-                    </span>
-                    <div className="relative flex h-9 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                      <div
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{
-                          width: chartVisible ? `${pct}%` : "0%",
-                          transitionDelay: `${i * 120}ms`,
-                          background: `hsl(${hue} 70% 55%)`,
-                        }}
-                      />
-                    </div>
-                    <span className="w-14 text-sm font-bold tabular-nums">
-                      {item.score}점
-                    </span>
-                  </div>
-                </Reveal>
-              );
-            })}
+          <div className="mt-12 grid w-full max-w-md gap-4 sm:grid-cols-2">
+            <Reveal delay={120}>
+              <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
+                <p className="font-display text-5xl text-brand sm:text-6xl">
+                  19점<span className="text-2xl">↓</span>
+                </p>
+                <p className="text-sm font-bold">청년 세대의 10년</p>
+                <p className="text-xs leading-relaxed text-muted">
+                  1989~96년생(현재 2030)이 16~23세 → 27~34세 동안 잃은 문해력 점수
+                </p>
+              </div>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
+                <p className="font-display text-5xl text-brand sm:text-6xl">
+                  92%
+                </p>
+                <p className="text-sm font-bold">교사들이 체감</p>
+                <p className="text-xs leading-relaxed text-muted">
+                  "지금 학생들 문해력이 과거보다 낮아졌다" (2024, 전국 교원 5,848명)
+                </p>
+              </div>
+            </Reveal>
           </div>
 
-          <Reveal delay={600}>
-            <p className="mt-6 text-center text-xs text-muted">
-              출처: OECD PIAAC 2주기 2023 성인역량조사 (한국직업능력연구원)
+          <Reveal delay={360}>
+            <p className="mt-8 text-center text-xs text-muted">
+              출처: OECD PIAAC 2023 · 경향신문(2025.1) · 한국교원단체총연합회 설문조사(2024.9)
             </p>
           </Reveal>
         </section>
@@ -341,7 +321,7 @@ export default function Home() {
               이런 장면, 낯설지 않으시죠?
             </h2>
             <p className="mt-2 text-center text-sm text-muted">
-              실제 온라인에서 벌어진 문해력 논란 사례입니다
+              온라인에서 우리 또래 사이에 벌어진 진짜 논란들
             </p>
           </Reveal>
 
@@ -353,7 +333,10 @@ export default function Home() {
                     "{c.word}"
                   </span>
                   <p className="text-sm text-muted">
-                    공지문: <span className="font-medium text-foreground">{c.prompt}</span>
+                    공지문:{" "}
+                    <span className="font-medium text-foreground">
+                      {c.prompt}
+                    </span>
                   </p>
                   <div className="rounded-xl bg-red-50 px-3 py-2.5 dark:bg-red-950/20">
                     <p className="text-sm text-red-600 dark:text-red-400">
@@ -368,7 +351,7 @@ export default function Home() {
 
           <Reveal delay={500}>
             <p className="mt-8 text-center text-xs text-muted">
-              출처: 한국일보(2024.8), 아주경제(2024.4), 교원단체총연합회 설문조사(2024.9)
+              출처: 한국일보(2024.8), 아주경제(2024.4)
             </p>
           </Reveal>
         </section>
@@ -407,7 +390,9 @@ export default function Home() {
       ──────────────────────────────────────────── */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-6 pb-5 pt-12 transition-all duration-300 sm:left-1/2 sm:max-w-xl sm:-translate-x-1/2 lg:hidden ${
-          showSticky ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none"
+          showSticky
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-4 opacity-0"
         }`}
       >
         <Link
