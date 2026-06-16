@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 
 import {
   MAX_REPORT_DETAIL_LENGTH,
-  QUESTION_TYPE_LABELS,
   type QuestionResult,
   type QuestionStat,
   REPORT_REASONS,
   type ReportReason,
+  resolveTypeLabel,
 } from "@/app/lib/quiz";
 
 function ReportForm({
@@ -102,6 +102,7 @@ export default function QuestionStats({
   results?: QuestionResult[];
 }) {
   const [stats, setStats] = useState<QuestionStat[] | null>(null);
+  const [typeLabels, setTypeLabels] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState(false);
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reported, setReported] = useState<Record<string, true>>({});
@@ -114,11 +115,17 @@ export default function QuestionStats({
     fetch("/api/stats")
       .then((res) =>
         res.ok
-          ? (res.json() as Promise<{ stats: QuestionStat[] }>)
+          ? (res.json() as Promise<{
+              stats: QuestionStat[];
+              typeLabels: Record<string, string>;
+            }>)
           : Promise.reject(new Error())
       )
       .then((data) => {
-        if (active) setStats(data.stats);
+        if (active) {
+          setStats(data.stats);
+          setTypeLabels(data.typeLabels ?? {});
+        }
       })
       .catch(() => {
         if (active) setFailed(true);
@@ -173,7 +180,7 @@ export default function QuestionStats({
                     {s.prompt}
                   </p>
                   <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
-                    {QUESTION_TYPE_LABELS[s.type]}
+                    {resolveTypeLabel(s.type, typeLabels)}
                   </span>
                 </div>
 

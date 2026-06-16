@@ -1,13 +1,9 @@
-// 문제 유형: 공지문, 한자어, 시간 표현, 혼동 표현, 사자성어, 문학
-export type QuestionType =
-  | "notice"
-  | "hanja"
-  | "time"
-  | "confusable"
-  | "idiom"
-  | "literary";
+// 문제 유형 키. 유형은 DB(question_types)에서 관리되므로 임의 문자열을 허용한다.
+// 아래 QUESTION_TYPE_LABELS는 내장(기본) 유형의 fallback 라벨이며, DB 라벨이 우선한다.
+export type QuestionType = string;
 
-export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+// 내장 유형 fallback 라벨 (DB 조회 전/실패 시 사용). DB의 question_types가 정본이다.
+export const QUESTION_TYPE_LABELS: Record<string, string> = {
   notice: "공지문",
   hanja: "한자어",
   time: "시간 표현",
@@ -15,6 +11,22 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   idiom: "사자성어",
   literary: "문학",
 };
+
+// DB로 관리되는 유형 정의 (관리자 유형 관리 + 공개 라벨/이모지 표시용)
+export interface QuestionTypeDef {
+  key: string;
+  label: string;
+  emoji: string;
+  sortOrder: number;
+}
+
+// 유형 키 → 라벨 해석 (DB 맵 우선, 내장 fallback, 최후엔 키 그대로)
+export function resolveTypeLabel(
+  type: string,
+  labels?: Record<string, string>
+): string {
+  return labels?.[type] ?? QUESTION_TYPE_LABELS[type] ?? type;
+}
 
 // 문제 형식: 객관식(보기 선택) / 단답형(직접 입력) / 띄어쓰기(문장 교정)
 export type QuestionFormat = "multiple_choice" | "short_answer" | "spacing";
@@ -75,9 +87,11 @@ export interface QuestionResult {
 }
 
 // /api/score 응답: 채점 결과 + 등급 서명 토큰 + 문항별 내 정답 여부
+// typeLabels: 유형 키 → 라벨 맵 (취약 유형 표시용, DB 라벨 반영)
 export interface ScoreResponse extends ScoreResult {
   gradeToken: string;
   perQuestion: QuestionResult[];
+  typeLabels: Record<string, string>;
 }
 
 // 관리자 화면용 문제 형태 (정답 포함 — 인증된 관리자에게만 노출)

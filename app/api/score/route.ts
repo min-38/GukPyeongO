@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   bumpQuestionStats,
   getAnswerKeyForIds,
+  getTypeLabelMap,
 } from "@/app/lib/questions.server";
 import type { ScoreRequestItem } from "@/app/lib/quiz";
 import {
@@ -67,5 +68,6 @@ export async function POST(request: Request) {
     questionId: p.questionId,
     correct: p.correct,
   }));
-  return NextResponse.json({ ...result, gradeToken, perQuestion });
+  const typeLabels = await getTypeLabelMap();
+  return NextResponse.json({ ...result, gradeToken, perQuestion, typeLabels });
 }

@@ -55,6 +55,20 @@ export function getAdminQuestions(): Promise<Question[]> {
   return fetchQuestions();
 }
 
+// 유형 키 → 라벨 맵 (공개 화면 라벨 표시용). DB의 question_types가 정본.
+export async function getTypeLabelMap(): Promise<Record<string, string>> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("question_types")
+    .select("key, label");
+  if (error || !data) return {};
+  const map: Record<string, string> = {};
+  for (const row of data as Array<{ key: string; label: string }>) {
+    map[row.key] = row.label;
+  }
+  return map;
+}
+
 // 채점용 정답키 (questionId -> 유형/정답). 서버에서만 사용한다.
 export async function getAnswerKey(): Promise<AnswerKey> {
   const questions = await fetchQuestions();

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  QUESTION_TYPE_LABELS,
-  RESULT_STORAGE_KEY,
   type PublicQuestion,
+  resolveTypeLabel,
+  RESULT_STORAGE_KEY,
   type ScoreRequestItem,
   type ScoreResponse,
 } from "@/app/lib/quiz";
@@ -31,6 +31,8 @@ export default function TestPage() {
   } | null>(null);
   // 객관식 보기 표시 순서 (문제별 1회 셔플, 원래 인덱스 배열). questions와 같은 인덱스로 대응.
   const [choiceOrders, setChoiceOrders] = useState<number[][]>([]);
+  // 유형 키 → 라벨 맵 (DB 라벨 반영). 출제 응답에서 함께 받는다.
+  const [typeLabels, setTypeLabels] = useState<Record<string, string>>({});
   // 시작 전 튜토리얼 표시 여부 (건너뛰기 가능, 한 번 보면 다음부터 자동 생략)
   const [showIntro, setShowIntro] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -74,12 +76,14 @@ export default function TestPage() {
         return res.json() as Promise<{
           questions: PublicQuestion[];
           quizToken: string;
+          typeLabels: Record<string, string>;
         }>;
       })
       .then((data) => {
         if (!active) return;
         quizTokenRef.current = data.quizToken;
         setQuestions(data.questions);
+        setTypeLabels(data.typeLabels ?? {});
         setChoiceOrders(
           data.questions.map((qq) => {
             const order = qq.choices.map((_, i) => i);
@@ -403,7 +407,7 @@ export default function TestPage() {
 
       <div key={q.id} className="animate-rise mt-9 flex flex-1 flex-col">
         <span className="w-fit rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
-          {QUESTION_TYPE_LABELS[q.type]}
+          {resolveTypeLabel(q.type, typeLabels)}
         </span>
         {q.type === "literary" ? (
           // 문학 긴 지문: 큰 제목 폰트 대신 읽기 좋은 본문 + 스크롤 가능 영역

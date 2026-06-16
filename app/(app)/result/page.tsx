@@ -5,7 +5,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import {
   gradeTheme,
-  QUESTION_TYPE_LABELS,
+  resolveTypeLabel,
   RESULT_STORAGE_KEY,
   type ScoreResponse,
 } from "@/app/lib/quiz";
@@ -109,7 +109,7 @@ export default function ResultPage() {
           className="mt-3 rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
           style={{ backgroundColor: theme.color }}
         >
-          {result.grade}등급 · 9등급 중
+          {result.grade}등급
         </p>
         <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
       </div>
@@ -147,7 +147,7 @@ export default function ResultPage() {
                 key={type}
                 className="rounded-full bg-surface px-3 py-1 text-sm font-bold"
               >
-                {QUESTION_TYPE_LABELS[type]}
+                {resolveTypeLabel(type, result.typeLabels)}
               </span>
             ))}
           </div>
