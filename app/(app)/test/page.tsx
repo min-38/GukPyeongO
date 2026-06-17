@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  GRADE_TITLES,
   type PublicQuestion,
   type QuizMode,
   QUIZ_MODES,
@@ -14,6 +15,7 @@ import {
   type ScoreResponse,
   type StoredResult,
 } from "@/app/lib/quiz";
+import GradeCharacter from "../GradeCharacter";
 
 type Phase = "loading" | "playing" | "submitting" | "error";
 
@@ -361,8 +363,10 @@ export default function TestPage() {
       {
         visual: (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-4xl">🦉</span>
-            <span className="font-display text-2xl text-brand">어휘 마스터</span>
+            <GradeCharacter grade={1} className="h-20 w-20" />
+            <span className="font-display text-2xl text-brand">
+              {GRADE_TITLES[1]}
+            </span>
             <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-brand-foreground">
               1등급
             </span>
