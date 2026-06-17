@@ -12,6 +12,7 @@ import {
   type StoredResult,
 } from "@/app/lib/quiz";
 
+import Footer from "../Footer";
 import GradeCharacter from "../GradeCharacter";
 import Comments from "./Comments";
 import QuestionStats from "./QuestionStats";
@@ -102,6 +103,7 @@ export default function ResultPage() {
   const modeCfg = QUIZ_MODES[resultMode(result)];
 
   return (
+    <>
     <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
      {/* 왼쪽 위: 등급·통계·공유 카드 */}
      <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
@@ -194,5 +196,7 @@ export default function ResultPage() {
       <QuestionStats results={result.perQuestion} />
      </div>
     </main>
+    <Footer />
+    </>
   );
 }

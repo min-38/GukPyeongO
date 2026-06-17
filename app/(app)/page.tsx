@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 
+import Footer from "./Footer";
 import GradeCharacter from "./GradeCharacter";
 
 // 실제 문해력 논란 사례 (온라인에서 우리 또래 사이에 벌어진 일)
@@ -514,6 +515,8 @@ export default function Home() {
           </Reveal>
         </section>
       </main>
+
+      <Footer className="pb-28 lg:pb-8" />
 
       {/* ────────────────────────────────────────────
           하단 고정 CTA (히어로 지나친 후 표시)
