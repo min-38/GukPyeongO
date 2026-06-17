@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 2 100 100">
+  <!-- 대현자 마법사 (GradeCharacter grade 1) -->
+  <path d="M48 58 C31 58 26 76 24 95 C23 101 28 102 34 102 L62 102 C68 102 73 101 72 95 C70 76 65 58 48 58 Z" fill="#f59e0b"/>
+  <circle cx="48" cy="50" r="15" fill="#ffd9b0"/>
+  <circle cx="43" cy="49" r="2.6" fill="#2a2440"/>
+  <circle cx="53" cy="49" r="2.6" fill="#2a2440"/>
+  <path d="M36 54 C39 80 57 80 60 54 C55 69 41 69 36 54 Z" fill="#f4f2ff"/>
+  <ellipse cx="48" cy="38" rx="26" ry="6" fill="#d4920f"/>
+  <polygon points="48,4 33,38 63,38" fill="#f5b342"/>
+  <circle cx="48" cy="5" r="4" fill="#f4f2ff"/>
+</svg>

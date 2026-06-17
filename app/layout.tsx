@@ -17,6 +17,7 @@ const description =
   "검색 없이 10문제. 당신의 문해력은 몇 등급?";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://gukpyeongo.site"),
   title,
   description,
   openGraph: {
