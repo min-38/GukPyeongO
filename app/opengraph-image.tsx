@@ -72,7 +72,7 @@ export default async function Image() {
             빠르게 문제 풀고 등급 확인하기
           </div>
           <div style={{ display: "flex", color: "#c4b5fd", fontSize: 32, marginTop: 56 }}>
-            gukpyeongo.site
+            www.gukpyeongo.site
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
