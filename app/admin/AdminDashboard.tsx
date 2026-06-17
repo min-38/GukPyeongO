@@ -409,9 +409,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      fetch("/api/admin/questions").then(
-        (r) => r.json() as Promise<{ questions: AdminQuestion[] }>
-      ),
+      fetch("/api/admin/questions").then(async (r) => {
+        if (r.status === 401) throw new Error("401");
+        return r.json() as Promise<{ questions: AdminQuestion[] }>;
+      }),
       fetch("/api/admin/question-types").then(
         (r) => r.json() as Promise<{ types: QuestionTypeDef[] }>
       ),
@@ -434,8 +435,13 @@ export default function AdminDashboard() {
         setAudits(a.audits ?? []);
         setLoading(false);
       })
-      .catch(() => {
-        if (active) setLoading(false);
+      .catch((err) => {
+        if (!active) return;
+        if ((err as Error).message === "401") {
+          window.location.href = "/admin/login";
+          return;
+        }
+        setLoading(false);
       });
     return () => {
       active = false;

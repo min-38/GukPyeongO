@@ -55,11 +55,6 @@ async function fetchQuestions(): Promise<Question[]> {
   }));
 }
 
-// 관리자용: 정답 포함 전체 문제 (인증된 관리자에게만 노출)
-export function getAdminQuestions(): Promise<Question[]> {
-  return fetchQuestions();
-}
-
 // 유형 키 → 라벨 맵 (공개 화면 라벨 표시용). DB의 question_types가 정본.
 export async function getTypeLabelMap(): Promise<Record<string, string>> {
   const supabase = getSupabaseAdmin();
@@ -72,21 +67,6 @@ export async function getTypeLabelMap(): Promise<Record<string, string>> {
     map[row.key] = row.label;
   }
   return map;
-}
-
-// 채점용 정답키 (questionId -> 유형/정답). 서버에서만 사용한다.
-export async function getAnswerKey(): Promise<AnswerKey> {
-  const questions = await fetchQuestions();
-  const key: AnswerKey = {};
-  for (const q of questions) {
-    key[q.id] = {
-      type: q.type,
-      format: q.format,
-      answerIndex: q.answerIndex,
-      answers: q.answers,
-    };
-  }
-  return key;
 }
 
 // 문항별 통계 (공개용). 정답은 포함하지 않고 prompt/시도/정답수/정답률만 반환.
@@ -124,19 +104,6 @@ export async function bumpQuestionStats(
   if (updates.length === 0) return;
   const supabase = getSupabaseAdmin();
   await supabase.rpc("bump_question_stats", { updates });
-}
-
-// 정답(answerIndex/answers)을 제거한 형태로만 반환한다.
-export async function getPublicQuestions(): Promise<PublicQuestion[]> {
-  const questions = await fetchQuestions();
-  return questions.map((q) => ({
-    id: q.id,
-    type: q.type,
-    format: q.format,
-    prompt: q.prompt,
-    choices: q.choices,
-    timeLimitSec: q.timeLimitSec,
-  }));
 }
 
 // 문제 풀에서 n개 출제 (정답 제외). 난이도 분포·유형 분산을 보장하는 층화 샘플링.

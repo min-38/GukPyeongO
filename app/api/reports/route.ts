@@ -14,9 +14,11 @@ const POST_COOLDOWN_MS = 10_000;
 const lastPostByIp = new Map<string, number>();
 
 function clientIp(request: Request): string {
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (fwd) return fwd.split(",").at(-1)!.trim();
+  return "unknown";
 }
 
 // 문제 오류 신고: { questionId, reason, detail? }
@@ -48,6 +50,9 @@ export async function POST(request: Request) {
 
   const ip = clientIp(request);
   const now = Date.now();
+  for (const [key, ts] of lastPostByIp) {
+    if (now - ts > POST_COOLDOWN_MS) lastPostByIp.delete(key);
+  }
   const last = lastPostByIp.get(ip);
   if (last && now - last < POST_COOLDOWN_MS) {
     return NextResponse.json(
