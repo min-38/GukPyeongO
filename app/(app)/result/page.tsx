@@ -12,6 +12,7 @@ import {
   type StoredResult,
 } from "@/app/lib/quiz";
 
+import GradeCharacter from "../GradeCharacter";
 import Comments from "./Comments";
 import QuestionStats from "./QuestionStats";
 
@@ -108,7 +109,7 @@ export default function ResultPage() {
         <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
           {modeCfg.emoji} {modeCfg.label} · {result.totalCount}문제
         </span>
-        <span className="mt-4 text-7xl">{theme.emoji}</span>
+        <GradeCharacter grade={result.grade} className="mt-2 h-28 w-28" />
         <p className="mt-3 text-sm font-bold tracking-widest text-muted">
           나의 문해력 캐릭터
         </p>

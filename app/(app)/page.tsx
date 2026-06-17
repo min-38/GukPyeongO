@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 
+import GradeCharacter from "./GradeCharacter";
+
 // 실제 문해력 논란 사례 (온라인에서 우리 또래 사이에 벌어진 일)
 const CASES = [
   {
@@ -150,10 +152,11 @@ export default function Home() {
                 ))}
               </div>
 
-              <p className="text-sm font-bold text-muted lg:hidden">
-                {activeGrade}등급 ·{" "}
+              <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-muted lg:hidden">
+                {activeGrade}등급 ·
+                <GradeCharacter grade={activeGrade} className="h-6 w-6" />
                 <span style={{ color: theme.color }}>
-                  {theme.emoji} {GRADE_TITLES[activeGrade]}
+                  {GRADE_TITLES[activeGrade]}
                 </span>
               </p>
             </div>
@@ -181,7 +184,10 @@ export default function Home() {
           {/* 데스크톱 우측 등급 미리보기 카드 */}
           <div className="hidden lg:flex lg:items-center lg:justify-center">
             <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 text-center shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-              <span className="text-7xl">{theme.emoji}</span>
+              <GradeCharacter
+                grade={activeGrade}
+                className="mx-auto h-32 w-32"
+              />
               <p className="mt-3 text-sm font-bold tracking-widest text-muted">
                 나의 문해력 캐릭터
               </p>
@@ -318,54 +324,164 @@ export default function Home() {
         </section>
 
         {/* ────────────────────────────────────────────
-            4. "당신 세대도 예외가 아닙니다" (2030/10대 타깃)
+            4. 지금 10대가 가장 낮은 세대 + AI 역설 (PISA 하락 → AI)
         ──────────────────────────────────────────── */}
         <section
           className={`flex min-h-[80vh] flex-col items-center justify-center bg-surface-muted px-6 py-24 ${FULL_BLEED}`}
         >
+          {/* 4-A. PISA 읽기 16년 하락 */}
           <Reveal>
             <p className="text-center text-xs font-bold tracking-[0.2em] text-brand">
-              윗세대 얘기가 아닙니다
+              수학·과학은 세계 최상위, 그런데
             </p>
             <h2 className="mt-3 text-center font-display text-3xl leading-snug lg:text-4xl">
-              당신 세대도
+              읽기는 16년째
               <br />
-              이미 떨어지고 있어요
+              내리막입니다
             </h2>
             <p className="mt-3 max-w-sm text-center text-sm leading-relaxed text-muted">
-              "나는 괜찮겠지"가 가장 위험합니다. 지금 잘 읽는다고 계속
-              그러리란 보장은 없어요.
+              한국 청소년(만 15세)의 PISA 읽기 점수. 2006년 세계 1위에서
+              해마다 미끄러졌고, 지금 10대가 역대 최저 세대입니다.
             </p>
           </Reveal>
 
-          <div className="mt-12 grid w-full max-w-md gap-4 sm:grid-cols-2">
+          <Reveal delay={160}>
+            <figure className="mt-10 w-full max-w-md rounded-2xl bg-surface p-5 shadow-sm">
+              <svg
+                viewBox="0 0 320 180"
+                className="w-full"
+                shapeRendering="crispEdges"
+                role="img"
+                aria-label="한국 PISA 읽기 점수: 2006년 556점에서 2022년 515점으로 하락"
+              >
+                {/* 기준선 */}
+                <line
+                  x1="36"
+                  y1="150"
+                  x2="300"
+                  y2="150"
+                  stroke="var(--border)"
+                  strokeWidth="2"
+                />
+                {/* 하락 라인 (각진 픽셀 톤) */}
+                <polyline
+                  points="36,37 89,75 142,81 194,123 247,130 300,128"
+                  fill="none"
+                  stroke="var(--brand)"
+                  strokeWidth="4"
+                  strokeLinejoin="miter"
+                  strokeLinecap="square"
+                />
+                {/* 픽셀 마커 (정사각형 점) */}
+                <rect x="32" y="33" width="8" height="8" fill="var(--brand)" />
+                <rect x="85" y="71" width="8" height="8" fill="var(--brand)" />
+                <rect x="138" y="77" width="8" height="8" fill="var(--brand)" />
+                <rect x="190" y="119" width="8" height="8" fill="var(--brand)" />
+                <rect x="243" y="126" width="8" height="8" fill="var(--brand)" />
+                <rect x="296" y="124" width="8" height="8" fill="#dc2626" />
+                {/* 점수·연도 라벨 */}
+                <text
+                  x="36"
+                  y="26"
+                  fill="var(--foreground)"
+                  fontSize="15"
+                  fontWeight="700"
+                  textAnchor="start"
+                >
+                  556
+                </text>
+                <text
+                  x="300"
+                  y="116"
+                  fill="#dc2626"
+                  fontSize="15"
+                  fontWeight="700"
+                  textAnchor="end"
+                >
+                  515
+                </text>
+                <text
+                  x="168"
+                  y="95"
+                  fill="#dc2626"
+                  fontSize="15"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  ▼ 41점
+                </text>
+                <text
+                  x="36"
+                  y="170"
+                  fill="var(--muted)"
+                  fontSize="11"
+                  textAnchor="start"
+                >
+                  &apos;06 세계 1위
+                </text>
+                <text
+                  x="300"
+                  y="170"
+                  fill="var(--muted)"
+                  fontSize="11"
+                  textAnchor="end"
+                >
+                  &apos;22
+                </text>
+              </svg>
+              <figcaption className="mt-2 text-center text-xs text-muted/80">
+                한국 PISA 읽기 평균 (500점 만점) · 2006 → 2022
+              </figcaption>
+            </figure>
+          </Reveal>
+
+          {/* 4-B. AI 역설 */}
+          <Reveal delay={120}>
+            <p className="mt-20 text-center text-xs font-bold tracking-[0.2em] text-brand">
+              그리고 이제
+            </p>
+            <h2 className="mt-3 text-center font-display text-3xl leading-snug lg:text-4xl">
+              AI가 글을 씁니다
+              <br />
+              읽는 건 당신이고요
+            </h2>
+            <p className="mt-3 max-w-sm text-center text-sm leading-relaxed text-muted">
+              연구에 따르면 챗봇 답변은 평균적으로 대학 2~3학년 수준의
+              독해력을 요구합니다. 권장 눈높이보다 한참 위예요.
+            </p>
+          </Reveal>
+
+          <div className="mt-10 grid w-full max-w-md gap-4 sm:grid-cols-2">
             <Reveal delay={120}>
               <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
                 <p className="font-display text-5xl text-brand sm:text-6xl">
-                  19점<span className="text-2xl">↓</span>
+                  14<span className="text-2xl">학년</span>
                 </p>
-                <p className="text-sm font-bold">청년 세대의 10년</p>
+                <p className="text-sm font-bold">AI 답변이 요구하는 독해 수준</p>
                 <p className="text-xs leading-relaxed text-muted">
-                  1989~96년생(현재 2030)이 16~23세 → 27~34세 동안 잃은 문해력 점수
+                  미국 학년 기준 ≈ 대학 2~3년차 (Flesch–Kincaid 14.8)
                 </p>
               </div>
             </Reveal>
             <Reveal delay={240}>
               <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
-                <p className="font-display text-5xl text-brand sm:text-6xl">
-                  92%
+                <p className="font-display text-5xl sm:text-6xl">
+                  6<span className="text-2xl">학년</span>
                 </p>
-                <p className="text-sm font-bold">교사들이 체감</p>
+                <p className="text-sm font-bold">전문가 권장 눈높이</p>
                 <p className="text-xs leading-relaxed text-muted">
-                  "지금 학생들 문해력이 과거보다 낮아졌다" (2024, 전국 교원 5,848명)
+                  일반 독자가 무리 없이 읽는 수준 (미국의학협회 권고)
                 </p>
               </div>
             </Reveal>
           </div>
 
           <Reveal delay={360}>
-            <p className="mt-8 text-center text-xs text-muted">
-              출처: OECD PIAAC 2023 · 경향신문(2025.1) · 한국교원단체총연합회 설문조사(2024.9)
+            <p className="mt-8 max-w-sm text-center text-sm font-bold leading-relaxed text-foreground">
+              AI는 점점 똑똑해지는데, 그 답을 읽어낼 사람은 준비됐을까요?
+            </p>
+            <p className="mt-6 text-center text-xs text-muted">
+              출처: OECD PISA 2022 · 챗봇 응답 가독성 연구(ScienceDirect 2023, Nature 2024)
             </p>
           </Reveal>
         </section>

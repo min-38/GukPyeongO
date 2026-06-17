@@ -20,6 +20,62 @@ type Phase = "loading" | "playing" | "submitting" | "error";
 // 튜토리얼을 본 적이 있으면 다음부터는 자동으로 건너뛴다.
 const TUTORIAL_SEEN_KEY = "gukpyeongo:tutorial-seen";
 
+// 효과음 — 에셋 없이 Web Audio로 합성. AudioContext는 모듈 단위로 1개만 생성.
+let audioCtx: AudioContext | null = null;
+
+function playTone(
+  freq: number,
+  offset: number,
+  dur: number,
+  type: OscillatorType,
+  peak: number
+) {
+  const ctx = (audioCtx ??= new AudioContext());
+  if (ctx.state === "suspended") void ctx.resume();
+  const t = ctx.currentTime + offset;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + dur);
+}
+
+// 남은 시간 5초 이하 카운트다운 틱
+function playTick() {
+  if (typeof window === "undefined") return;
+  try {
+    playTone(880, 0, 0.12, "sine", 0.5);
+  } catch {
+    /* 오디오 재생 불가 시 무시 */
+  }
+}
+
+// 정답: 밝게 상승하는 두 음. 오답: 둔탁하게 하강하는 저음 부저.
+function playCorrect() {
+  if (typeof window === "undefined") return;
+  try {
+    playTone(660, 0, 0.12, "sine", 0.4);
+    playTone(988, 0.1, 0.18, "sine", 0.4);
+  } catch {
+    /* 오디오 재생 불가 시 무시 */
+  }
+}
+
+function playIncorrect() {
+  if (typeof window === "undefined") return;
+  try {
+    playTone(196, 0, 0.18, "square", 0.22);
+    playTone(147, 0.12, 0.26, "square", 0.22);
+  } catch {
+    /* 오디오 재생 불가 시 무시 */
+  }
+}
+
 export default function TestPage() {
   const router = useRouter();
   // 선택한 테스트 모드(빠른/정밀). 선택 전(null)에는 모드 선택 화면을 보여준다.
@@ -53,24 +109,6 @@ export default function TestPage() {
   const startRef = useRef(0);
   const lockRef = useRef(false); // 한 문제당 한 번만 응답 처리
   const quizTokenRef = useRef(""); // 출제 세트 서명 토큰 (#18)
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  function playTick() {
-    if (typeof window === "undefined") return;
-    try {
-      const ctx = (audioCtxRef.current ??= new AudioContext());
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.5, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.12);
-    } catch {
-      /* 오디오 재생 불가 시 무시 */
-    }
-  }
 
   // 문제 로드 (모드 선택 후 해당 모드 문항 수만큼 무작위 출제 + 출제 세트 토큰)
   useEffect(() => {
@@ -166,6 +204,7 @@ export default function TestPage() {
       // 시간초과: 틀렸어요 피드백 표시 후 진행
       if (!answered) {
         setFeedback({ selectedIndex: null, correct: false });
+        playIncorrect();
         window.setTimeout(advance, 1100);
         return;
       }
@@ -183,9 +222,11 @@ export default function TestPage() {
         }),
       })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-        .then((d: { correct: boolean }) =>
-          setFeedback({ selectedIndex: choiceIndex, correct: d.correct })
-        )
+        .then((d: { correct: boolean }) => {
+          setFeedback({ selectedIndex: choiceIndex, correct: d.correct });
+          if (d.correct) playCorrect();
+          else playIncorrect();
+        })
         .catch(() => {
           /* 확인 실패 시 그대로 진행 */
         })

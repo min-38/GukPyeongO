@@ -317,17 +317,18 @@ export interface AdminReport extends Report {
   questionPrompt: string;
 }
 
-// 등급별 페르소나(캐릭터/별명) — 결과 화면의 메인. 톤: 성장/도전, 모욕 금지.
+// 등급별 RPG 페르소나(직업 클래스) — 결과 화면의 메인.
+// 톤: 레트로 RPG. 상위는 영웅 칭호, 하위는 인게임 상태로 따끔하게(인신공격 금지).
 export const GRADE_TITLES: Record<number, string> = {
-  1: "어휘 마스터",
-  2: "문해력 우등생",
-  3: "어휘 수집가",
-  4: "성장형 독서가",
-  5: "균형 잡힌 탐독가",
-  6: "문해력 새싹",
-  7: "도전하는 새내기",
-  8: "어휘 탐험가",
-  9: "무한 성장 캐릭터",
+  1: "대현자",
+  2: "왕립 학자",
+  3: "숙련된 모험가",
+  4: "견습 기사",
+  5: "떠돌이 여행자",
+  6: "수련생",
+  7: "마을 주민",
+  8: "길 잃은 초심자",
+  9: "갓 깨어난 슬라임",
 };
 
 // 등급별 시각 테마 (결과 화면 표현용 — 컬러/이모지/한줄평)
@@ -338,15 +339,15 @@ export interface GradeTheme {
 }
 
 const GRADE_THEMES: Record<number, GradeTheme> = {
-  1: { color: "#f59e0b", emoji: "🦉", blurb: "검색 없이 이 정도면 진짜 고수." },
-  2: { color: "#10b981", emoji: "🎓", blurb: "공지문 정도는 가뿐하죠." },
-  3: { color: "#14b8a6", emoji: "✨", blurb: "사흘이 며칠인지 확실히 아는 사람." },
-  4: { color: "#6366f1", emoji: "🚀", blurb: "상위권이 코앞! 조금만 더." },
-  5: { color: "#7c3aed", emoji: "🧐", blurb: "딱 중간, 여기서부터 치고 올라가요." },
-  6: { color: "#f97316", emoji: "🌱", blurb: "감 잡는 중. 가능성이 보여요." },
-  7: { color: "#fb7185", emoji: "🐣", blurb: "한 끗 차이! 다시 보면 보여요." },
-  8: { color: "#ef4444", emoji: "📚", blurb: "새로운 단어를 만나는 중, 그게 성장." },
-  9: { color: "#dc2626", emoji: "🔥", blurb: "시작이 반! 올라갈 일만 남았어요." },
+  1: { color: "#f59e0b", emoji: "🧙", blurb: "검색 마법 없이 이 경지라니. 길드가 당신을 찾고 있습니다." },
+  2: { color: "#10b981", emoji: "📜", blurb: "왕국의 고문서쯤은 막힘없이 해독하는 두뇌." },
+  3: { color: "#14b8a6", emoji: "⚔️", blurb: "웬만한 던전 비문은 술술 읽어내는 베테랑." },
+  4: { color: "#6366f1", emoji: "🛡️", blurb: "가능성이 보입니다. 검을 조금만 더 갈면 정예." },
+  5: { color: "#7c3aed", emoji: "🧭", blurb: "딱 평균. 여기서부터가 진짜 모험입니다." },
+  6: { color: "#f97316", emoji: "🪄", blurb: "기초 주문서가 아직 버겁군요. 수련이 필요합니다." },
+  7: { color: "#fb7185", emoji: "🏘️", blurb: "모험은 이릅니다. 마을 간판부터 천천히 읽어봅시다." },
+  8: { color: "#ef4444", emoji: "🌫️", blurb: "심각합니다. 글자 앞에서 길을 잃었어요." },
+  9: { color: "#dc2626", emoji: "🟢", blurb: "긴급 상황. 튜토리얼 마을로 돌아가야 할 수준입니다." },
 };
 
 export function gradeTheme(grade: number): GradeTheme {
