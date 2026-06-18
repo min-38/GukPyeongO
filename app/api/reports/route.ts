@@ -61,6 +61,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // 로컬 개발 환경에서는 prod DB 오염 방지를 위해 insert를 건너뛴다.
+  if (process.env.NODE_ENV === "development") {
+    lastPostByIp.set(ip, now);
+    return NextResponse.json({ ok: true }, { status: 201 });
+  }
+
   // 작성은 service-role로 수행 (anon 직접 쓰기는 RLS로 차단됨).
   // 존재하지 않는 questionId는 FK 제약으로 거부된다.
   const supabase = getSupabaseAdmin();

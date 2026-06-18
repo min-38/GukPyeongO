@@ -136,6 +136,25 @@ export async function POST(request: Request) {
     );
   }
 
+  // 로컬 개발 환경에서는 prod DB 오염 방지를 위해 insert를 건너뛰고
+  // 입력값 기반 합성 댓글을 반환한다 (UI 동작은 그대로 확인 가능).
+  if (process.env.NODE_ENV === "development") {
+    lastPostByIp.set(ip, now);
+    return NextResponse.json(
+      {
+        comment: toComment({
+          id: crypto.randomUUID(),
+          content: trimmed,
+          grade,
+          nickname: nick,
+          ip_masked: maskIp(ip),
+          created_at: new Date().toISOString(),
+        }),
+      },
+      { status: 201 }
+    );
+  }
+
   // 작성은 service-role로 수행 (anon 직접 쓰기는 RLS로 차단됨).
   // 닉네임은 서버에서 자동 생성, IP는 원본을 저장하지 않고 마스킹값만 저장한다.
   const supabase = getSupabaseAdmin();
