@@ -9,7 +9,14 @@ export default function Footer({ className = "" }: { className?: string }) {
     >
       <div className="mx-auto flex max-w-md flex-col items-center gap-3">
         <p className="font-display text-sm text-foreground">국평오</p>
-        <nav className="flex items-center gap-4">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          <Link
+            href="/patch"
+            className="font-medium transition-colors hover:text-foreground"
+          >
+            패치노트
+          </Link>
+          <span className="text-border">·</span>
           <Link
             href="/privacy"
             className="font-medium transition-colors hover:text-foreground"

@@ -8,6 +8,10 @@ import {
   AUDIT_ACTION_LABELS,
   type Comment,
   DIFFICULTY_LABELS,
+  type PatchNote,
+  type PatchType,
+  PATCH_TYPE_LABELS,
+  PATCH_TYPES,
   QUESTION_FORMAT_LABELS,
   type QuestionAudit,
   type QuestionFormat,
@@ -19,7 +23,7 @@ import {
 const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
 const DIFFICULTIES = Object.keys(DIFFICULTY_LABELS).map(Number);
 
-type Tab = "questions" | "types" | "reports" | "comments" | "audit";
+type Tab = "questions" | "types" | "reports" | "comments" | "audit" | "patch";
 
 // 유형 키 → "이모지 라벨" 표시 문자열
 function typeBadge(type: string, types: QuestionTypeDef[]): string {
@@ -391,12 +395,129 @@ function TypeForm({
   );
 }
 
+function PatchForm({
+  onSaved,
+  onCancel,
+}: {
+  onSaved: (n: PatchNote) => void;
+  onCancel: () => void;
+}) {
+  const [version, setVersion] = useState("");
+  const [type, setType] = useState<PatchType>("new");
+  const [content, setContent] = useState("");
+  const [patchedAt, setPatchedAt] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/patch-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version, type, content, patchedAt }),
+      });
+      const data = (await res.json()) as {
+        patchNote?: PatchNote;
+        error?: string;
+      };
+      if (!res.ok || !data.patchNote) {
+        setError(data.error ?? "저장에 실패했습니다.");
+        return;
+      }
+      onSaved(data.patchNote);
+    } catch {
+      setError("저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={save}
+      className="flex flex-col gap-3 rounded-2xl border border-brand bg-surface p-4"
+    >
+      <div className="flex gap-3">
+        <label className="flex flex-1 flex-col gap-1 text-sm">
+          버전
+          <input
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            placeholder="예: v1.2.0"
+            className="h-10 rounded-xl border border-border bg-surface px-3"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          유형
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as PatchType)}
+            className="h-10 rounded-xl border border-border bg-surface px-3"
+          >
+            {PATCH_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {PATCH_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          패치 일시
+          <input
+            type="date"
+            value={patchedAt}
+            onChange={(e) => setPatchedAt(e.target.value)}
+            className="h-10 rounded-xl border border-border bg-surface px-3"
+          />
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        내용
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={4}
+          placeholder="이번 업데이트에서 바뀐 점을 적어주세요."
+          className="resize-none rounded-xl border border-border bg-surface px-3 py-2"
+        />
+      </label>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+        >
+          {saving ? "저장 중..." : "저장"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
+        >
+          취소
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function AdminDashboard() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [types, setTypes] = useState<QuestionTypeDef[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [audits, setAudits] = useState<QuestionAudit[]>([]);
+  const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [tab, setTab] = useState<Tab>("questions");
@@ -405,6 +526,7 @@ export default function AdminDashboard() {
   const [editingType, setEditingType] = useState<QuestionTypeDef | "new" | null>(
     null
   );
+  const [editingPatch, setEditingPatch] = useState<"new" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -425,14 +547,18 @@ export default function AdminDashboard() {
       fetch("/api/admin/audit").then(
         (r) => r.json() as Promise<{ audits: QuestionAudit[] }>
       ),
+      fetch("/api/admin/patch-notes").then(
+        (r) => r.json() as Promise<{ patchNotes: PatchNote[] }>
+      ),
     ])
-      .then(([q, t, c, rp, a]) => {
+      .then(([q, t, c, rp, a, pn]) => {
         if (!active) return;
         setQuestions(q.questions ?? []);
         setTypes(t.types ?? []);
         setComments(c.comments ?? []);
         setReports(rp.reports ?? []);
         setAudits(a.audits ?? []);
+        setPatchNotes(pn.patchNotes ?? []);
         setLoading(false);
       })
       .catch((err) => {
@@ -517,6 +643,21 @@ export default function AdminDashboard() {
     if (res.ok) setComments((prev) => prev.filter((c) => c.id !== id));
   }
 
+  function handlePatchSaved(n: PatchNote) {
+    setPatchNotes((prev) =>
+      [n, ...prev].sort((a, b) => b.patchedAt.localeCompare(a.patchedAt))
+    );
+    setEditingPatch(null);
+  }
+
+  async function deletePatchNote(id: string) {
+    if (!confirm("이 패치노트를 삭제할까요?")) return;
+    const res = await fetch(`/api/admin/patch-notes?id=${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) setPatchNotes((prev) => prev.filter((p) => p.id !== id));
+  }
+
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.href = "/admin/login";
@@ -544,6 +685,7 @@ export default function AdminDashboard() {
     { id: "reports", emoji: "🚩", label: "신고", count: openReports },
     { id: "comments", emoji: "💬", label: "댓글", count: comments.length },
     { id: "audit", emoji: "🕑", label: "로그", count: audits.length },
+    { id: "patch", emoji: "📋", label: "패치노트", count: patchNotes.length },
   ];
 
   return (
@@ -948,6 +1090,72 @@ export default function AdminDashboard() {
                         minute: "2-digit",
                       })}
                     </span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+        )}
+
+        {tab === "patch" && (
+          <section>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">
+                패치노트{" "}
+                <span className="text-muted">({patchNotes.length})</span>
+              </h2>
+              {editingPatch === null && (
+                <button
+                  onClick={() => setEditingPatch("new")}
+                  className="rounded-xl bg-brand px-3 py-1.5 text-sm font-semibold text-brand-foreground"
+                >
+                  + 패치노트 작성
+                </button>
+              )}
+            </div>
+
+            {editingPatch === "new" && (
+              <div className="mt-4">
+                <PatchForm
+                  onSaved={handlePatchSaved}
+                  onCancel={() => setEditingPatch(null)}
+                />
+              </div>
+            )}
+
+            <ul className="mt-4 flex flex-col gap-3">
+              {patchNotes.length === 0 ? (
+                <li className="py-8 text-center text-sm text-muted">
+                  패치노트가 없습니다.
+                </li>
+              ) : (
+                patchNotes.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-2xl border border-border bg-surface p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full bg-brand/10 px-2 py-0.5 font-bold text-brand">
+                        {PATCH_TYPE_LABELS[p.type]}
+                      </span>
+                      <span className="font-bold">{p.version}</span>
+                      <span className="text-muted">
+                        {new Date(p.patchedAt).toLocaleDateString("ko-KR", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}
+                      </span>
+                      <button
+                        onClick={() => deletePatchNote(p.id)}
+                        className="ml-auto font-medium text-red-500"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm">
+                      {p.content}
+                    </p>
                   </li>
                 ))
               )}

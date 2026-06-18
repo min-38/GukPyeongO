@@ -317,6 +317,28 @@ export interface AdminReport extends Report {
   questionPrompt: string;
 }
 
+// 패치노트 (#41) — 서비스 업데이트 내역. 공개 /patch 페이지에 노출.
+export const PATCH_TYPES = ["new", "fix", "improve"] as const;
+export type PatchType = (typeof PATCH_TYPES)[number];
+
+export const PATCH_TYPE_LABELS: Record<PatchType, string> = {
+  new: "신규",
+  fix: "수정",
+  improve: "개선",
+};
+
+export const MAX_PATCH_VERSION_LENGTH = 30;
+export const MAX_PATCH_CONTENT_LENGTH = 2000;
+
+export interface PatchNote {
+  id: string;
+  version: string;
+  type: PatchType;
+  content: string;
+  patchedAt: string; // 패치 적용 일시 (ISO)
+  createdAt: string;
+}
+
 // 등급별 RPG 페르소나(직업 클래스) — 결과 화면의 메인.
 // 톤: 레트로 RPG. 상위는 영웅 칭호, 하위는 인게임 상태로 따끔하게(인신공격 금지).
 export const GRADE_TITLES: Record<number, string> = {
