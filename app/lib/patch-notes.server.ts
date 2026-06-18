@@ -35,6 +35,7 @@ export async function getPatchNotes(): Promise<PatchNote[]> {
     .from("patch_notes")
     .select(COLS)
     .order("patched_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(200);
   if (error) {
     throw new Error("패치노트를 불러오지 못했습니다.");
