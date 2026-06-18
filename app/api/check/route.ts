@@ -44,7 +44,8 @@ export async function POST(request: Request) {
   }
 
   const answerKey = await getAnswerKeyForIds([questionId]);
-  if (!answerKey[questionId]) {
+  const entry = answerKey[questionId];
+  if (!entry) {
     return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
   }
 
@@ -55,5 +56,17 @@ export async function POST(request: Request) {
     reactionMs: 0,
   };
   const correct = scoreSubmission(answerKey, [item]).correctCount === 1;
-  return NextResponse.json({ correct });
+  if (correct) {
+    return NextResponse.json({ correct: true });
+  }
+
+  // 오답일 때만 정답을 동봉한다(맞히면 불필요). 객관식은 정답 보기 인덱스,
+  // 입력형(단답·띄어쓰기)은 대표 정답 텍스트를 내려 클라이언트가 표시한다.
+  if (entry.format === "multiple_choice") {
+    return NextResponse.json({ correct: false, correctIndex: entry.answerIndex });
+  }
+  return NextResponse.json({
+    correct: false,
+    correctAnswer: entry.answers[0] ?? "",
+  });
 }

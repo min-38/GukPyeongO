@@ -22,6 +22,14 @@ type Phase = "loading" | "playing" | "submitting" | "error";
 // 튜토리얼을 본 적이 있으면 다음부터는 자동으로 건너뛴다.
 const TUTORIAL_SEEN_KEY = "gukpyeongo:tutorial-seen";
 
+// 입력형(단답·띄어쓰기)은 모바일 타자 속도를 감안해 제한시간을 1.5배로 늘린다.
+// 객관식은 클릭이라 그대로 둔다.
+function effectiveTimeLimit(q: PublicQuestion): number {
+  return q.format === "multiple_choice"
+    ? q.timeLimitSec
+    : Math.ceil(q.timeLimitSec * 1.5);
+}
+
 // 효과음 — 에셋 없이 Web Audio로 합성. AudioContext는 모듈 단위로 1개만 생성.
 let audioCtx: AudioContext | null = null;
 
@@ -87,10 +95,13 @@ export default function TestPage() {
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [textInput, setTextInput] = useState(""); // 단답형 입력
-  // 풀이 직후 정답/오답 피드백 (correct=null이면 확인 중). 정답 내용은 받지 않음.
+  // 풀이 직후 정답/오답 피드백 (correct=null이면 확인 중).
+  // 오답일 때만 정답 정보를 받는다: 객관식은 correctIndex, 입력형은 correctAnswer.
   const [feedback, setFeedback] = useState<{
     selectedIndex: number | null;
     correct: boolean | null;
+    correctIndex?: number | null;
+    correctAnswer?: string | null;
   } | null>(null);
   // 객관식 보기 표시 순서 (문제별 1회 셔플, 원래 인덱스 배열). questions와 같은 인덱스로 대응.
   const [choiceOrders, setChoiceOrders] = useState<number[][]>([]);
@@ -140,7 +151,9 @@ export default function TestPage() {
             return order;
           })
         );
-        setRemaining(data.questions[0]?.timeLimitSec ?? 0);
+        setRemaining(
+          data.questions[0] ? effectiveTimeLimit(data.questions[0]) : 0
+        );
         setPhase("playing");
       })
       .catch(() => {
@@ -179,7 +192,7 @@ export default function TestPage() {
     setFeedback(null);
     if (index + 1 < questions.length) {
       setTextInput("");
-      setRemaining(questions[index + 1].timeLimitSec);
+      setRemaining(effectiveTimeLimit(questions[index + 1]));
       setIndex(index + 1);
     } else {
       void submit(answersRef.current);
@@ -203,15 +216,8 @@ export default function TestPage() {
         { questionId: q.id, choiceIndex, text, reactionMs },
       ];
 
-      // 시간초과: 틀렸어요 피드백 표시 후 진행
-      if (!answered) {
-        setFeedback({ selectedIndex: null, correct: false });
-        playIncorrect();
-        window.setTimeout(advance, 1100);
-        return;
-      }
-
-      // 선택 즉시 표시 후, 서버에서 정답/오답만 확인 (정답 내용은 받지 않음)
+      // 응답/미응답(시간초과) 모두 서버로 확인한다. 오답일 때는 정답 정보를
+      // 함께 받아 화면에 표시하고, 읽을 시간을 위해 전환을 더 늦춘다.
       setFeedback({ selectedIndex: choiceIndex, correct: null });
       fetch("/api/check", {
         method: "POST",
@@ -224,15 +230,27 @@ export default function TestPage() {
         }),
       })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-        .then((d: { correct: boolean }) => {
-          setFeedback({ selectedIndex: choiceIndex, correct: d.correct });
-          if (d.correct) playCorrect();
-          else playIncorrect();
-        })
+        .then(
+          (d: {
+            correct: boolean;
+            correctIndex?: number;
+            correctAnswer?: string;
+          }) => {
+            setFeedback({
+              selectedIndex: choiceIndex,
+              correct: d.correct,
+              correctIndex: d.correctIndex ?? null,
+              correctAnswer: d.correctAnswer ?? null,
+            });
+            if (d.correct) playCorrect();
+            else playIncorrect();
+            window.setTimeout(advance, d.correct ? 1100 : 2500);
+          }
+        )
         .catch(() => {
-          /* 확인 실패 시 그대로 진행 */
-        })
-        .finally(() => window.setTimeout(advance, 1100));
+          // 확인 실패 시 정답 표시 없이 진행
+          window.setTimeout(advance, 1100);
+        });
     },
     [questions, index, advance]
   );
@@ -243,7 +261,7 @@ export default function TestPage() {
     if (phase !== "playing" || questions.length === 0 || showIntro) return;
     lockRef.current = false;
     startRef.current = performance.now();
-    const limit = questions[index].timeLimitSec;
+    const limit = effectiveTimeLimit(questions[index]);
 
     let secondsLeft = limit;
     const tick = setInterval(() => {
@@ -358,7 +376,7 @@ export default function TestPage() {
         ),
         emoji: "✅",
         title: "바로 채점돼요",
-        desc: "답을 고르면 정답/오답을 즉시 알려줘요.\n틀려도 정답은 비밀!",
+        desc: "답을 고르면 정답/오답을 즉시 알려줘요.\n틀리면 정답도 함께 알려줘요!",
       },
       {
         visual: (
@@ -533,6 +551,11 @@ export default function TestPage() {
             }`}
           >
             {feedback.correct ? "정답이에요! 🎉" : "틀렸어요 😅"}
+            {!feedback.correct && feedback.correctAnswer && (
+              <p className="mt-1 text-sm font-bold text-foreground">
+                정답: {feedback.correctAnswer}
+              </p>
+            )}
           </div>
         )}
 
@@ -578,13 +601,19 @@ export default function TestPage() {
               let state =
                 "border-border bg-surface hover:border-brand hover:bg-surface-muted";
               if (feedback) {
-                state = sel
-                  ? feedback.correct == null
-                    ? "border-brand bg-brand/5"
-                    : feedback.correct
-                      ? "border-green-500 bg-green-500/10"
-                      : "border-red-500 bg-red-500/10"
-                  : "border-border opacity-50";
+                if (sel) {
+                  state =
+                    feedback.correct == null
+                      ? "border-brand bg-brand/5"
+                      : feedback.correct
+                        ? "border-green-500 bg-green-500/10"
+                        : "border-red-500 bg-red-500/10";
+                } else if (feedback.correctIndex === originalIndex) {
+                  // 오답 시 실제 정답 보기를 초록으로 강조
+                  state = "border-green-500 bg-green-500/10";
+                } else {
+                  state = "border-border opacity-50";
+                }
               }
               return (
                 <button
