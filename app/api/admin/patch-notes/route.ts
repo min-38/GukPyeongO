@@ -43,6 +43,7 @@ export async function GET() {
     .from("patch_notes")
     .select(COLS)
     .order("patched_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(200);
   if (error) {
     return NextResponse.json(
