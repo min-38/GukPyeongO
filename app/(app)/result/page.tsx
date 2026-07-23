@@ -12,6 +12,9 @@ import {
   type StoredResult,
 } from "@/app/lib/quiz";
 
+import useIsDesktop from "@/app/lib/useIsDesktop";
+
+import AdFitBanner from "../AdFitBanner";
 import Footer from "../Footer";
 import GradeCharacter from "../GradeCharacter";
 import Comments from "./Comments";
@@ -53,6 +56,7 @@ function resultMode(r: StoredResult): QuizMode {
 export default function ResultPage() {
   const result = useSyncExternalStore(subscribe, readResult, () => null);
   const [copied, setCopied] = useState(false);
+  const isDesktop = useIsDesktop();
 
   // 결과 공유: 지원 기기는 네이티브 공유 시트, 아니면 링크 복사 폴백.
   // 개인정보는 담지 않고 사이트 진입 경로(랜딩)만 공유한다.
@@ -105,6 +109,17 @@ export default function ResultPage() {
   return (
     <>
     <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
+     {/* 모바일 상단 배너 320×50 */}
+     {isDesktop === false && (
+       <div className="flex justify-center">
+         <AdFitBanner
+           unit="DAN-lgDU2Dq4xvULyTQD"
+           width={320}
+           height={50}
+           className="mb-6"
+         />
+       </div>
+     )}
      {/* 왼쪽 위: 등급·통계·공유 카드 */}
      <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="animate-pop flex flex-col items-center text-center">
@@ -188,6 +203,17 @@ export default function ResultPage() {
 
      {/* 오른쪽 전체: 댓글 (데스크톱) */}
      <div className="lg:col-start-2 lg:row-span-2 lg:[&>section]:mt-0">
+      {/* PC 전용: 댓글 위 250×250 */}
+      {isDesktop === true && (
+        <div className="flex justify-center">
+          <AdFitBanner
+            unit="DAN-AVHY1ki21whWnOYz"
+            width={250}
+            height={250}
+            className="mb-6"
+          />
+        </div>
+      )}
       <Comments grade={result.grade} gradeToken={result.gradeToken} />
      </div>
 

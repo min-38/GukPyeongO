@@ -15,6 +15,9 @@ import {
   type ScoreResponse,
   type StoredResult,
 } from "@/app/lib/quiz";
+import useIsDesktop from "@/app/lib/useIsDesktop";
+
+import AdFitBanner from "../AdFitBanner";
 import GradeCharacter from "../GradeCharacter";
 
 type Phase = "loading" | "playing" | "submitting" | "error";
@@ -107,6 +110,7 @@ export default function TestPage() {
   const [choiceOrders, setChoiceOrders] = useState<number[][]>([]);
   // 유형 키 → 라벨 맵 (DB 라벨 반영). 출제 응답에서 함께 받는다.
   const [typeLabels, setTypeLabels] = useState<Record<string, string>>({});
+  const isDesktop = useIsDesktop();
   // 시작 전 튜토리얼 표시 여부 (건너뛰기 가능, 한 번 보면 다음부터 자동 생략)
   const [showIntro, setShowIntro] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -499,7 +503,26 @@ export default function TestPage() {
   const order = choiceOrders[index] ?? q.choices.map((_, i) => i);
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-7 lg:items-center lg:justify-center lg:px-0 lg:py-10">
+    <main className="flex flex-1 flex-col px-6 py-7 lg:px-0 lg:py-6">
+     {/* PC 상단 리더보드 728×90 — 브라우저 상단 고정(fixed)이라 카드 중앙 배치에 영향 없음 */}
+     {isDesktop === true && (
+       <div className="fixed left-1/2 top-0 z-40 -translate-x-1/2">
+         <AdFitBanner unit="DAN-oszfGEM0MoJsuWN3" width={728} height={90} />
+       </div>
+     )}
+     {/* 모바일 상단 배너 320×50 */}
+     {isDesktop === false && (
+       <div className="flex justify-center">
+         <AdFitBanner
+           unit="DAN-lgDU2Dq4xvULyTQD"
+           width={320}
+           height={50}
+           className="mb-6"
+         />
+       </div>
+     )}
+     {/* lg:-translate-y-6 — body 전역 padding-top 24px 보정, 카드를 뷰포트 정중앙에 */}
+     <div className="flex w-full flex-1 flex-col lg:-translate-y-6 lg:items-center lg:justify-center">
      <div className="flex w-full flex-1 flex-col lg:max-w-2xl lg:flex-none lg:rounded-[2.5rem] lg:border lg:border-border lg:bg-surface lg:p-12 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-bold tabular-nums">
@@ -633,6 +656,7 @@ export default function TestPage() {
           </div>
         )}
       </div>
+     </div>
      </div>
     </main>
   );

@@ -1,0 +1,16 @@
+# gukpyeongo 로컬 Supabase.
+# 포트는 umbyul 등 다른 로컬 프로젝트(기본 543xx)와 충돌하지 않게 544xx로 시프트.
+# .env.local의 NEXT_PUBLIC_SUPABASE_URL(127.0.0.1:54421)과 짝.
+project_id = "gukpyeongo"
+
+[api]
+port = 54421
+
+[db]
+port = 54422
+
+[studio]
+port = 54423
+
+[inbucket]
+port = 54424
