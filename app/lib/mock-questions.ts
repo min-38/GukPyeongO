@@ -31,12 +31,8 @@ export interface MockScenario {
   steps: ScenarioStep[];
 }
 
-// 난이도 → 배점. 킬러(3)를 크게 둬 쉬운 것만으론 고득점 불가.
-export const POINTS_BY_DIFFICULTY: Record<1 | 2 | 3, number> = {
-  1: 1,
-  2: 3,
-  3: 8,
-};
+// 배점 매핑은 진행 로직과 함께 useScenario에 둔다.
+export { POINTS_BY_DIFFICULTY } from "./useScenario";
 
 export const MOCK_SCENARIO: MockScenario = {
   id: "mock-company",
