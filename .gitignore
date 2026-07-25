@@ -52,3 +52,7 @@ INTRODUCE.md
 !/rules/security.md
 !/rules/content.md
 !/rules/ui.md
+
+# supabase CLI 로컬 캐시
+/supabase/.branches
+/supabase/.temp

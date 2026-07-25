@@ -11,7 +11,7 @@ import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
 // 진행·타이머·점수·정답공개(useScenario/ScenarioUI)와 레이아웃·respond를 여기 모으고,
 // 표면은 "콘텐츠를 어떻게 등장시키고(revealOnce) 어떻게 그리는지(children)"만 담당한다.
 
-const NEXT_STEP_OPEN_MS = 400; // 문제만 바뀔 때 선택지 여는 딜레이
+export const NEXT_STEP_OPEN_MS = 400; // 문제만 바뀔 때 선택지 여는 딜레이
 const REVEAL_HOLD_MS = 1800; // 답 후 정답 공개를 읽을 시간
 
 type ReadingStep = ScenarioStep & { prompt: string; choices: string[] };
@@ -22,21 +22,23 @@ export default function ReadingScenario<S extends ReadingStep>({
   onFinish,
   // 첫 스텝에서 콘텐츠를 1회 등장시킨다. 다 보여준 뒤 open()을 호출. 정리 함수 반환.
   revealOnce,
+  revealNext,
   children,
 }: {
   label: string;
   steps: S[];
   onFinish: (score: number) => void;
   revealOnce: (open: () => void) => () => void;
+  // 2번째 스텝부터 콘텐츠를 더 여는 유형(이메일)만 넘긴다. 없으면 문제만 바뀐다.
+  revealNext?: (step: S, index: number, open: () => void) => () => void;
   children: ReactNode;
 }) {
-  const reveal = (_step: S, index: number, open: () => void) => {
-    if (index > 0) {
-      // 콘텐츠는 이미 다 떠 있다 — 문제만 바뀐다.
-      const t = window.setTimeout(open, NEXT_STEP_OPEN_MS);
-      return () => clearTimeout(t);
-    }
-    return revealOnce(open);
+  const reveal = (step: S, index: number, open: () => void) => {
+    if (index === 0) return revealOnce(open);
+    if (revealNext) return revealNext(step, index, open);
+    // 콘텐츠는 이미 다 떠 있다 — 문제만 바뀐다.
+    const t = window.setTimeout(open, NEXT_STEP_OPEN_MS);
+    return () => clearTimeout(t);
   };
 
   // 답 후엔 콘텐츠를 건드리지 않고 정답 공개(선택지 색)만 잠깐 보여준 뒤 다음 문제로.
