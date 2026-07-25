@@ -71,24 +71,26 @@ export function AnswerPanel({
         </span>
       )}
 
+      {/* 문제는 답 고른 뒤(정답 공개)에도 그대로 둔다 — 뭘 물었는지 보며 정답을 확인하게. */}
+      {(stage === "answering" || stage === "answered") && (
+        <p className="mb-3 text-center text-sm font-medium text-muted">
+          {prompt}
+        </p>
+      )}
+
       {stage === "answering" && (
-        <>
-          <p className="mb-3 text-center text-sm font-medium text-muted">
-            {prompt}
-          </p>
-          <div className="flex flex-col gap-2">
-            {choices.map((choice, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onAnswer(i)}
-                className="w-full rounded-2xl border-2 border-border px-4 py-4 text-left text-[15px] font-medium transition-all hover:bg-surface-muted active:scale-[0.99]"
-              >
-                {choice}
-              </button>
-            ))}
-          </div>
-        </>
+        <div className="flex flex-col gap-2">
+          {choices.map((choice, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onAnswer(i)}
+              className="w-full rounded-2xl border-2 border-border px-4 py-4 text-left text-[15px] font-medium transition-all hover:bg-surface-muted active:scale-[0.99]"
+            >
+              {choice}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* 정답 공개: 정답=초록, 내 오답 선택=빨강. 무응답(picked=null)이어도 정답은 알려준다. */}
