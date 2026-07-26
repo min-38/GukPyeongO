@@ -17,12 +17,27 @@ import {
 
 import { INPUT } from "./ui";
 
+import CommunityPayloadEditor from "./CommunityPayloadEditor";
 import DocPayloadEditor from "./DocPayloadEditor";
 import ScenarioPreview from "./ScenarioPreview";
 
 // 시나리오 탭 (#75). 목록 + 공통 필드·문항 편집.
 // 유형별 지문 편집기는 kind에 따라 갈아끼우는 슬롯으로만 두고(지금은 JSON),
 // 실제 편집기는 #79~#83에서 채운다.
+
+// 유형별 지문 편집기. 없는 유형은 JSON으로 다룬다(#80~#82에서 채운다).
+const PAYLOAD_EDITORS: Partial<
+  Record<
+    ScenarioKind,
+    (props: {
+      payload: Record<string, unknown>;
+      onChange: (next: Record<string, unknown>) => void;
+    }) => React.ReactElement
+  >
+> = {
+  doc: DocPayloadEditor,
+  community: CommunityPayloadEditor,
+};
 
 const EMPTY_STEP: AdminScenarioStep = {
   id: "",
@@ -249,8 +264,8 @@ function ScenarioForm({
   // 전용 편집기가 있는 유형이면 지문을 객체로 넘긴다.
   // 원본은 payloadText 하나만 두고 편집기는 그때그때 직렬화한다 — 두 벌이 어긋나지 않게.
   // JSON이 깨져 있으면 편집기를 열 수 없으므로 JSON 입력으로 되돌린다.
-  const docPayload = (() => {
-    if (kind !== "doc") return null;
+  const editorPayload = (() => {
+    if (!PAYLOAD_EDITORS[kind]) return null;
     try {
       const parsed = JSON.parse(payloadText) as Record<string, unknown>;
       return typeof parsed === "object" &&
@@ -262,6 +277,7 @@ function ScenarioForm({
       return null;
     }
   })();
+  const PayloadEditor = PAYLOAD_EDITORS[kind];
 
   // 표시 라벨의 정본은 지문 안에 있다(화면이 그걸 읽는다). 여기선 보여주기만 한다.
   const derivedLabel = (() => {
@@ -405,12 +421,12 @@ function ScenarioForm({
       <div className="mt-3">
         <p className="text-xs font-medium text-muted">
           지문 ({SCENARIO_KIND_LABELS[kind]})
-          {!docPayload && " — 전용 편집기는 준비 중, 지금은 JSON"}
+          {!editorPayload && " — 전용 편집기는 준비 중, 지금은 JSON"}
         </p>
-        {docPayload ? (
+        {editorPayload && PayloadEditor ? (
           <div className="mt-1">
-            <DocPayloadEditor
-              payload={docPayload}
+            <PayloadEditor
+              payload={editorPayload}
               onChange={(next) => setPayloadText(JSON.stringify(next, null, 2))}
             />
           </div>

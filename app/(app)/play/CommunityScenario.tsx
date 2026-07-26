@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { type CommunityScenario } from "@/app/lib/mock-community";
+import { type CommunityScenario } from "@/app/lib/community-scenario";
 import { readMs } from "@/app/lib/scenario-pacing";
 import { playMessagePop } from "@/app/lib/sfx";
 

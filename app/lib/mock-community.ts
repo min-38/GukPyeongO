@@ -4,37 +4,7 @@
 // 댓글은 "이미 달려 있는" 글이다 — 정답/오답에 따라 새로 달리지 않는다.
 // 실제 커뮤니티 글을 긁지 않고 가상 인물·가상 상황으로 창작(저작권·명예훼손 회피).
 
-export interface CommunityPost {
-  author: string;
-  title: string;
-  body: string[]; // 문단(줄) 단위 — "안 정돈된 날것 톤"을 그대로
-}
-
-export interface CommunityComment {
-  nick: string;
-  text: string;
-  reply?: boolean; // 대댓글(들여쓰기)
-}
-
-// 시나리오 안의 문제 한 개. 콘텐츠(원글·댓글)는 게시물이 통째로 가지므로,
-// 스텝은 문제 정보만 가진다. (문제마다 댓글이 추가되면 "그게 정답" 힌트가 되어버림)
-export interface CommunityStep {
-  id: string;
-  type: string; // 요지·반어·논점이탈·맞춤법 등
-  prompt: string;
-  choices: string[];
-  answerIndex: number;
-  difficulty: 1 | 2 | 3; // 1 쉬움 / 2 중 / 3 킬러
-  timeLimitSec: number;
-}
-
-export interface CommunityScenario {
-  id: string;
-  boardName: string;
-  post: CommunityPost; // 원글 — 처음에 한 번에 보여준다
-  comments: CommunityComment[]; // 댓글 전체 — 원글과 함께 한 번에 보여준다
-  steps: CommunityStep[];
-}
+import { type CommunityScenario } from "./community-scenario";
 
 export const MOCK_COMMUNITY: CommunityScenario = {
   id: "mock-community",
@@ -52,12 +22,28 @@ export const MOCK_COMMUNITY: CommunityScenario = {
     ],
   },
   comments: [
-    { nick: "ㅇㅇ", text: "금일이면 오늘인데 왜 사흘째 얘기가 나옴? 글을 정리해서 써라" },
-    { nick: "지나가던행인", text: "ㄴ 부장이 3일째 안 올렸단 거잖아 이걸 못 읽네ㅋㅋ", reply: true },
-    { nick: "팩트폭격기", text: "부장이 “천천히 하지”랬다는 거 보면 답 나왔지" },
+    {
+      nick: "ㅇㅇ",
+      text: "금일이면 오늘인데 왜 사흘째 얘기가 나옴? 글을 정리해서 써라",
+    },
+    {
+      nick: "지나가던행인",
+      text: "ㄴ 부장이 3일째 안 올렸단 거잖아 이걸 못 읽네ㅋㅋ",
+      reply: true,
+    },
+    {
+      nick: "팩트폭격기",
+      text: "부장이 “천천히 하지”랬다는 거 보면 답 나왔지",
+    },
     { nick: "헬창2호", text: "3일이나 자료 안 올린 거면 부장 잘못 맞지" },
-    { nick: "배고픈너구리", text: "근데 그 회사 어디임? 나도 이직하려는데 정보좀" },
-    { nick: "맞춤법지키미", text: "글은 잘 썼는데 첫 줄에 틀린 거 하나 있음. 그거부터 고치셈" },
+    {
+      nick: "배고픈너구리",
+      text: "근데 그 회사 어디임? 나도 이직하려는데 정보좀",
+    },
+    {
+      nick: "맞춤법지키미",
+      text: "글은 잘 썼는데 첫 줄에 틀린 거 하나 있음. 그거부터 고치셈",
+    },
   ],
   steps: [
     {
@@ -99,7 +85,11 @@ export const MOCK_COMMUNITY: CommunityScenario = {
       id: "spelling",
       type: "맞춤법",
       prompt: "원글에서 맞춤법이 틀린 부분은?",
-      choices: ["어의없어서 → 어이없어서", "취합해서 → 취합해써", "올려주실까요 → 올려주실가요"],
+      choices: [
+        "어의없어서 → 어이없어서",
+        "취합해서 → 취합해써",
+        "올려주실까요 → 올려주실가요",
+      ],
       answerIndex: 0,
       difficulty: 1,
       timeLimitSec: 30,
