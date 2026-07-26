@@ -15,6 +15,8 @@ import {
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
 
+import ScenarioPreview from "./ScenarioPreview";
+
 // 시나리오 탭 (#75). 목록 + 공통 필드·문항 편집.
 // 유형별 지문 편집기는 kind에 따라 갈아끼우는 슬롯으로만 두고(지금은 JSON),
 // 실제 편집기는 #79~#83에서 채운다.
@@ -244,6 +246,18 @@ function ScenarioForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
+
+  // 미리보기에 넘길 지문. 열 때 JSON을 한 번 해석해 두고, 닫으면 비운다.
+  function togglePreview() {
+    if (preview) return setPreview(null);
+    try {
+      setPreview(JSON.parse(payloadText) as Record<string, unknown>);
+      setError(null);
+    } catch {
+      setError("지문 JSON을 해석할 수 없어 미리보기를 열 수 없습니다.");
+    }
+  }
 
   function moveStep(index: number, dir: -1 | 1) {
     const to = index + dir;
@@ -408,12 +422,29 @@ function ScenarioForm({
         </button>
         <button
           type="button"
+          onClick={togglePreview}
+          className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
+        >
+          {preview ? "미리보기 닫기" : "미리보기"}
+        </button>
+        <button
+          type="button"
           onClick={onCancel}
           className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
         >
           취소
         </button>
       </div>
+
+      {/* 저장 전 편집 중인 내용 그대로 확인한다(#77). */}
+      {preview && (
+        <ScenarioPreview
+          kind={kind}
+          payload={preview}
+          steps={steps}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </form>
   );
 }
