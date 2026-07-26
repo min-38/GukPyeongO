@@ -17,7 +17,7 @@ const BODY_LIMITS: Partial<Record<ScenarioKind, number>> = {
 };
 
 // 분당 읽기 속도 상한. 이보다 빠르게 읽어야 하면 독해가 아니라 속독 시험이 된다.
-const MAX_CHARS_PER_MINUTE = 400;
+export const MAX_CHARS_PER_MINUTE = 400;
 
 // 감정·심정·분위기·주제는 본문이 확정하지 못한다. 채점자가 정하는 문제가 되어버린다(#73).
 const IMPRESSION_WORDS = [
@@ -42,7 +42,10 @@ export interface RuleResult {
 }
 
 // 유형별로 본문이 어디 있는지 다르다. 없는 유형(chat)은 빈 문자열.
-function bodyText(kind: ScenarioKind, payload: Record<string, unknown>): string {
+function bodyText(
+  kind: ScenarioKind,
+  payload: Record<string, unknown>,
+): string {
   const p = payload as {
     body?: string[];
     doc?: { body?: string[] };
@@ -66,7 +69,7 @@ function bodyText(kind: ScenarioKind, payload: Record<string, unknown>): string 
 export function checkScenarioRules(
   kind: ScenarioKind,
   payload: Record<string, unknown>,
-  steps: RuleStep[]
+  steps: RuleStep[],
 ): RuleResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -88,7 +91,7 @@ export function checkScenarioRules(
   const limit = BODY_LIMITS[kind];
   if (limit !== undefined && body.length > limit) {
     warnings.push(
-      `본문이 ${body.length}자입니다. 권장 상한 ${limit}자를 넘으면 모바일에서 읽기 어렵습니다.`
+      `본문이 ${body.length}자입니다. 권장 상한 ${limit}자를 넘으면 모바일에서 읽기 어렵습니다.`,
     );
   }
 
@@ -101,27 +104,26 @@ export function checkScenarioRules(
       if (perMinute > MAX_CHARS_PER_MINUTE) {
         const needed = Math.ceil((body.length / MAX_CHARS_PER_MINUTE) * 60);
         errors.push(
-          `읽기 시간이 부족합니다. 본문 ${body.length}자에는 ${needed}초 이상이 필요합니다(현재 ${readSec}초).`
+          `읽기 시간이 부족합니다. 본문 ${body.length}자에는 ${needed}초 이상이 필요합니다(현재 ${readSec}초).`,
         );
       }
     }
   }
 
   if (kind === "email") {
-    const messageCount = (
-      (payload as { messages?: unknown[] }).messages ?? []
-    ).length;
+    const messageCount = ((payload as { messages?: unknown[] }).messages ?? [])
+      .length;
     let prev = 0;
     for (const [i, step] of steps.entries()) {
       const upTo = step.showUpTo ?? messageCount;
       if (upTo > messageCount) {
         errors.push(
-          `${i + 1}번 문항: 공개 범위(${upTo})가 메일 수(${messageCount})를 넘습니다.`
+          `${i + 1}번 문항: 공개 범위(${upTo})가 메일 수(${messageCount})를 넘습니다.`,
         );
       } else if (upTo < prev) {
         // 한 번 열린 메일은 닫히지 않는다. 줄어들면 UI가 메일을 도로 감춘다.
         errors.push(
-          `${i + 1}번 문항: 공개 범위가 앞 문항(${prev})보다 줄었습니다.`
+          `${i + 1}번 문항: 공개 범위가 앞 문항(${prev})보다 줄었습니다.`,
         );
       }
       prev = Math.max(prev, upTo);
@@ -135,7 +137,7 @@ export function checkScenarioRules(
         const hit = IMPRESSION_WORDS.find((w) => text.includes(w));
         if (hit) {
           warnings.push(
-            `${i + 1}번 문항에 감상 어휘 '${hit}'가 있습니다. 본문이 확정하지 못하는 것을 묻고 있지 않은지 확인해주세요.`
+            `${i + 1}번 문항에 감상 어휘 '${hit}'가 있습니다. 본문이 확정하지 못하는 것을 묻고 있지 않은지 확인해주세요.`,
           );
           break;
         }

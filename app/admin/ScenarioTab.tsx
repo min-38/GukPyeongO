@@ -23,6 +23,7 @@ import CommunityPayloadEditor from "./CommunityPayloadEditor";
 import DocPayloadEditor from "./DocPayloadEditor";
 import EmailPayloadEditor from "./EmailPayloadEditor";
 import ScenarioPreview from "./ScenarioPreview";
+import StoryPayloadEditor from "./StoryPayloadEditor";
 
 // 시나리오 탭 (#75). 목록 + 공통 필드·문항 편집.
 // 유형별 지문 편집기는 kind에 따라 갈아끼우는 슬롯으로만 두고(지금은 JSON),
@@ -34,6 +35,8 @@ const PAYLOAD_EDITORS: Partial<
     ScenarioKind,
     (props: {
       payload: Record<string, unknown>;
+      // 서사 편집기는 감상 어휘·읽기 시간 규칙을 미리 보여주려 문항도 본다.
+      steps: AdminScenarioStep[];
       onChange: (next: Record<string, unknown>) => void;
     }) => React.ReactElement
   >
@@ -42,6 +45,7 @@ const PAYLOAD_EDITORS: Partial<
   community: CommunityPayloadEditor,
   chat: ChatPayloadEditor,
   email: EmailPayloadEditor,
+  story: StoryPayloadEditor,
 };
 
 const EMPTY_STEP: AdminScenarioStep = {
@@ -448,6 +452,7 @@ function ScenarioForm({
           <div className="mt-1">
             <PayloadEditor
               payload={editorPayload}
+              steps={steps}
               onChange={(next) => setPayloadText(JSON.stringify(next, null, 2))}
             />
           </div>
