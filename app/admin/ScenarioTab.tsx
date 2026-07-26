@@ -21,6 +21,7 @@ import ChatPayloadEditor from "./ChatPayloadEditor";
 import ChatStepFields from "./ChatStepFields";
 import CommunityPayloadEditor from "./CommunityPayloadEditor";
 import DocPayloadEditor from "./DocPayloadEditor";
+import EmailPayloadEditor from "./EmailPayloadEditor";
 import ScenarioPreview from "./ScenarioPreview";
 
 // 시나리오 탭 (#75). 목록 + 공통 필드·문항 편집.
@@ -40,6 +41,7 @@ const PAYLOAD_EDITORS: Partial<
   doc: DocPayloadEditor,
   community: CommunityPayloadEditor,
   chat: ChatPayloadEditor,
+  email: EmailPayloadEditor,
 };
 
 const EMPTY_STEP: AdminScenarioStep = {
