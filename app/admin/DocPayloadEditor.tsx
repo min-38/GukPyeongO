@@ -1,10 +1,11 @@
 "use client";
 
+import { EditorHints, ParagraphList } from "./ListRow";
 import { INPUT } from "./ui";
 
 // 문서형(공지·신문) 지문 편집기 (#78).
-// 정본 타입은 app/lib/doc-scenario.ts 의 DocScenario.doc — source·title·body[].
-// 지문 JSON을 직접 고치던 자리를 대신한다. 본문은 문단 단위로 추가/삭제/순서 변경한다.
+// 정본 타입은 app/lib/doc-scenario.ts 의 DocScenario — sourceLabel·doc{source·title·body[]}.
+// 본문은 문단 단위로 추가/삭제/순서 변경한다.
 
 // 서버는 이 길이를 넘으면 경고를 준다(#76). 편집 중에 미리 알려준다.
 const BODY_SOFT_LIMIT = 650;
@@ -29,18 +30,9 @@ export default function DocPayloadEditor({
   const setDoc = (next: Partial<NonNullable<DocPayload["doc"]>>) =>
     onChange({ ...payload, doc: { ...doc, ...next } });
 
-  const setBody = (next: string[]) => setDoc({ body: next });
-
-  function moveParagraph(index: number, dir: -1 | 1) {
-    const to = index + dir;
-    if (to < 0 || to >= body.length) return;
-    const next = [...body];
-    [next[index], next[to]] = [next[to], next[index]];
-    setBody(next);
-  }
-
   const chars = body.join("").length;
   const hints: string[] = [];
+  if (!p.sourceLabel?.trim()) hints.push("표시 라벨을 입력해주세요.");
   if (!doc.source?.trim()) hints.push("출처를 입력해주세요.");
   if (!doc.title?.trim()) hints.push("제목을 입력해주세요.");
   if (body.length === 0 || body.every((line) => !line.trim()))
@@ -91,58 +83,16 @@ export default function DocPayloadEditor({
         </span>
         <button
           type="button"
-          onClick={() => setBody([...body, ""])}
+          onClick={() => setDoc({ body: [...body, ""] })}
           className="text-xs font-medium text-brand"
         >
           + 문단 추가
         </button>
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {body.map((line, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className="mt-2 w-4 shrink-0 text-xs text-muted">
-              {i + 1}
-            </span>
-            <textarea
-              value={line}
-              onChange={(e) =>
-                setBody(body.map((l, j) => (j === i ? e.target.value : l)))
-              }
-              rows={2}
-              className={`flex-1 ${INPUT}`}
-            />
-            <span className="mt-1 flex shrink-0 flex-col gap-1 text-xs text-muted">
-              <button type="button" onClick={() => moveParagraph(i, -1)}>
-                ↑
-              </button>
-              <button type="button" onClick={() => moveParagraph(i, 1)}>
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => setBody(body.filter((_, j) => j !== i))}
-                className="text-red-500"
-              >
-                ✕
-              </button>
-            </span>
-          </li>
-        ))}
-        {body.length === 0 && (
-          <li className="py-3 text-center text-xs text-muted">
-            문단이 없습니다.
-          </li>
-        )}
-      </ul>
+      <ParagraphList value={body} onChange={(next) => setDoc({ body: next })} />
 
-      {hints.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-          {hints.map((h, i) => (
-            <li key={i}>· {h}</li>
-          ))}
-        </ul>
-      )}
+      <EditorHints hints={hints} />
     </div>
   );
 }

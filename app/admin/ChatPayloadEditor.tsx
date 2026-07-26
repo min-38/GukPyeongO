@@ -1,5 +1,6 @@
 "use client";
 
+import { EditorHints } from "./ListRow";
 import { INPUT } from "./ui";
 
 // 메신저 지문 편집기 (#80).
@@ -56,13 +57,7 @@ export default function ChatPayloadEditor({
         대사 길이로 자동 계산됩니다.
       </p>
 
-      {hints.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-          {hints.map((h, i) => (
-            <li key={i}>· {h}</li>
-          ))}
-        </ul>
-      )}
+      <EditorHints hints={hints} />
     </div>
   );
 }

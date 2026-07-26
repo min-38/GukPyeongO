@@ -2,7 +2,7 @@
 
 import { type EmailMessage } from "@/app/lib/email-scenario";
 
-import { moved, RowButtons } from "./ListRow";
+import { EditorHints, moved, RowButtons } from "./ListRow";
 import { INPUT } from "./ui";
 
 // 이메일 지문 편집기 (#81).
@@ -314,13 +314,7 @@ export default function EmailPayloadEditor({
         )}
       </ul>
 
-      {hints.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-          {hints.map((h, i) => (
-            <li key={i}>· {h}</li>
-          ))}
-        </ul>
-      )}
+      <EditorHints hints={hints} />
     </div>
   );
 }

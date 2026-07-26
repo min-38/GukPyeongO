@@ -5,7 +5,7 @@ import {
   type CommunityPost,
 } from "@/app/lib/community-scenario";
 
-import { moved, RowButtons } from "./ListRow";
+import { EditorHints, moved, ParagraphList, RowButtons } from "./ListRow";
 import { INPUT } from "./ui";
 
 // 커뮤니티 지문 편집기 (#79).
@@ -93,28 +93,7 @@ export default function CommunityPayloadEditor({
           + 문단 추가
         </button>
       </div>
-      <ul className="flex flex-col gap-2">
-        {body.map((line, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className="mt-2 w-4 shrink-0 text-xs text-muted">
-              {i + 1}
-            </span>
-            <textarea
-              value={line}
-              onChange={(e) =>
-                setBody(body.map((l, j) => (j === i ? e.target.value : l)))
-              }
-              rows={2}
-              className={`flex-1 ${INPUT}`}
-            />
-            <RowButtons
-              onUp={() => setBody(moved(body, i, -1))}
-              onDown={() => setBody(moved(body, i, 1))}
-              onRemove={() => setBody(body.filter((_, j) => j !== i))}
-            />
-          </li>
-        ))}
-      </ul>
+      <ParagraphList value={body} onChange={setBody} />
 
       <div className="mt-2 flex items-center justify-between">
         <span className="text-xs font-medium text-muted">
@@ -191,13 +170,7 @@ export default function CommunityPayloadEditor({
         )}
       </ul>
 
-      {hints.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-          {hints.map((h, i) => (
-            <li key={i}>· {h}</li>
-          ))}
-        </ul>
-      )}
+      <EditorHints hints={hints} />
     </div>
   );
 }

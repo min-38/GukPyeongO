@@ -35,3 +35,54 @@ export function RowButtons({
     </span>
   );
 }
+
+// 저장 전 확인할 것들. 다섯 편집기가 같은 모양으로 그리던 것을 모았다.
+export function EditorHints({ hints }: { hints: string[] }) {
+  if (hints.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
+      {hints.map((h, i) => (
+        <li key={i}>· {h}</li>
+      ))}
+    </ul>
+  );
+}
+
+// 문단 배열 편집(번호 + textarea + 이동/삭제). 문서·커뮤니티·서사 본문이 같은 손놀림이다.
+export function ParagraphList({
+  value,
+  onChange,
+  rows = 2,
+  emptyText = "문단이 없습니다.",
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+  rows?: number;
+  emptyText?: string;
+}) {
+  return (
+    <ul className="flex flex-col gap-2">
+      {value.map((line, i) => (
+        <li key={i} className="flex items-start gap-2">
+          <span className="mt-2 w-4 shrink-0 text-xs text-muted">{i + 1}</span>
+          <textarea
+            value={line}
+            onChange={(e) =>
+              onChange(value.map((l, j) => (j === i ? e.target.value : l)))
+            }
+            rows={rows}
+            className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground"
+          />
+          <RowButtons
+            onUp={() => onChange(moved(value, i, -1))}
+            onDown={() => onChange(moved(value, i, 1))}
+            onRemove={() => onChange(value.filter((_, j) => j !== i))}
+          />
+        </li>
+      ))}
+      {value.length === 0 && (
+        <li className="py-3 text-center text-xs text-muted">{emptyText}</li>
+      )}
+    </ul>
+  );
+}

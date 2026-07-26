@@ -6,7 +6,7 @@ import {
   MAX_CHARS_PER_MINUTE,
 } from "@/app/lib/scenario-rules";
 
-import { moved, RowButtons } from "./ListRow";
+import { EditorHints, ParagraphList } from "./ListRow";
 import { INPUT } from "./ui";
 
 // 서사 지문 편집기 (#82).
@@ -130,41 +130,9 @@ export default function StoryPayloadEditor({
         </button>
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {body.map((line, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className="mt-2 w-4 shrink-0 text-xs text-muted">
-              {i + 1}
-            </span>
-            <textarea
-              value={line}
-              onChange={(e) =>
-                setBody(body.map((l, j) => (j === i ? e.target.value : l)))
-              }
-              rows={3}
-              className={`flex-1 ${INPUT}`}
-            />
-            <RowButtons
-              onUp={() => setBody(moved(body, i, -1))}
-              onDown={() => setBody(moved(body, i, 1))}
-              onRemove={() => setBody(body.filter((_, j) => j !== i))}
-            />
-          </li>
-        ))}
-        {body.length === 0 && (
-          <li className="py-3 text-center text-xs text-muted">
-            문단이 없습니다.
-          </li>
-        )}
-      </ul>
+      <ParagraphList value={body} onChange={setBody} rows={3} />
 
-      {hints.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-          {hints.map((h, i) => (
-            <li key={i}>· {h}</li>
-          ))}
-        </ul>
-      )}
+      <EditorHints hints={hints} />
     </div>
   );
 }
