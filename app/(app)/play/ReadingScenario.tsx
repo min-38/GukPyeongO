@@ -20,6 +20,8 @@ export default function ReadingScenario<S extends ReadingStep>({
   label,
   steps,
   onFinish,
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug,
   // 첫 스텝에서 콘텐츠를 1회 등장시킨다. 다 보여준 뒤 open()을 호출. 정리 함수 반환.
   revealOnce,
   revealNext,
@@ -28,6 +30,7 @@ export default function ReadingScenario<S extends ReadingStep>({
   label: string;
   steps: S[];
   onFinish: (score: number) => void;
+  slug?: string;
   revealOnce: (open: () => void) => () => void;
   // 2번째 스텝부터 콘텐츠를 더 여는 유형(이메일)만 넘긴다. 없으면 문제만 바뀐다.
   revealNext?: (step: S, index: number, open: () => void) => () => void;
@@ -47,7 +50,7 @@ export default function ReadingScenario<S extends ReadingStep>({
     return () => clearTimeout(t);
   };
 
-  const s = useScenario({ steps, onFinish, reveal, respond });
+  const s = useScenario({ steps, onFinish, slug, reveal, respond });
   const { step } = s;
 
   return (
@@ -68,7 +71,7 @@ export default function ReadingScenario<S extends ReadingStep>({
       <AnswerPanel
         prompt={step.prompt}
         choices={step.choices}
-        answerIndex={step.answerIndex}
+        answerIndex={s.answerIndex}
         stage={s.stage}
         picked={s.picked}
         correct={s.correct}

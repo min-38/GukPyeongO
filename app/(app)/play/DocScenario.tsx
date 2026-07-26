@@ -35,9 +35,12 @@ function DocCard({
 export default function DocScenarioView({
   scenario,
   onFinish,
+  slug,
 }: {
   scenario: DocScenario;
   onFinish: (score: number) => void;
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug?: string;
 }) {
   const [docShown, setDocShown] = useState(false);
 
@@ -48,7 +51,7 @@ export default function DocScenarioView({
       window.setTimeout(() => {
         playMessagePop();
         setDocShown(true);
-      }, OPENING_DELAY_MS)
+      }, OPENING_DELAY_MS),
     );
     const openAt = OPENING_DELAY_MS + readMs(scenario.doc.body.join(" "));
     timers.push(window.setTimeout(open, openAt));
@@ -60,6 +63,7 @@ export default function DocScenarioView({
       label={scenario.sourceLabel}
       steps={scenario.steps}
       onFinish={onFinish}
+      slug={slug}
       revealOnce={revealOnce}
     >
       {docShown && (

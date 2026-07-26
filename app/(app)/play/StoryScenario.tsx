@@ -12,9 +12,12 @@ const OPENING_DELAY_MS = 400;
 export default function StoryScenarioView({
   scenario,
   onFinish,
+  slug,
 }: {
   scenario: StoryScenario;
   onFinish: (score: number) => void;
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug?: string;
 }) {
   const [shown, setShown] = useState(false);
   // 읽는 단계. 남은 시간이 0이 되거나 다 읽었다고 누르면 문제로 넘어간다.
@@ -44,12 +47,15 @@ export default function StoryScenarioView({
         setReading(true);
         ticker = window.setInterval(
           () => setLeft((n) => Math.max(0, n - 1)),
-          1000
+          1000,
         );
-      }, OPENING_DELAY_MS)
+      }, OPENING_DELAY_MS),
     );
     timers.push(
-      window.setTimeout(toQuestions, OPENING_DELAY_MS + scenario.readSec * 1000)
+      window.setTimeout(
+        toQuestions,
+        OPENING_DELAY_MS + scenario.readSec * 1000,
+      ),
     );
 
     return () => {
@@ -64,6 +70,7 @@ export default function StoryScenarioView({
       label={scenario.sourceLabel}
       steps={scenario.steps}
       onFinish={onFinish}
+      slug={slug}
       revealOnce={revealOnce}
     >
       {shown && (

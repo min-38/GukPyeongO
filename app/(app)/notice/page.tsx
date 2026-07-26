@@ -1,19 +1,12 @@
-"use client";
-
 import { MOCK_NOTICE } from "@/app/lib/mock-notice";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import DocScenarioView from "../play/DocScenario";
-import PlayShell from "../play/PlayShell";
-import NoticeTutorial from "./NoticeTutorial";
+import NoticePlay from "./Play";
 
-export default function NoticePage() {
-  return (
-    <PlayShell
-      doneTitle="공고 정독 완료!"
-      tutorial={(start) => <NoticeTutorial onStart={start} />}
-      renderScenario={(onFinish) => (
-        <DocScenarioView scenario={MOCK_NOTICE} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+export const revalidate = 60;
+
+export default async function NoticePage() {
+  const scenario = await getScenario("notice", MOCK_NOTICE);
+  return <NoticePlay scenario={scenario} />;
 }

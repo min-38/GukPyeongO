@@ -74,9 +74,12 @@ function TypingIndicator() {
 export default function ChatScenario({
   scenario,
   onFinish,
+  slug,
 }: {
   scenario: ChatScenario;
   onFinish: (score: number) => void;
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug?: string;
 }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [typing, setTyping] = useState(false);
@@ -139,7 +142,13 @@ export default function ChatScenario({
     return () => timers.forEach(clearTimeout);
   };
 
-  const s = useScenario({ steps: scenario.steps, onFinish, reveal, respond });
+  const s = useScenario({
+    steps: scenario.steps,
+    onFinish,
+    slug,
+    reveal,
+    respond,
+  });
 
   // 새 말풍선이 붙거나 하단 영역이 나타나고 사라질 때마다 맨 아래로 붙인다.
   const endRef = useRef<HTMLDivElement>(null);
@@ -171,7 +180,7 @@ export default function ChatScenario({
       <AnswerPanel
         prompt={step.prompt}
         choices={step.choices}
-        answerIndex={step.answerIndex}
+        answerIndex={s.answerIndex}
         stage={s.stage}
         picked={s.picked}
         correct={s.correct}

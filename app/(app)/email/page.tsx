@@ -1,19 +1,12 @@
-"use client";
-
 import { MOCK_EMAIL } from "@/app/lib/mock-email";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import EmailScenarioView from "../play/EmailScenario";
-import PlayShell from "../play/PlayShell";
-import EmailTutorial from "./EmailTutorial";
+import EmailPlay from "./Play";
 
-export default function EmailPage() {
-  return (
-    <PlayShell
-      doneTitle="메일 정독 완료!"
-      tutorial={(start) => <EmailTutorial onStart={start} />}
-      renderScenario={(onFinish) => (
-        <EmailScenarioView scenario={MOCK_EMAIL} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+export const revalidate = 60;
+
+export default async function EmailPage() {
+  const scenario = await getScenario("email", MOCK_EMAIL);
+  return <EmailPlay scenario={scenario} />;
 }

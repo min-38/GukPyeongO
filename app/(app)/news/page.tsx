@@ -1,19 +1,12 @@
-"use client";
-
 import { MOCK_NEWS } from "@/app/lib/mock-news";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import DocScenarioView from "../play/DocScenario";
-import PlayShell from "../play/PlayShell";
-import NewsTutorial from "./NewsTutorial";
+import NewsPlay from "./Play";
 
-export default function NewsPage() {
-  return (
-    <PlayShell
-      doneTitle="기사 정독 완료!"
-      tutorial={(start) => <NewsTutorial onStart={start} />}
-      renderScenario={(onFinish) => (
-        <DocScenarioView scenario={MOCK_NEWS} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+export const revalidate = 60;
+
+export default async function NewsPage() {
+  const scenario = await getScenario("news", MOCK_NEWS);
+  return <NewsPlay scenario={scenario} />;
 }

@@ -1,19 +1,12 @@
-"use client";
-
 import { MOCK_STORY } from "@/app/lib/mock-story";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import PlayShell from "../play/PlayShell";
-import StoryScenarioView from "../play/StoryScenario";
-import StoryTutorial from "./StoryTutorial";
+import StoryPlay from "./Play";
 
-export default function StoryPage() {
-  return (
-    <PlayShell
-      doneTitle="이야기 정독 완료!"
-      tutorial={(start) => <StoryTutorial onStart={start} />}
-      renderScenario={(onFinish) => (
-        <StoryScenarioView scenario={MOCK_STORY} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+export const revalidate = 60;
+
+export default async function StoryPage() {
+  const scenario = await getScenario("story", MOCK_STORY);
+  return <StoryPlay scenario={scenario} />;
 }

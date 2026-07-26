@@ -9,8 +9,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type ScenarioStage = "replaying" | "answering" | "answered";
 
 // 유형별 문제 스텝의 최소 공통 형태.
+// answerIndex는 서버 채점(#83)으로 오면 클라이언트에 내려오지 않는다.
 export interface ScenarioStep {
-  answerIndex: number;
+  id?: string;
+  answerIndex?: number;
   difficulty: 1 | 2 | 3;
   timeLimitSec: number;
 }
@@ -21,6 +23,26 @@ export const POINTS_BY_DIFFICULTY: Record<1 | 2 | 3, number> = {
   2: 3,
   3: 8,
 };
+
+// 서버 채점 (#83). 정답이 클라이언트에 없을 때만 부른다.
+async function gradeOnServer(
+  slug: string | undefined,
+  stepKey: string | undefined,
+  choiceIndex: number | null,
+): Promise<{ answerIndex: number } | null> {
+  if (!slug || !stepKey) return null;
+  try {
+    const res = await fetch("/api/scenario-answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, stepKey, choiceIndex }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as { answerIndex: number };
+  } catch {
+    return null;
+  }
+}
 
 const SCORE_POP_MS = 1000; // 점수 애니메이션 길이 (globals.css의 score-pop과 동일)
 
@@ -33,6 +55,8 @@ export interface AnswerResult {
 export function useScenario<S extends ScenarioStep>({
   steps,
   onFinish,
+  // DB에서 온 시나리오의 라우트 키. 있으면 정답 판정을 서버에 맡긴다(#83).
+  slug,
   // 현재 스텝의 맥락을 재생한다. 다 보여준 뒤 open()을 호출하면 선택지가 열린다.
   // 정리 함수를 반환한다(예약 타이머 취소).
   reveal,
@@ -41,6 +65,7 @@ export function useScenario<S extends ScenarioStep>({
 }: {
   steps: S[];
   onFinish: (score: number) => void;
+  slug?: string;
   reveal: (step: S, index: number, open: () => void) => () => void;
   respond: (step: S, result: AnswerResult, next: () => void) => () => void;
 }) {
@@ -50,6 +75,8 @@ export function useScenario<S extends ScenarioStep>({
   const [picked, setPicked] = useState<number | null>(null);
   const [correct, setCorrect] = useState(false);
   const [scorePop, setScorePop] = useState<number | null>(null);
+  // 공개할 정답. 서버 채점이면 응답으로 채워지고, mock 폴백이면 스텝이 그대로 갖고 있다.
+  const [answerIndex, setAnswerIndex] = useState<number | null>(null);
 
   const lockRef = useRef(false);
   const scoreRef = useRef(0);
@@ -70,14 +97,27 @@ export function useScenario<S extends ScenarioStep>({
   const isLast = stepIndex + 1 >= total;
 
   const answer = useCallback(
-    (choiceIndex: number | null) => {
+    async (choiceIndex: number | null) => {
       if (lockRef.current) return;
       lockRef.current = true;
 
-      const isCorrect = choiceIndex === step.answerIndex;
+      // 정답이 스텝에 없으면(=DB에서 온 시나리오) 서버가 채점한다.
+      // 실패하면 오답으로 두지 않고 무효 처리해 다시 고를 수 있게 한다.
+      let revealed = step.answerIndex;
+      if (revealed === undefined) {
+        const graded = await gradeOnServer(slug, step.id, choiceIndex);
+        if (!graded) {
+          lockRef.current = false;
+          return;
+        }
+        revealed = graded.answerIndex;
+      }
+
+      const isCorrect = choiceIndex !== null && choiceIndex === revealed;
       const gained = isCorrect ? POINTS_BY_DIFFICULTY[step.difficulty] : 0;
       scoreRef.current += gained;
 
+      setAnswerIndex(revealed);
       setPicked(choiceIndex);
       setCorrect(isCorrect);
       setStage("answered");
@@ -105,14 +145,14 @@ export function useScenario<S extends ScenarioStep>({
       const cleanupRespond = respondRef.current(
         step,
         { choiceIndex, isCorrect, gained },
-        next
+        next,
       );
       cleanupRef.current = () => {
         if (popTimer) clearTimeout(popTimer);
         cleanupRespond();
       };
     },
-    [step, isLast, onFinish]
+    [step, isLast, onFinish, slug],
   );
 
   // 스텝 진입 → 맥락 재생 → open()으로 선택지 노출.
@@ -136,7 +176,7 @@ export function useScenario<S extends ScenarioStep>({
     }, 1000);
     const deadline = window.setTimeout(
       () => answer(null),
-      step.timeLimitSec * 1000
+      step.timeLimitSec * 1000,
     );
     return () => {
       clearInterval(tick);
@@ -153,6 +193,8 @@ export function useScenario<S extends ScenarioStep>({
     picked,
     correct,
     scorePop,
+    // 정답 공개용. 서버 채점이면 응답 값, 아니면 스텝이 들고 있던 값.
+    answerIndex: answerIndex ?? step.answerIndex ?? -1,
     answer,
   };
 }

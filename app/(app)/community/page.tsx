@@ -1,24 +1,12 @@
-"use client";
-
 import { MOCK_COMMUNITY } from "@/app/lib/mock-community";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import CommunityScenarioView from "../play/CommunityScenario";
-import PlayShell from "../play/PlayShell";
-import CommunityTutorial from "./CommunityTutorial";
+import CommunityPlay from "./Play";
 
-export default function CommunityPage() {
-  return (
-    <PlayShell
-      doneTitle="정독 완료!"
-      tutorial={(start) => (
-        <CommunityTutorial
-          boardName={MOCK_COMMUNITY.boardName}
-          onStart={start}
-        />
-      )}
-      renderScenario={(onFinish) => (
-        <CommunityScenarioView scenario={MOCK_COMMUNITY} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+export const revalidate = 60;
+
+export default async function CommunityPage() {
+  const scenario = await getScenario("community", MOCK_COMMUNITY);
+  return <CommunityPlay scenario={scenario} />;
 }

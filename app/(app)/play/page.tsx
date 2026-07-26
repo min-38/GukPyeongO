@@ -1,21 +1,12 @@
-"use client";
-
 import { MOCK_SCENARIO } from "@/app/lib/mock-questions";
+import { getScenario } from "@/app/lib/scenarios.server";
 
-import ChatScenario from "./ChatScenario";
-import PlayShell from "./PlayShell";
-import Tutorial from "./Tutorial";
+import ChatPlay from "./Play";
 
-export default function PlayPage() {
-  return (
-    <PlayShell
-      doneTitle="대화 종료!"
-      tutorial={(start) => (
-        <Tutorial roomTitle={MOCK_SCENARIO.roomTitle} onStart={start} />
-      )}
-      renderScenario={(onFinish) => (
-        <ChatScenario scenario={MOCK_SCENARIO} onFinish={onFinish} />
-      )}
-    />
-  );
+// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#83).
+export const revalidate = 60;
+
+export default async function PlayPage() {
+  const scenario = await getScenario("chat", MOCK_SCENARIO);
+  return <ChatPlay scenario={scenario} />;
 }

@@ -63,9 +63,12 @@ function CommentRow({
 export default function CommunityScenarioView({
   scenario,
   onFinish,
+  slug,
 }: {
   scenario: CommunityScenario;
   onFinish: (score: number) => void;
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug?: string;
 }) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const addItem = (item: FeedItem) => setFeed((prev) => [...prev, item]);
@@ -79,16 +82,21 @@ export default function CommunityScenarioView({
       window.setTimeout(() => {
         playMessagePop();
         addItem({ kind: "post", ...post });
-      }, OPENING_DELAY_MS)
+      }, OPENING_DELAY_MS),
     );
     const commentsAt = OPENING_DELAY_MS + readMs(post.body.join(" "));
     timers.push(
       window.setTimeout(() => {
         playMessagePop();
         comments.forEach((c) =>
-          addItem({ kind: "comment", nick: c.nick, text: c.text, reply: c.reply })
+          addItem({
+            kind: "comment",
+            nick: c.nick,
+            text: c.text,
+            reply: c.reply,
+          }),
         );
-      }, commentsAt)
+      }, commentsAt),
     );
     // 전체 댓글을 훑을 시간을 준 뒤 첫 문제를 연다.
     const openAt = commentsAt + readMs(comments.map((c) => c.text).join(" "));
@@ -101,6 +109,7 @@ export default function CommunityScenarioView({
       label={scenario.boardName}
       steps={scenario.steps}
       onFinish={onFinish}
+      slug={slug}
       revealOnce={revealOnce}
     >
       {feed.map((item, i) =>
@@ -118,7 +127,7 @@ export default function CommunityScenarioView({
             text={item.text}
             reply={item.reply}
           />
-        )
+        ),
       )}
     </ReadingScenario>
   );

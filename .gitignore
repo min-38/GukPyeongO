@@ -56,3 +56,6 @@ INTRODUCE.md
 # supabase CLI 로컬 캐시
 /supabase/.branches
 /supabase/.temp
+
+# Claude Code 로컬 설정
+/.claude

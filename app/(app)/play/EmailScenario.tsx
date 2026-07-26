@@ -66,9 +66,12 @@ function MessageCard({ msg }: { msg: EmailMessage }) {
 export default function EmailScenarioView({
   scenario,
   onFinish,
+  slug,
 }: {
   scenario: EmailScenario;
   onFinish: (score: number) => void;
+  // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
+  slug?: string;
 }) {
   // 지금까지 열린 메일 수. 이미 열린 메일은 다시 닫히지 않으므로 원문을 계속 대조할 수 있다.
   const [visible, setVisible] = useState(0);
@@ -84,7 +87,7 @@ export default function EmailScenarioView({
       scenario.messages
         .slice(from, to)
         .map((m) => m.body.join(" "))
-        .join(" ")
+        .join(" "),
     );
 
   const openUpTo = (to: number, from: number, open: () => void) => {
@@ -94,10 +97,10 @@ export default function EmailScenarioView({
         playMessagePop();
         setVisible(to);
         setTab(to - 1); // 새로 온 메일을 펴서 보여준다
-      }, OPENING_DELAY_MS)
+      }, OPENING_DELAY_MS),
     );
     timers.push(
-      window.setTimeout(open, OPENING_DELAY_MS + readMsFor(from, to))
+      window.setTimeout(open, OPENING_DELAY_MS + readMsFor(from, to)),
     );
     return () => timers.forEach(clearTimeout);
   };
@@ -120,6 +123,7 @@ export default function EmailScenarioView({
       label={scenario.sourceLabel}
       steps={scenario.steps}
       onFinish={onFinish}
+      slug={slug}
       revealOnce={revealOnce}
       revealNext={revealNext}
     >
