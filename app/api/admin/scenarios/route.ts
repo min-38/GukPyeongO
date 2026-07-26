@@ -25,7 +25,7 @@ async function logAudit(
   supabase: Db,
   action: AuditAction,
   scenarioId: string,
-  snapshot: AdminScenario | null
+  snapshot: AdminScenario | null,
 ) {
   try {
     await supabase
@@ -80,7 +80,7 @@ function toStep(row: StepRow): AdminScenarioStep {
 
 function toScenario(row: ScenarioRow): AdminScenario {
   const steps = [...(row.scenario_steps ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order
+    (a, b) => a.sort_order - b.sort_order,
   );
   return {
     id: row.id,
@@ -130,7 +130,18 @@ function parseInput(body: unknown): ParsedInput | string {
     return "유형이 올바르지 않습니다.";
   if (!SCENARIO_STATUSES.includes(b.status as ScenarioStatus))
     return "상태가 올바르지 않습니다.";
-  if (typeof b.sourceLabel !== "string") return "표시 라벨이 필요합니다.";
+  // 표시 라벨의 정본은 payload 안에 있다(화면이 그걸 읽는다).
+  // source_label 컬럼은 목록·필터용 사본이라 여기서 payload로부터 파생시킨다.
+  const labelSource = b.payload as {
+    sourceLabel?: unknown;
+    boardName?: unknown;
+  };
+  const sourceLabel =
+    typeof labelSource?.sourceLabel === "string"
+      ? labelSource.sourceLabel
+      : typeof labelSource?.boardName === "string"
+        ? labelSource.boardName
+        : "";
   if (
     typeof b.payload !== "object" ||
     b.payload === null ||
@@ -220,7 +231,7 @@ function parseInput(body: unknown): ParsedInput | string {
   return {
     slug: b.slug,
     kind: b.kind as ScenarioKind,
-    source_label: b.sourceLabel.trim(),
+    source_label: sourceLabel.trim(),
     payload: b.payload as Record<string, unknown>,
     status: b.status as ScenarioStatus,
     sort_order: sortOrder,
@@ -237,7 +248,7 @@ function runRules(parsed: ParsedInput) {
       prompt: s.prompt,
       choices: s.choices,
       showUpTo: s.show_up_to,
-    }))
+    })),
   );
 }
 
@@ -246,14 +257,12 @@ function runRules(parsed: ParsedInput) {
 async function syncSteps(
   supabase: Db,
   scenarioId: string,
-  steps: ParsedStep[]
+  steps: ParsedStep[],
 ): Promise<string | null> {
-  const { error: upsertError } = await supabase
-    .from("scenario_steps")
-    .upsert(
-      steps.map((s) => ({ ...s, scenario_id: scenarioId })),
-      { onConflict: "scenario_id,step_key" }
-    );
+  const { error: upsertError } = await supabase.from("scenario_steps").upsert(
+    steps.map((s) => ({ ...s, scenario_id: scenarioId })),
+    { onConflict: "scenario_id,step_key" },
+  );
   if (upsertError) return "문항 저장에 실패했습니다.";
 
   // 이번 저장에서 빠진 문항은 삭제 (통계도 함께 사라진다)
@@ -270,7 +279,7 @@ async function syncSteps(
 
 async function fetchOne(
   supabase: Db,
-  id: string
+  id: string,
 ): Promise<AdminScenario | null> {
   const { data } = await supabase
     .from("scenarios")
@@ -292,7 +301,7 @@ export async function GET() {
   if (error) {
     return NextResponse.json(
       { error: "시나리오를 불러오지 못했습니다." },
-      { status: 500 }
+      { status: 500 },
     );
   }
   return NextResponse.json({
@@ -361,7 +370,7 @@ export async function PATCH(request: Request) {
   if (typeof id !== "string" || id.trim().length === 0) {
     return NextResponse.json(
       { error: "시나리오 ID가 필요합니다." },
-      { status: 400 }
+      { status: 400 },
     );
   }
   const parsed = parseInput(body);
@@ -397,7 +406,7 @@ export async function PATCH(request: Request) {
   if (!updated) {
     return NextResponse.json(
       { error: "수정에 실패했습니다." },
-      { status: 400 }
+      { status: 400 },
     );
   }
   await logAudit(supabase, "update", updated.id, updated);
@@ -419,7 +428,10 @@ export async function DELETE(request: Request) {
 
   const { error } = await supabase.from("scenarios").delete().eq("id", id);
   if (error) {
-    return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
+    return NextResponse.json(
+      { error: "삭제에 실패했습니다." },
+      { status: 500 },
+    );
   }
 
   await logAudit(supabase, "delete", id, existing);

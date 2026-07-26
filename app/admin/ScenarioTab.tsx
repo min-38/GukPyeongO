@@ -15,15 +15,14 @@ import {
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
 
+import { INPUT } from "./ui";
+
+import DocPayloadEditor from "./DocPayloadEditor";
 import ScenarioPreview from "./ScenarioPreview";
 
 // 시나리오 탭 (#75). 목록 + 공통 필드·문항 편집.
 // 유형별 지문 편집기는 kind에 따라 갈아끼우는 슬롯으로만 두고(지금은 JSON),
 // 실제 편집기는 #79~#83에서 채운다.
-
-// 입력 요소 공용 스타일. 필드마다 폭·글꼴만 덧붙인다.
-const INPUT =
-  "rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground";
 
 const EMPTY_STEP: AdminScenarioStep = {
   id: "",
@@ -233,7 +232,6 @@ function ScenarioForm({
 }) {
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [kind, setKind] = useState<ScenarioKind>(initial?.kind ?? "doc");
-  const [sourceLabel, setSourceLabel] = useState(initial?.sourceLabel ?? "");
   const [status, setStatus] = useState<ScenarioStatus>(
     initial?.status ?? "draft",
   );
@@ -247,6 +245,38 @@ function ScenarioForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
+
+  // 전용 편집기가 있는 유형이면 지문을 객체로 넘긴다.
+  // 원본은 payloadText 하나만 두고 편집기는 그때그때 직렬화한다 — 두 벌이 어긋나지 않게.
+  // JSON이 깨져 있으면 편집기를 열 수 없으므로 JSON 입력으로 되돌린다.
+  const docPayload = (() => {
+    if (kind !== "doc") return null;
+    try {
+      const parsed = JSON.parse(payloadText) as Record<string, unknown>;
+      return typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+        ? parsed
+        : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // 표시 라벨의 정본은 지문 안에 있다(화면이 그걸 읽는다). 여기선 보여주기만 한다.
+  const derivedLabel = (() => {
+    try {
+      const p = JSON.parse(payloadText) as {
+        sourceLabel?: unknown;
+        boardName?: unknown;
+      };
+      if (typeof p.sourceLabel === "string") return p.sourceLabel;
+      if (typeof p.boardName === "string") return p.boardName;
+    } catch {
+      // JSON이 깨져 있으면 라벨을 알 수 없다
+    }
+    return "";
+  })();
 
   // 미리보기에 넘길 지문. 열 때 JSON을 한 번 해석해 두고, 닫으면 비운다.
   function togglePreview() {
@@ -286,7 +316,6 @@ function ScenarioForm({
         ...(initial ? { id: initial.id } : {}),
         slug,
         kind,
-        sourceLabel,
         status,
         sortOrder,
         payload,
@@ -337,12 +366,12 @@ function ScenarioForm({
           </select>
         </label>
         <label className="text-xs font-medium text-muted">
-          표시 라벨
+          표시 라벨 (지문에서 가져온다)
           <input
-            value={sourceLabel}
-            onChange={(e) => setSourceLabel(e.target.value)}
-            placeholder="국평오일보"
-            className={`mt-1 w-full ${INPUT}`}
+            value={derivedLabel}
+            readOnly
+            placeholder="지문 편집기에서 입력"
+            className={`mt-1 w-full ${INPUT} opacity-60`}
           />
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -372,17 +401,29 @@ function ScenarioForm({
         </div>
       </div>
 
-      {/* 유형별 지문 편집기가 들어올 자리. 지금은 JSON 그대로 다룬다(#79~#83에서 교체). */}
-      <label className="mt-3 block text-xs font-medium text-muted">
-        지문 ({SCENARIO_KIND_LABELS[kind]}) — 전용 편집기는 준비 중, 지금은 JSON
-        <textarea
-          value={payloadText}
-          onChange={(e) => setPayloadText(e.target.value)}
-          rows={10}
-          spellCheck={false}
-          className={`mt-1 w-full font-mono !text-xs ${INPUT}`}
-        />
-      </label>
+      {/* 유형별 지문 편집기 슬롯. 전용 편집기가 없는 유형은 JSON으로 다룬다(#79~#82에서 교체). */}
+      <div className="mt-3">
+        <p className="text-xs font-medium text-muted">
+          지문 ({SCENARIO_KIND_LABELS[kind]})
+          {!docPayload && " — 전용 편집기는 준비 중, 지금은 JSON"}
+        </p>
+        {docPayload ? (
+          <div className="mt-1">
+            <DocPayloadEditor
+              payload={docPayload}
+              onChange={(next) => setPayloadText(JSON.stringify(next, null, 2))}
+            />
+          </div>
+        ) : (
+          <textarea
+            value={payloadText}
+            onChange={(e) => setPayloadText(e.target.value)}
+            rows={10}
+            spellCheck={false}
+            className={`mt-1 w-full font-mono !text-xs ${INPUT}`}
+          />
+        )}
+      </div>
 
       <div className="mt-4 flex items-center justify-between">
         <h3 className="text-sm font-bold">문항 ({steps.length})</h3>
