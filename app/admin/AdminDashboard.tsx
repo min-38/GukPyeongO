@@ -19,11 +19,21 @@ import {
   type QuestionTypeDef,
   resolveTypeLabel,
 } from "@/app/lib/quiz";
+import { type AdminScenario } from "@/app/lib/scenario-admin";
+
+import ScenarioTab from "./ScenarioTab";
 
 const FORMATS = Object.keys(QUESTION_FORMAT_LABELS) as QuestionFormat[];
 const DIFFICULTIES = Object.keys(DIFFICULTY_LABELS).map(Number);
 
-type Tab = "questions" | "types" | "reports" | "comments" | "audit" | "patch";
+type Tab =
+  | "questions"
+  | "scenarios"
+  | "types"
+  | "reports"
+  | "comments"
+  | "audit"
+  | "patch";
 
 // 유형 키 → "이모지 라벨" 표시 문자열
 function typeBadge(type: string, types: QuestionTypeDef[]): string {
@@ -518,6 +528,7 @@ export default function AdminDashboard() {
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [audits, setAudits] = useState<QuestionAudit[]>([]);
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
+  const [scenarios, setScenarios] = useState<AdminScenario[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [tab, setTab] = useState<Tab>("questions");
@@ -550,8 +561,11 @@ export default function AdminDashboard() {
       fetch("/api/admin/patch-notes").then(
         (r) => r.json() as Promise<{ patchNotes: PatchNote[] }>
       ),
+      fetch("/api/admin/scenarios").then(
+        (r) => r.json() as Promise<{ scenarios: AdminScenario[] }>
+      ),
     ])
-      .then(([q, t, c, rp, a, pn]) => {
+      .then(([q, t, c, rp, a, pn, sc]) => {
         if (!active) return;
         setQuestions(q.questions ?? []);
         setTypes(t.types ?? []);
@@ -559,6 +573,7 @@ export default function AdminDashboard() {
         setReports(rp.reports ?? []);
         setAudits(a.audits ?? []);
         setPatchNotes(pn.patchNotes ?? []);
+        setScenarios(sc.scenarios ?? []);
         setLoading(false);
       })
       .catch((err) => {
@@ -681,6 +696,12 @@ export default function AdminDashboard() {
 
   const nav: { id: Tab; emoji: string; label: string; count: number }[] = [
     { id: "questions", emoji: "📝", label: "문제", count: questions.length },
+    {
+      id: "scenarios",
+      emoji: "🎬",
+      label: "시나리오",
+      count: scenarios.length,
+    },
     { id: "types", emoji: "🏷️", label: "유형", count: types.length },
     { id: "reports", emoji: "🚩", label: "신고", count: openReports },
     { id: "comments", emoji: "💬", label: "댓글", count: comments.length },
@@ -885,6 +906,22 @@ export default function AdminDashboard() {
               )}
             </ul>
           </section>
+        )}
+
+        {tab === "scenarios" && (
+          <ScenarioTab
+            scenarios={scenarios}
+            onSaved={(s) =>
+              setScenarios((prev) =>
+                prev.some((p) => p.id === s.id)
+                  ? prev.map((p) => (p.id === s.id ? s : p))
+                  : [...prev, s]
+              )
+            }
+            onDeleted={(id) =>
+              setScenarios((prev) => prev.filter((p) => p.id !== id))
+            }
+          />
         )}
 
         {tab === "types" && (
