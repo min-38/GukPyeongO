@@ -4,37 +4,12 @@
 // ERD의 questions.context / react_correct / react_wrong 구조를 그대로 따라,
 // 연동 이슈에서 fetch로 교체할 때 형태를 바꾸지 않도록 한다.
 
-export interface ContextMessage {
-  speaker: string;
-  text: string;
-}
-
-// 시나리오 안의 문제 한 개.
-export interface ScenarioStep {
-  id: string;
-  type: string; // 유형 (어휘·화법·문법 등)
-  context: ContextMessage[]; // 이 문제 앞에 이어붙는 대화
-  prompt: string; // 내 속마음 — "어떻게 답장하지?"
-  choices: string[];
-  answerIndex: number;
-  reactCorrect: string;
-  reactWrong: string;
-  reactTimeout: string; // 시간 초과(무응답) 시 — 오답과 상황이 다르다
-  difficulty: 1 | 2 | 3; // 1 쉬움 / 2 중 / 3 킬러
-  timeLimitSec: number;
-}
-
-export interface MockScenario {
-  id: string;
-  roomTitle: string; // 채팅방 제목
-  speaker: string; // 상대 화자 (반응 대사의 화자)
-  steps: ScenarioStep[];
-}
+import { type ChatScenario } from "./chat-scenario";
 
 // 배점 매핑은 진행 로직과 함께 useScenario에 둔다.
 export { POINTS_BY_DIFFICULTY } from "./useScenario";
 
-export const MOCK_SCENARIO: MockScenario = {
+export const MOCK_SCENARIO: ChatScenario = {
   id: "mock-company",
   roomTitle: "회사 메신저",
   speaker: "김부장",
@@ -61,9 +36,7 @@ export const MOCK_SCENARIO: MockScenario = {
     {
       id: "apjon",
       type: "문법",
-      context: [
-        { speaker: "김부장", text: "아 그리고, 김 과장은 어디 갔나?" },
-      ],
+      context: [{ speaker: "김부장", text: "아 그리고, 김 과장은 어디 갔나?" }],
       prompt: "부장님한테 뭐라고 하지…?",
       choices: ["김 과장님은 외근 나가셨습니다.", "김 과장은 외근 나갔습니다."],
       answerIndex: 0,

@@ -46,6 +46,8 @@ export interface AdminScenarioStep {
   difficulty: number;
   timeLimitSec: number;
   showUpTo: number | null; // 이메일 전용(순차 공개)
+  // 유형별 추가 필드(#80). 메신저는 여기에 context·reactCorrect·reactWrong·reactTimeout을 담는다.
+  extra: Record<string, unknown>;
   attempts: number;
   correctCount: number;
 }

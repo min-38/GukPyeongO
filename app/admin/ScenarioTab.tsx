@@ -17,6 +17,8 @@ import {
 
 import { INPUT } from "./ui";
 
+import ChatPayloadEditor from "./ChatPayloadEditor";
+import ChatStepFields from "./ChatStepFields";
 import CommunityPayloadEditor from "./CommunityPayloadEditor";
 import DocPayloadEditor from "./DocPayloadEditor";
 import ScenarioPreview from "./ScenarioPreview";
@@ -37,6 +39,7 @@ const PAYLOAD_EDITORS: Partial<
 > = {
   doc: DocPayloadEditor,
   community: CommunityPayloadEditor,
+  chat: ChatPayloadEditor,
 };
 
 const EMPTY_STEP: AdminScenarioStep = {
@@ -49,6 +52,7 @@ const EMPTY_STEP: AdminScenarioStep = {
   difficulty: 2,
   timeLimitSec: 30,
   showUpTo: null,
+  extra: {},
   attempts: 0,
   correctCount: 0,
 };
@@ -56,14 +60,16 @@ const EMPTY_STEP: AdminScenarioStep = {
 function StepEditor({
   step,
   index,
-  isEmail,
+  kind,
+  chatSpeaker,
   onChange,
   onRemove,
   onMove,
 }: {
   step: AdminScenarioStep;
   index: number;
-  isEmail: boolean;
+  kind: ScenarioKind;
+  chatSpeaker: string;
   onChange: (next: AdminScenarioStep) => void;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
@@ -213,7 +219,7 @@ function StepEditor({
             className={`mt-1 block w-28 ${INPUT}`}
           />
         </label>
-        {isEmail && (
+        {kind === "email" && (
           <label className="text-xs font-medium text-muted">
             공개 범위(메일 수)
             <input
@@ -232,6 +238,14 @@ function StepEditor({
           </label>
         )}
       </div>
+
+      {kind === "chat" && (
+        <ChatStepFields
+          extra={step.extra}
+          defaultSpeaker={chatSpeaker}
+          onChange={(next) => set("extra", next)}
+        />
+      )}
     </li>
   );
 }
@@ -278,6 +292,11 @@ function ScenarioForm({
     }
   })();
   const PayloadEditor = PAYLOAD_EDITORS[kind];
+  // 메신저 문항의 맥락 대사는 기본 화자를 지문의 상대 화자로 채운다.
+  const chatSpeaker =
+    typeof (editorPayload as { speaker?: unknown } | null)?.speaker === "string"
+      ? (editorPayload as { speaker: string }).speaker
+      : "";
 
   // 표시 라벨의 정본은 지문 안에 있다(화면이 그걸 읽는다). 여기선 보여주기만 한다.
   const derivedLabel = (() => {
@@ -457,7 +476,8 @@ function ScenarioForm({
             key={i}
             step={step}
             index={i}
-            isEmail={kind === "email"}
+            kind={kind}
+            chatSpeaker={chatSpeaker}
             onChange={(next) =>
               setSteps(steps.map((s, j) => (j === i ? next : s)))
             }

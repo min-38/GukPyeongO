@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import ChatScenarioView from "@/app/(app)/play/ChatScenario";
 import CommunityScenarioView from "@/app/(app)/play/CommunityScenario";
 import DocScenarioView from "@/app/(app)/play/DocScenario";
 import EmailScenarioView from "@/app/(app)/play/EmailScenario";
@@ -38,6 +39,8 @@ function toSurfaceScenario(
       difficulty: s.difficulty,
       timeLimitSec: s.timeLimitSec,
       ...(s.showUpTo === null ? {} : { showUpTo: s.showUpTo }),
+      // 유형별 추가 필드(메신저의 대화·반응)는 표면이 그대로 읽는다.
+      ...s.extra,
     })),
   };
 }
@@ -72,10 +75,14 @@ function PlayArea({
       return (
         <StoryScenarioView scenario={scenario as never} onFinish={onFinish} />
       );
+    case "chat":
+      return (
+        <ChatScenarioView scenario={scenario as never} onFinish={onFinish} />
+      );
     default:
       return (
         <p className="py-10 text-center text-sm text-muted">
-          메신저 유형은 아직 미리보기를 지원하지 않습니다.
+          이 유형은 아직 미리보기를 지원하지 않습니다.
         </p>
       );
   }
@@ -94,6 +101,8 @@ function payloadLines(
     comments?: { nick?: string; text?: string }[];
     subject?: string;
     messages?: { from?: string; body?: string[] }[];
+    roomTitle?: string;
+    speaker?: string;
   };
   switch (kind) {
     case "doc":
@@ -117,6 +126,8 @@ function payloadLines(
           ...(m.body ?? []),
         ]),
       ];
+    case "chat":
+      return [`${p.roomTitle ?? ""} · 상대: ${p.speaker ?? ""}`];
     default:
       return [];
   }

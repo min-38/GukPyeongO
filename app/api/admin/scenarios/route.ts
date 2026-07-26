@@ -18,7 +18,7 @@ type Db = ReturnType<typeof getSupabaseAdmin>;
 const SCENARIO_COLS =
   "id, slug, kind, source_label, payload, status, sort_order";
 const STEP_COLS =
-  "id, step_key, type, prompt, choices, answer_index, difficulty, time_limit_sec, show_up_to, sort_order, attempts, correct_count";
+  "id, step_key, type, prompt, choices, answer_index, difficulty, time_limit_sec, show_up_to, extra, sort_order, attempts, correct_count";
 
 // 시나리오 변경 로그 (best-effort — 실패해도 본 작업에는 영향 주지 않음)
 async function logAudit(
@@ -57,6 +57,7 @@ interface StepRow {
   difficulty: number;
   time_limit_sec: number;
   show_up_to: number | null;
+  extra: Record<string, unknown>;
   sort_order: number;
   attempts: number;
   correct_count: number;
@@ -73,6 +74,7 @@ function toStep(row: StepRow): AdminScenarioStep {
     difficulty: row.difficulty,
     timeLimitSec: row.time_limit_sec,
     showUpTo: row.show_up_to,
+    extra: row.extra ?? {},
     attempts: row.attempts,
     correctCount: row.correct_count,
   };
@@ -103,6 +105,7 @@ interface ParsedStep {
   difficulty: number;
   time_limit_sec: number;
   show_up_to: number | null;
+  extra: Record<string, unknown>;
   sort_order: number;
 }
 
@@ -117,6 +120,45 @@ interface ParsedInput {
 }
 
 const SLUG_RE = /^[a-z0-9-]+$/;
+
+// 메신저 문항의 추가 필드. 대화(context)와 답변 후 반응은 문항이 각자 들고 간다.
+// 유효하면 저장할 객체를, 아니면 에러 메시지를 돌려준다.
+function parseChatExtra(raw: unknown, at: string) {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+    return `${at}: 메신저 문항 정보가 없습니다.`;
+  const s = raw as Record<string, unknown>;
+
+  const context = s.context;
+  if (!Array.isArray(context) || context.length === 0)
+    return `${at}: 맥락 대사를 1개 이상 입력해주세요.`;
+  for (const raw of context) {
+    const m = raw as Record<string, unknown>;
+    if (
+      typeof m?.speaker !== "string" ||
+      m.speaker.trim().length === 0 ||
+      typeof m?.text !== "string" ||
+      m.text.trim().length === 0
+    )
+      return `${at}: 맥락 대사의 화자와 내용을 모두 입력해주세요.`;
+  }
+
+  const reactions = ["reactCorrect", "reactWrong", "reactTimeout"] as const;
+  for (const key of reactions) {
+    const v = s[key];
+    if (typeof v !== "string" || v.trim().length === 0)
+      return `${at}: 반응 대사(${key})를 입력해주세요.`;
+  }
+
+  return {
+    context: (context as { speaker: string; text: string }[]).map((m) => ({
+      speaker: m.speaker.trim(),
+      text: m.text.trim(),
+    })),
+    reactCorrect: (s.reactCorrect as string).trim(),
+    reactWrong: (s.reactWrong as string).trim(),
+    reactTimeout: (s.reactTimeout as string).trim(),
+  };
+}
 
 // 입력 검증. 유효하면 DB 컬럼 형태를 반환, 아니면 에러 메시지.
 // 출제 규칙(문항 수 하한 등) 검증은 #77에서 따로 다룬다.
@@ -215,6 +257,13 @@ function parseInput(body: unknown): ParsedInput | string {
     )
       return `${at}: 공개 범위는 1 이상의 정수여야 합니다.`;
 
+    let extra: Record<string, unknown> = {};
+    if (b.kind === "chat") {
+      const parsedExtra = parseChatExtra(s.extra, at);
+      if (typeof parsedExtra === "string") return parsedExtra;
+      extra = parsedExtra;
+    }
+
     steps.push({
       step_key: s.stepKey,
       type: s.type.trim(),
@@ -224,6 +273,7 @@ function parseInput(body: unknown): ParsedInput | string {
       difficulty,
       time_limit_sec: timeLimitSec,
       show_up_to: typeof showUpTo === "number" ? showUpTo : null,
+      extra,
       sort_order: i + 1,
     });
   }

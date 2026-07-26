@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { type MockScenario } from "@/app/lib/mock-questions";
+import { type ChatScenario } from "@/app/lib/chat-scenario";
 import { readMs, scheduleTyping } from "@/app/lib/scenario-pacing";
 import { playMessagePop, playSendPop } from "@/app/lib/sfx";
 import { type AnswerResult, useScenario } from "@/app/lib/useScenario";
@@ -75,7 +75,7 @@ export default function ChatScenario({
   scenario,
   onFinish,
 }: {
-  scenario: MockScenario;
+  scenario: ChatScenario;
   onFinish: (score: number) => void;
 }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
@@ -85,9 +85,9 @@ export default function ChatScenario({
 
   // 맥락 대사를 하나씩 타이핑 연출로 등장시킨 뒤 선택지를 연다.
   const reveal = (
-    step: MockScenario["steps"][number],
+    step: ChatScenario["steps"][number],
     _index: number,
-    open: () => void
+    open: () => void,
   ) => {
     const timers: number[] = [];
     let at = OPENING_DELAY_MS;
@@ -104,9 +104,9 @@ export default function ChatScenario({
 
   // 내 답장을 말풍선으로 보내고, 상대 반응을 같은 리듬으로 등장시킨 뒤 다음으로.
   const respond = (
-    step: MockScenario["steps"][number],
+    step: ChatScenario["steps"][number],
     { choiceIndex, isCorrect }: AnswerResult,
-    next: () => void
+    next: () => void,
   ) => {
     const timers: number[] = [];
     if (choiceIndex !== null) {
@@ -133,7 +133,7 @@ export default function ChatScenario({
           text: reactText,
           tone: isCorrect ? "correct" : "wrong",
         });
-      }
+      },
     );
     timers.push(window.setTimeout(next, shownAt + readMs(reactText)));
     return () => timers.forEach(clearTimeout);

@@ -76,6 +76,15 @@ export function checkScenarioRules(
     errors.push("지문 본문이 비어 있습니다.");
   }
 
+  if (kind === "chat") {
+    // 메신저는 지문 자리에 방 제목·상대 화자만 있다. 화자가 없으면 반응 대사를 누가 하는지 모른다.
+    const p = payload as { roomTitle?: unknown; speaker?: unknown };
+    if (typeof p.roomTitle !== "string" || p.roomTitle.trim().length === 0)
+      errors.push("대화방 제목을 입력해주세요.");
+    if (typeof p.speaker !== "string" || p.speaker.trim().length === 0)
+      errors.push("상대 화자를 입력해주세요.");
+  }
+
   const limit = BODY_LIMITS[kind];
   if (limit !== undefined && body.length > limit) {
     warnings.push(
