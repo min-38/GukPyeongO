@@ -2,9 +2,8 @@
 // DB는 지문(scenarios)과 문항(scenario_steps)을 나눠 갖지만,
 // 어드민 화면은 "지문 1개 + 문항 N개"를 한 덩어리로 다룬다.
 
-import { type ScenarioKind } from "./scenario-registry";
-
-export type { ScenarioKind };
+// 렌더링 표면 종류. DB의 scenarios.kind 와 같은 값.
+export type ScenarioKind = "doc" | "community" | "chat" | "email" | "story";
 
 export const SCENARIO_KINDS: ScenarioKind[] = [
   "doc",

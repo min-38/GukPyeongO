@@ -1,12 +1,14 @@
-import { MOCK_EMAIL_REPLY } from "@/app/lib/mock-email-reply";
+import { type EmailScenario } from "@/app/lib/email-scenario";
 import { getScenario } from "@/app/lib/scenarios.server";
 
+import ScenarioUnavailable from "../../play/ScenarioUnavailable";
 import EmailReplyPlay from "./Play";
 
-// 콘텐츠는 DB(scenarios)에서, 없으면 mock으로 (#85).
+// 콘텐츠는 DB(scenarios)에서 읽는다. mock 폴백은 없앴다(#86).
 export const revalidate = 60;
 
-export default async function EmailReplyPage() {
-  const scenario = await getScenario("email-reply", MOCK_EMAIL_REPLY);
+export default async function Page() {
+  const scenario = await getScenario<EmailScenario>("email-reply");
+  if (!scenario) return <ScenarioUnavailable label="메일" />;
   return <EmailReplyPlay scenario={scenario} />;
 }

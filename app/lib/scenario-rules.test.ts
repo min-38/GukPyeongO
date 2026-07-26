@@ -1,13 +1,70 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-import { SCENARIO_SEEDS } from "./scenario-registry";
+import { type ScenarioKind } from "./scenario-admin";
 import { checkScenarioRules } from "./scenario-rules";
 
-// 출제 규칙(#76). mock 테스트가 시드에만 걸리는 것과 달리, 이건 어드민 입력에도 걸린다.
+// 새 DB를 채우는 원본(#86). mock이 사라진 뒤로 이 파일이 시드 정본이라 여기서 검사한다.
+const SEED_SQL = readFileSync("supabase/scenarios_seed.sql", "utf8");
+
+// 시드 SQL에서 지문(payload)과 문항을 되읽는다.
+// 두 insert 모두 첫 칸이 slug라 그걸로 묶는다(블록 단위로 자르면 중간 주석에 걸려 끊긴다).
+const Q = "((?:[^']|'')*)"; // 작은따옴표를 '' 로 escape 한 SQL 문자열
+const unq = (v: string) => v.replace(/''/g, "'");
+
+interface SeedScenario {
+  slug: string;
+  kind: ScenarioKind;
+  payload: Record<string, unknown>;
+  steps: { prompt: string; choices: string[]; showUpTo?: number | null }[];
+}
+
+function seedScenarios(): SeedScenario[] {
+  const bySlug = new Map<string, SeedScenario>();
+
+  // 지문: (slug, kind, source_label, payload::jsonb, status, sort_order)
+  const docRe = new RegExp(
+    `^ {2}\\('${Q}', '${Q}', '${Q}', '${Q}'::jsonb, '[a-z]+', \\d+\\)`,
+    "gm",
+  );
+  for (const m of SEED_SQL.matchAll(docRe)) {
+    bySlug.set(m[1], {
+      slug: m[1],
+      kind: m[2] as ScenarioKind,
+      payload: JSON.parse(unq(m[4])) as Record<string, unknown>,
+      steps: [],
+    });
+  }
+
+  // 문항: (slug, step_key, type, prompt, choices::jsonb, 정답, 난이도, 제한시간, 공개범위, extra::jsonb, 순서)
+  const stepRe = new RegExp(
+    `^ {2}\\('${Q}', '${Q}', '${Q}', '${Q}', '${Q}'::jsonb, \\d+, \\d+, \\d+, (null|\\d+),`,
+    "gm",
+  );
+  for (const m of SEED_SQL.matchAll(stepRe)) {
+    bySlug.get(m[1])?.steps.push({
+      prompt: unq(m[4]),
+      choices: JSON.parse(unq(m[5])) as string[],
+      showUpTo: m[6] === "null" ? null : Number(m[6]),
+    });
+  }
+
+  return [...bySlug.values()];
+}
+
 describe("scenario-rules", () => {
-  it("기존 시드 6종은 규칙을 통과한다", () => {
-    for (const seed of SCENARIO_SEEDS) {
-      const { errors } = checkScenarioRules(seed.kind, seed.payload, seed.steps);
+  it("시드 SQL의 시나리오가 모두 규칙을 통과한다", () => {
+    const seeds = seedScenarios();
+    expect(seeds.length).toBe(7);
+    // 파싱이 헛돌면 문항 0개로도 통과해버린다 — 실제로 읽혔는지 먼저 본다.
+    expect(seeds.reduce((n, s) => n + s.steps.length, 0)).toBe(32);
+    for (const seed of seeds) {
+      const { errors } = checkScenarioRules(
+        seed.kind,
+        seed.payload,
+        seed.steps,
+      );
       expect({ slug: seed.slug, errors }).toEqual({
         slug: seed.slug,
         errors: [],
@@ -25,7 +82,7 @@ describe("scenario-rules", () => {
     const { errors, warnings } = checkScenarioRules(
       "doc",
       { doc: { body: [long] } },
-      []
+      [],
     );
     expect(errors).toEqual([]);
     expect(warnings.join()).toContain("650");
@@ -41,16 +98,21 @@ describe("scenario-rules", () => {
     });
 
     it("읽기 시간이 넉넉하면 통과한다", () => {
-      const { errors } = checkScenarioRules("story", { body, readSec: 120 }, []);
+      const { errors } = checkScenarioRules(
+        "story",
+        { body, readSec: 120 },
+        [],
+      );
       expect(errors).toEqual([]);
     });
 
     it("감상 어휘는 경고한다 — 선택지에 있어도", () => {
-      const { warnings } = checkScenarioRules(
-        "story",
-        { body, readSec: 120 },
-        [{ prompt: "아버지가 한 일은?", choices: ["방을 데웠다", "기분이 나빴다"] }]
-      );
+      const { warnings } = checkScenarioRules("story", { body, readSec: 120 }, [
+        {
+          prompt: "아버지가 한 일은?",
+          choices: ["방을 데웠다", "기분이 나빴다"],
+        },
+      ]);
       expect(warnings.join()).toContain("기분");
     });
   });
