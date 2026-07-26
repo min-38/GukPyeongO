@@ -10,6 +10,7 @@ import {
   type ScenarioKind,
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
+import { checkScenarioRules } from "@/app/lib/scenario-rules";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 type Db = ReturnType<typeof getSupabaseAdmin>;
@@ -227,6 +228,19 @@ function parseInput(body: unknown): ParsedInput | string {
   };
 }
 
+// 출제 규칙 검사(#76). 구조 검증(parseInput)을 통과한 뒤 유형별 규칙을 본다.
+function runRules(parsed: ParsedInput) {
+  return checkScenarioRules(
+    parsed.kind,
+    parsed.payload,
+    parsed.steps.map((s) => ({
+      prompt: s.prompt,
+      choices: s.choices,
+      showUpTo: s.show_up_to,
+    }))
+  );
+}
+
 // 문항을 step_key 기준으로 맞춘다. 전부 지우고 다시 넣으면 문항별 통계
 // (attempts/correct_count)가 사라지므로, 남는 문항은 update로 살린다.
 async function syncSteps(
@@ -301,6 +315,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed }, { status: 400 });
   }
 
+  const { errors, warnings } = runRules(parsed);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors.join("\n") }, { status: 400 });
+  }
+
   const supabase = getSupabaseAdmin();
   const { steps, ...scenario } = parsed;
   const { data, error } = await supabase
@@ -325,7 +344,7 @@ export async function POST(request: Request) {
 
   const created = await fetchOne(supabase, data.id);
   if (created) await logAudit(supabase, "create", created.id, created);
-  return NextResponse.json({ scenario: created }, { status: 201 });
+  return NextResponse.json({ scenario: created, warnings }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -348,6 +367,11 @@ export async function PATCH(request: Request) {
   const parsed = parseInput(body);
   if (typeof parsed === "string") {
     return NextResponse.json({ error: parsed }, { status: 400 });
+  }
+
+  const { errors, warnings } = runRules(parsed);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors.join("\n") }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
@@ -377,7 +401,7 @@ export async function PATCH(request: Request) {
     );
   }
   await logAudit(supabase, "update", updated.id, updated);
-  return NextResponse.json({ scenario: updated });
+  return NextResponse.json({ scenario: updated, warnings });
 }
 
 export async function DELETE(request: Request) {

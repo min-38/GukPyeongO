@@ -226,7 +226,7 @@ function ScenarioForm({
   onCancel,
 }: {
   initial: AdminScenario | null;
-  onSaved: (s: AdminScenario) => void;
+  onSaved: (s: AdminScenario, warnings: string[]) => void;
   onCancel: () => void;
 }) {
   const [slug, setSlug] = useState(initial?.slug ?? "");
@@ -284,11 +284,13 @@ function ScenarioForm({
     const data = (await res.json()) as {
       scenario?: AdminScenario;
       error?: string;
+      warnings?: string[];
     };
     if (!res.ok || !data.scenario) {
       return setError(data.error ?? "저장에 실패했습니다.");
     }
-    onSaved(data.scenario);
+    // 경고는 저장을 막지 않는다 — 저장한 뒤 확인만 시킨다(#76).
+    onSaved(data.scenario, data.warnings ?? []);
   }
 
   return (
@@ -429,6 +431,8 @@ export default function ScenarioTab({
   const [statusFilter, setStatusFilter] = useState<ScenarioStatus | "all">(
     "all",
   );
+  // 저장은 됐지만 확인이 필요한 것들(#76). 다음 저장 때까지 남겨둔다.
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const filtered =
     statusFilter === "all"
@@ -444,8 +448,9 @@ export default function ScenarioTab({
     if (res.ok) onDeleted(s.id);
   }
 
-  function handleSaved(s: AdminScenario) {
+  function handleSaved(s: AdminScenario, saveWarnings: string[]) {
     onSaved(s);
+    setWarnings(saveWarnings);
     setEditing(null);
   }
 
@@ -483,6 +488,14 @@ export default function ScenarioTab({
           </button>
         ))}
       </div>
+
+      {warnings.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          {warnings.map((w, i) => (
+            <li key={i}>⚠️ {w}</li>
+          ))}
+        </ul>
+      )}
 
       {editing === "new" && (
         <div className="mt-4">
