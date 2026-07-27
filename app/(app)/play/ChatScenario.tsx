@@ -22,11 +22,16 @@ type Bubble = {
 const OPENING_DELAY_MS = 500; // 화면 진입 후 첫 메시지까지
 const REPLY_BEAT_MS = 500; // 내 답장이 눈에 들어온 뒤 상대가 반응하기까지
 
-function ChatBubble({ bubble }: { bubble: Bubble }) {
+// 같은 사람이 연달아 보내면 이름과 프로필을 다시 보여주지 않는다 — 실제 메신저와 같게.
+function ChatBubble({ bubble, grouped }: { bubble: Bubble; grouped: boolean }) {
   if (bubble.side === "me") {
     return (
-      <div className="animate-rise flex flex-col items-end gap-1">
-        <span className="text-xs text-muted">{bubble.speaker}</span>
+      <div
+        className={`animate-rise flex flex-col items-end gap-1 ${grouped ? "" : "mt-2"}`}
+      >
+        {!grouped && (
+          <span className="text-xs text-muted">{bubble.speaker}</span>
+        )}
         <p className="max-w-[16rem] rounded-2xl rounded-tr-sm bg-brand px-4 py-2.5 text-[15px] font-medium text-brand-foreground">
           {bubble.text}
         </p>
@@ -42,12 +47,21 @@ function ChatBubble({ bubble }: { bubble: Bubble }) {
         : "bg-surface-muted text-foreground";
 
   return (
-    <div className="animate-rise flex items-end gap-2">
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/20 text-xs font-bold text-brand">
-        {bubble.speaker.slice(0, 1)}
-      </div>
+    <div
+      className={`animate-rise flex items-end gap-2 ${grouped ? "" : "mt-2"}`}
+    >
+      {grouped ? (
+        // 자리는 남겨야 말풍선이 좌우로 흔들리지 않는다.
+        <div className="h-8 w-8 shrink-0" />
+      ) : (
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/20 text-xs font-bold text-brand">
+          {bubble.speaker.slice(0, 1)}
+        </div>
+      )}
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-muted">{bubble.speaker}</span>
+        {!grouped && (
+          <span className="text-xs text-muted">{bubble.speaker}</span>
+        )}
         <p
           className={`max-w-[16rem] rounded-2xl rounded-tl-sm px-4 py-2.5 text-[15px] ${toneClass}`}
         >
@@ -172,10 +186,17 @@ export default function ChatScenario({
       />
 
       {/* 대화 영역 — 시나리오 내내 누적. 여기만 스크롤(스크롤바 감춤). */}
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {bubbles.map((b, i) => (
-          <ChatBubble key={i} bubble={b} />
-        ))}
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {bubbles.map((b, i) => {
+          const prev = bubbles[i - 1];
+          return (
+            <ChatBubble
+              key={i}
+              bubble={b}
+              grouped={prev?.side === b.side && prev?.speaker === b.speaker}
+            />
+          );
+        })}
         {typing && <TypingIndicator />}
         <div ref={endRef} />
       </div>

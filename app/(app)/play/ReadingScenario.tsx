@@ -72,8 +72,9 @@ export default function ReadingScenario<S extends ReadingStep>({
         remaining={s.remaining}
       />
 
-      {/* 콘텐츠 영역 — 여기만 스크롤(스크롤바 감춤). 위에서부터 읽으므로 자동스크롤 없음. */}
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 콘텐츠 영역 — 넘칠 때만 여기서 스크롤(스크롤바 감춤). 위에서부터 읽으므로 자동스크롤 없음.
+          늘리지는 않는다(flex-1 없음) — 지문이 짧으면 선택지가 바로 밑에 붙는다. */}
+      <div className="mt-6 flex min-h-0 flex-col gap-3 overflow-y-auto [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
 

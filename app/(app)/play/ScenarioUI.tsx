@@ -16,7 +16,8 @@ export function ScenarioTopBar({
   stepIndex: number;
   total: number;
   stage: ScenarioStage;
-  remaining: number;
+  // null = 제한시간 없음(튜토리얼 예시) — 타이머를 아예 감춘다.
+  remaining: number | null;
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between">
@@ -28,7 +29,7 @@ export function ScenarioTopBar({
           {stepIndex + 1}
           <span className="text-muted"> / {total}</span>
         </span>
-        {stage === "answering" && (
+        {stage === "answering" && remaining !== null && (
           <span
             className={`rounded-full px-3 py-1 text-sm font-bold tabular-nums ${
               remaining <= 5

@@ -110,8 +110,11 @@ export default function PlayShell({
 
   if (!started) {
     return (
-      <main className={`flex flex-col justify-center px-6 lg:pt-28 ${SCREEN}`}>
+      <main
+        className={`flex flex-col px-6 py-4 lg:justify-center lg:pt-28 ${SCREEN}`}
+      >
         {desktopAd}
+        {mobileAd}
         {tutorial(start)}
       </main>
     );

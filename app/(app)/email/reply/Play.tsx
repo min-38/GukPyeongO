@@ -4,7 +4,7 @@ import { type EmailScenario } from "@/app/lib/email-scenario";
 
 import EmailScenarioView from "../../play/EmailScenario";
 import PlayShell from "../../play/PlayShell";
-import ReplyTutorial from "./ReplyTutorial";
+import EmailTutorial from "../EmailTutorial";
 
 export default function EmailReplyPlay({
   scenario,
@@ -14,7 +14,7 @@ export default function EmailReplyPlay({
   return (
     <PlayShell
       doneTitle="대조 완료!"
-      tutorial={(start) => <ReplyTutorial onStart={start} />}
+      tutorial={(start) => <EmailTutorial onStart={start} />}
       renderScenario={(onFinish) => (
         <EmailScenarioView
           scenario={scenario}

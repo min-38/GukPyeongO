@@ -79,3 +79,27 @@ export function playSendPop() {
   if (typeof window === "undefined") return;
   blip(700, 420, 0.07, 0.12);
 }
+
+// 시작 카운트다운 — 3·2·1은 짧고 낮게 째깍, 마지막 시작 신호는 위로 뻗는다(#93).
+export function playCountTick() {
+  if (typeof window === "undefined") return;
+  blip(660, 620, 0.07, 0.14);
+}
+
+export function playCountGo() {
+  if (typeof window === "undefined") return;
+  blip(700, 1400, 0.18, 0.2);
+}
+
+// 정답 — 두 음이 밝게 올라간다. 오답 — 낮게 툭 떨어진다.
+// 소리로도 맞았는지 알 수 있어야 화면을 안 보고도 넘어갈 수 있다.
+export function playCorrect() {
+  if (typeof window === "undefined") return;
+  blip(660, 990, 0.12, 0.18);
+  window.setTimeout(() => blip(990, 1320, 0.14, 0.16), 90);
+}
+
+export function playWrong() {
+  if (typeof window === "undefined") return;
+  blip(260, 160, 0.22, 0.16);
+}

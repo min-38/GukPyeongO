@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { POINTS_BY_DIFFICULTY } from "./scenario-points";
+import { playCorrect, playWrong } from "./sfx";
 
 // 유형(회사 메신저·커뮤니티…)이 공유하는 진행 상태머신.
 // "무엇을 어떻게 보여줄지"(맥락 재생·반응 연출)는 표면이 콜백으로 주입하고,
@@ -72,6 +73,7 @@ export function useScenario<S extends ScenarioStep>({
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [stage, setStage] = useState<ScenarioStage>("replaying");
+  // timeLimitSec이 0이면 제한시간 없음 — 튜토리얼 예시를 눌러보는 용도(#93).
   const [remaining, setRemaining] = useState(steps[0].timeLimitSec);
   const [picked, setPicked] = useState<number | null>(null);
   const [correct, setCorrect] = useState(false);
@@ -125,8 +127,13 @@ export function useScenario<S extends ScenarioStep>({
       setCorrect(isCorrect);
       setStage("answered");
 
-      if (!isCorrect && typeof navigator !== "undefined") {
-        navigator.vibrate?.(80); // 햅틱: 오답 시 1회
+      if (isCorrect) {
+        playCorrect();
+      } else {
+        playWrong();
+        if (typeof navigator !== "undefined") {
+          navigator.vibrate?.(80); // 햅틱: 오답 시 1회
+        }
       }
 
       let popTimer: number | undefined;
@@ -171,7 +178,7 @@ export function useScenario<S extends ScenarioStep>({
 
   // 제한시간 타이머 — 선택지가 열린 뒤(answering)부터. 초과 시 무응답 처리.
   useEffect(() => {
-    if (stage !== "answering") return;
+    if (stage !== "answering" || step.timeLimitSec <= 0) return;
     let left = step.timeLimitSec;
     const tick = setInterval(() => {
       left -= 1;
@@ -192,7 +199,8 @@ export function useScenario<S extends ScenarioStep>({
     stepIndex,
     total,
     stage,
-    remaining,
+    // 제한시간이 없는 스텝(튜토리얼 예시)은 null — 표면이 타이머를 감춘다.
+    remaining: step.timeLimitSec > 0 ? remaining : null,
     picked,
     correct,
     scorePop,

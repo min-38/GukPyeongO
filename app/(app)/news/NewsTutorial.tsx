@@ -1,42 +1,25 @@
 "use client";
 
+import TutorialExample from "../play/TutorialExample";
 import TutorialShell from "../play/TutorialShell";
 
 // 신문 읽기 유형 시작 화면.
 export default function NewsTutorial({ onStart }: { onStart: () => void }) {
   return (
     <TutorialShell
+      framed="example"
       label="국평오일보"
-      title="제목만 믿으면, 낚입니다"
-      subtitle={
-        <>
-          자극적인 제목과 실제 내용은 다릅니다.
-          <br />
-          기사에서 사실과 추측을 갈라내세요.
-        </>
-      }
-      demo={
-        <div className="rounded-2xl border border-border bg-surface-muted/40 p-4">
-          <p className="text-xs font-medium text-brand">○○일보</p>
-          <p className="mt-1 text-[15px] font-bold">“청년 절반이 떠난다”</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted">
-            제목은 “절반”. 본문은{" "}
-            <b className="font-medium text-foreground">이직 ‘의향’ 절반, 실제 계획 8%</b>. 숫자를 직접 읽으세요.
-          </p>
-        </div>
-      }
-      steps={[
-        <>
-          기사를 <b className="font-medium text-foreground">한 번</b> 보여주고, 그 위에서 문제가 이어져요.
-        </>,
-        <>
-          <b className="font-medium text-foreground">제목낚시·사실/추측·추론</b>을 갈라내는 문제입니다.
-        </>,
-        <>
-          문제가 뜨면 <b className="font-medium text-foreground">제한시간</b>이 시작돼요. 틀려도 계속 진행됩니다.
-        </>,
+      pages={[
+        {
+          title: "신문기사 유형",
+          desc: [
+            "신문을 제대로 읽지 못하면 세상을 이해하기 힘들죠.",
+            "제목으로만 내용을 짐작할 수도 있지만, 본문을 읽어야 정확히 알 수 있습니다.",
+            "신문 기사의 핵심 내용을 파악하고, 세부 사항을 정확히 읽어내는 능력을 평가합니다.",
+          ],
+        },
       ]}
-      startLabel="기사 읽기"
+      startLabel="시작하기"
       onStart={onStart}
     />
   );
