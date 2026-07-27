@@ -97,7 +97,13 @@ export const TUTORIAL_EXAMPLES: Partial<
         ...STEP,
         id: "example",
         type: "화법",
-        context: [{ speaker: "김부장", text: "금일 보고는 언제 진행할 건가?" }],
+        context: [
+          {
+            speaker: "김부장",
+            text: "금일 보고는 언제 진행할 건가?",
+            at: "오전 9:17",
+          },
+        ],
         prompt: "어떻게 답장하지?",
         choices: [
           "네, 오늘 5시에 보고드리겠습니다.",
@@ -107,6 +113,7 @@ export const TUTORIAL_EXAMPLES: Partial<
         reactCorrect: "그래, 5시에 보자.",
         reactWrong: "금일은 오늘이야.",
         reactTimeout: "답이 없네?",
+        at: "오전 9:18",
       },
     ],
   },

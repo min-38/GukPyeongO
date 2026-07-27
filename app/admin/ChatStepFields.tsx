@@ -13,6 +13,7 @@ interface ChatExtra {
   reactCorrect?: string;
   reactWrong?: string;
   reactTimeout?: string;
+  at?: string;
 }
 
 const REACTIONS: {
@@ -67,18 +68,32 @@ export default function ChatStepFields({
       <ul className="mt-2 flex flex-col gap-2">
         {context.map((msg, i) => (
           <li key={i} className="flex items-start gap-2">
-            <input
-              value={msg.speaker}
-              onChange={(ev) =>
-                setContext(
-                  context.map((m, j) =>
-                    j === i ? { ...m, speaker: ev.target.value } : m,
-                  ),
-                )
-              }
-              placeholder="화자"
-              className={`w-24 ${INPUT}`}
-            />
+            <span className="flex w-24 shrink-0 flex-col gap-1">
+              <input
+                value={msg.speaker}
+                onChange={(ev) =>
+                  setContext(
+                    context.map((m, j) =>
+                      j === i ? { ...m, speaker: ev.target.value } : m,
+                    ),
+                  )
+                }
+                placeholder="화자"
+                className={`w-full ${INPUT}`}
+              />
+              <input
+                value={msg.at ?? ""}
+                onChange={(ev) =>
+                  setContext(
+                    context.map((m, j) =>
+                      j === i ? { ...m, at: ev.target.value } : m,
+                    ),
+                  )
+                }
+                placeholder="오전 9:17"
+                className={`w-full ${INPUT}`}
+              />
+            </span>
             <textarea
               value={msg.text}
               onChange={(ev) =>
@@ -117,6 +132,15 @@ export default function ChatStepFields({
       </ul>
 
       <div className="mt-3 flex flex-col gap-2">
+        <label className="text-xs text-muted">
+          내 답장·상대 반응이 오간 시각 — 맥락 대사보다 뒤, 다음 문항보다 앞
+          <input
+            value={e.at ?? ""}
+            onChange={(ev) => onChange({ ...extra, at: ev.target.value })}
+            placeholder="오전 9:18"
+            className={`mt-1 w-full ${INPUT}`}
+          />
+        </label>
         <span className="text-xs font-medium text-muted">
           답변 후 상대 반응 — 무응답은 오답과 상황이 다르므로 따로 씁니다
         </span>

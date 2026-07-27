@@ -53,8 +53,8 @@ export default function ChatPayloadEditor({
       </div>
 
       <p className="text-xs text-muted">
-        대화 내용과 답변 후 반응은 아래 문항마다 입력합니다. 타이핑 연출 속도는
-        대사 길이로 자동 계산됩니다.
+        대화 내용·보낸 시각·답변 후 반응은 아래 문항마다 입력합니다. 타이핑 연출
+        속도는 대사 길이로 자동 계산됩니다.
       </p>
 
       <EditorHints hints={hints} />

@@ -88,14 +88,22 @@ function parseChatExtra(raw: unknown, at: string) {
       return `${at}: 반응 대사(${key})를 입력해주세요.`;
   }
 
+  // 보낸 시각(#94)은 선택. 빈 값이면 아예 넣지 않아 화면이 자리를 비운다.
+  const time = (v: unknown) =>
+    typeof v === "string" && v.trim().length > 0 ? { at: v.trim() } : {};
+
   return {
-    context: (context as { speaker: string; text: string }[]).map((m) => ({
-      speaker: m.speaker.trim(),
-      text: m.text.trim(),
-    })),
+    context: (context as { speaker: string; text: string; at?: unknown }[]).map(
+      (m) => ({
+        speaker: m.speaker.trim(),
+        text: m.text.trim(),
+        ...time(m.at),
+      }),
+    ),
     reactCorrect: (s.reactCorrect as string).trim(),
     reactWrong: (s.reactWrong as string).trim(),
     reactTimeout: (s.reactTimeout as string).trim(),
+    ...time(s.at),
   };
 }
 

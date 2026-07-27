@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { type ChatScenario } from "@/app/lib/chat-scenario";
+import { type ChatScenario, showsTime } from "@/app/lib/chat-scenario";
 import { readMs, scheduleTyping } from "@/app/lib/scenario-pacing";
 import { playMessagePop, playSendPop } from "@/app/lib/sfx";
 import { type AnswerResult, useScenario } from "@/app/lib/useScenario";
@@ -14,6 +14,7 @@ type Bubble = {
   side: "them" | "me";
   speaker: string;
   text: string;
+  at?: string; // 보낸 시각. 묶음의 마지막 줄에만 보인다(showsTime).
   // 반응 대사의 정답/오답 톤. 대화가 누적되므로 색은 말풍선에 고정해
   // 다음 문제로 넘어가도 과거 말풍선 색이 바뀌지 않게 한다.
   tone?: "correct" | "wrong";
@@ -22,8 +23,19 @@ type Bubble = {
 const OPENING_DELAY_MS = 500; // 화면 진입 후 첫 메시지까지
 const REPLY_BEAT_MS = 500; // 내 답장이 눈에 들어온 뒤 상대가 반응하기까지
 
+const TIME = "shrink-0 text-[11px] text-muted";
+
 // 같은 사람이 연달아 보내면 이름과 프로필을 다시 보여주지 않는다 — 실제 메신저와 같게.
-function ChatBubble({ bubble, grouped }: { bubble: Bubble; grouped: boolean }) {
+// 시각은 반대쪽 끝, 묶음의 마지막 줄에만 붙는다.
+function ChatBubble({
+  bubble,
+  grouped,
+  timed,
+}: {
+  bubble: Bubble;
+  grouped: boolean;
+  timed: boolean;
+}) {
   if (bubble.side === "me") {
     return (
       <div
@@ -32,9 +44,12 @@ function ChatBubble({ bubble, grouped }: { bubble: Bubble; grouped: boolean }) {
         {!grouped && (
           <span className="text-xs text-muted">{bubble.speaker}</span>
         )}
-        <p className="max-w-[16rem] rounded-2xl rounded-tr-sm bg-brand px-4 py-2.5 text-[15px] font-medium text-brand-foreground">
-          {bubble.text}
-        </p>
+        <div className="flex items-end gap-1.5">
+          {timed && <span className={TIME}>{bubble.at}</span>}
+          <p className="max-w-[16rem] rounded-2xl rounded-tr-sm bg-brand px-4 py-2.5 text-[15px] font-medium text-brand-foreground">
+            {bubble.text}
+          </p>
+        </div>
       </div>
     );
   }
@@ -62,11 +77,14 @@ function ChatBubble({ bubble, grouped }: { bubble: Bubble; grouped: boolean }) {
         {!grouped && (
           <span className="text-xs text-muted">{bubble.speaker}</span>
         )}
-        <p
-          className={`max-w-[16rem] rounded-2xl rounded-tl-sm px-4 py-2.5 text-[15px] ${toneClass}`}
-        >
-          {bubble.text}
-        </p>
+        <div className="flex items-end gap-1.5">
+          <p
+            className={`max-w-[16rem] rounded-2xl rounded-tl-sm px-4 py-2.5 text-[15px] ${toneClass}`}
+          >
+            {bubble.text}
+          </p>
+          {timed && <span className={TIME}>{bubble.at}</span>}
+        </div>
       </div>
     </div>
   );
@@ -113,7 +131,12 @@ export default function ChatScenario({
     step.context.forEach((msg) => {
       const shownAt = scheduleTyping(timers, at, msg.text, setTyping, () => {
         playMessagePop();
-        addBubble({ side: "them", speaker: msg.speaker, text: msg.text });
+        addBubble({
+          side: "them",
+          speaker: msg.speaker,
+          text: msg.text,
+          at: msg.at,
+        });
       });
       at = shownAt + readMs(msg.text);
     });
@@ -130,7 +153,12 @@ export default function ChatScenario({
     const timers: number[] = [];
     if (choiceIndex !== null) {
       playSendPop();
-      addBubble({ side: "me", speaker: "나", text: step.choices[choiceIndex] });
+      addBubble({
+        side: "me",
+        speaker: "나",
+        text: step.choices[choiceIndex],
+        at: step.at,
+      });
     }
     // 무응답(시간 초과)은 오답과 상황이 달라 전용 대사를 쓴다.
     const reactText =
@@ -150,6 +178,7 @@ export default function ChatScenario({
           side: "them",
           speaker: scenario.speaker,
           text: reactText,
+          at: step.at,
           tone: isCorrect ? "correct" : "wrong",
         });
       },
@@ -194,6 +223,7 @@ export default function ChatScenario({
               key={i}
               bubble={b}
               grouped={prev?.side === b.side && prev?.speaker === b.speaker}
+              timed={showsTime(bubbles, i)}
             />
           );
         })}
