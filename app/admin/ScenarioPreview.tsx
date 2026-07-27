@@ -2,11 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import ChatScenarioView from "@/app/(app)/play/ChatScenario";
-import CommunityScenarioView from "@/app/(app)/play/CommunityScenario";
-import DocScenarioView from "@/app/(app)/play/DocScenario";
-import EmailScenarioView from "@/app/(app)/play/EmailScenario";
-import StoryScenarioView from "@/app/(app)/play/StoryScenario";
+import SurfaceByKind from "@/app/(app)/play/SurfaceByKind";
 import { DIFFICULTY_LABELS } from "@/app/lib/quiz";
 import {
   type AdminScenarioStep,
@@ -43,49 +39,6 @@ function toSurfaceScenario(
       ...s.extra,
     })),
   };
-}
-
-function PlayArea({
-  kind,
-  scenario,
-  onFinish,
-}: {
-  kind: ScenarioKind;
-  // 유형마다 지문 구조가 달라 표면별 타입으로 좁혀 넘긴다.
-  scenario: ReturnType<typeof toSurfaceScenario>;
-  onFinish: (score: number) => void;
-}) {
-  switch (kind) {
-    case "doc":
-      return (
-        <DocScenarioView scenario={scenario as never} onFinish={onFinish} />
-      );
-    case "community":
-      return (
-        <CommunityScenarioView
-          scenario={scenario as never}
-          onFinish={onFinish}
-        />
-      );
-    case "email":
-      return (
-        <EmailScenarioView scenario={scenario as never} onFinish={onFinish} />
-      );
-    case "story":
-      return (
-        <StoryScenarioView scenario={scenario as never} onFinish={onFinish} />
-      );
-    case "chat":
-      return (
-        <ChatScenarioView scenario={scenario as never} onFinish={onFinish} />
-      );
-    default:
-      return (
-        <p className="py-10 text-center text-sm text-muted">
-          이 유형은 아직 미리보기를 지원하지 않습니다.
-        </p>
-      );
-  }
 }
 
 // 지문을 유형별로 훑어 읽을 수 있게 문단 배열로 편다.
@@ -260,7 +213,7 @@ export default function ScenarioPreview({
               </button>
             </div>
           ) : (
-            <PlayArea
+            <SurfaceByKind
               key={runId}
               kind={kind}
               scenario={scenario}
