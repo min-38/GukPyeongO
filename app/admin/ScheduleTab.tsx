@@ -131,8 +131,7 @@ export default function ScheduleTab({
     <section>
       <h2 className="text-xl font-bold">편성</h2>
       <p className="mt-1 text-sm text-muted">
-        그날 낼 문제와 순서를 정합니다. 게시 상태인 시나리오만 편성할 수
-        있습니다.
+        그날 낼 문제와 순서를 정합니다. 게시 상태인 문제만 편성할 수 있습니다.
       </p>
 
       <div className="mt-4 flex gap-6">
@@ -213,10 +212,10 @@ export default function ScheduleTab({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">
-                      {s ? SCENARIO_KIND_LABELS[s.kind] : "삭제된 시나리오"}
+                      {s ? SCENARIO_KIND_LABELS[s.kind] : "삭제된 문제"}
                     </span>
                     <span className="ml-2 font-medium">
-                      {s?.sourceLabel || "(라벨 없음)"}
+                      {s?.title || s?.sourceLabel || "(제목 없음)"}
                     </span>
                     <span className="ml-2 text-xs text-muted">
                       문항 {s?.steps.length ?? 0}개 · {byIdPoints.get(id) ?? 0}
@@ -239,7 +238,7 @@ export default function ScheduleTab({
           </ol>
 
           <div className="mt-4">
-            <p className="text-xs font-medium text-muted">추가할 시나리오</p>
+            <p className="text-xs font-medium text-muted">추가할 문제</p>
             <ul className="mt-1 flex flex-wrap gap-2">
               {addable.map((s) => (
                 <li key={s.id}>
@@ -248,14 +247,14 @@ export default function ScheduleTab({
                     onClick={() => setPicked([...picked, s.id])}
                     className="rounded-xl border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
                   >
-                    + {SCENARIO_KIND_LABELS[s.kind]} · {s.sourceLabel || s.slug}{" "}
+                    + {SCENARIO_KIND_LABELS[s.kind]} · {s.title || s.slug}{" "}
                     <span className="text-muted">{scenarioPoints(s)}점</span>
                   </button>
                 </li>
               ))}
               {addable.length === 0 && (
                 <li className="text-xs text-muted">
-                  추가할 수 있는 게시 시나리오가 없습니다.
+                  추가할 수 있는 게시 문제가 없습니다.
                 </li>
               )}
             </ul>

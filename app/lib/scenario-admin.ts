@@ -54,6 +54,9 @@ export interface AdminScenarioStep {
 export interface AdminScenario {
   id: string;
   slug: string;
+  // 만드는 사람이 목록·편성에서 알아보는 이름(#92).
+  // 푸는 사람이 보는 표시 라벨(sourceLabel)과 다르다.
+  title: string;
   kind: ScenarioKind;
   sourceLabel: string;
   status: ScenarioStatus;

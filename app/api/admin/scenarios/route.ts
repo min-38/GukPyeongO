@@ -4,21 +4,19 @@ import { isAdmin } from "@/app/lib/admin-session.server";
 import { type AuditAction } from "@/app/lib/quiz";
 import {
   type AdminScenario,
-  type AdminScenarioStep,
   SCENARIO_KINDS,
   SCENARIO_STATUSES,
   type ScenarioKind,
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
 import { checkScenarioRules } from "@/app/lib/scenario-rules";
+import {
+  fetchScenario,
+  fetchScenarios,
+} from "@/app/lib/scenarios-admin.server";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 type Db = ReturnType<typeof getSupabaseAdmin>;
-
-const SCENARIO_COLS =
-  "id, slug, kind, source_label, payload, status, sort_order";
-const STEP_COLS =
-  "id, step_key, type, prompt, choices, answer_index, difficulty, time_limit_sec, show_up_to, extra, sort_order, attempts, correct_count";
 
 // 시나리오 변경 로그 (best-effort — 실패해도 본 작업에는 영향 주지 않음)
 async function logAudit(
@@ -34,66 +32,6 @@ async function logAudit(
   } catch {
     // 로그 실패 무시
   }
-}
-
-interface ScenarioRow {
-  id: string;
-  slug: string;
-  kind: string;
-  source_label: string;
-  payload: Record<string, unknown>;
-  status: string;
-  sort_order: number;
-  scenario_steps?: StepRow[];
-}
-
-interface StepRow {
-  id: string;
-  step_key: string;
-  type: string;
-  prompt: string;
-  choices: string[];
-  answer_index: number;
-  difficulty: number;
-  time_limit_sec: number;
-  show_up_to: number | null;
-  extra: Record<string, unknown>;
-  sort_order: number;
-  attempts: number;
-  correct_count: number;
-}
-
-function toStep(row: StepRow): AdminScenarioStep {
-  return {
-    id: row.id,
-    stepKey: row.step_key,
-    type: row.type,
-    prompt: row.prompt,
-    choices: row.choices,
-    answerIndex: row.answer_index,
-    difficulty: row.difficulty,
-    timeLimitSec: row.time_limit_sec,
-    showUpTo: row.show_up_to,
-    extra: row.extra ?? {},
-    attempts: row.attempts,
-    correctCount: row.correct_count,
-  };
-}
-
-function toScenario(row: ScenarioRow): AdminScenario {
-  const steps = [...(row.scenario_steps ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
-  return {
-    id: row.id,
-    slug: row.slug,
-    kind: row.kind as ScenarioKind,
-    sourceLabel: row.source_label,
-    status: row.status as ScenarioStatus,
-    sortOrder: row.sort_order,
-    payload: row.payload,
-    steps: steps.map(toStep),
-  };
 }
 
 interface ParsedStep {
@@ -112,6 +50,7 @@ interface ParsedStep {
 interface ParsedInput {
   slug: string;
   kind: ScenarioKind;
+  title: string;
   source_label: string;
   payload: Record<string, unknown>;
   status: ScenarioStatus;
@@ -172,6 +111,9 @@ function parseInput(body: unknown): ParsedInput | string {
     return "유형이 올바르지 않습니다.";
   if (!SCENARIO_STATUSES.includes(b.status as ScenarioStatus))
     return "상태가 올바르지 않습니다.";
+  // 목록에서 문제를 알아볼 이름(#92). 없으면 편성 화면이 다시 라벨만 남는다.
+  if (typeof b.title !== "string" || b.title.trim().length === 0)
+    return "문제 제목을 입력해주세요.";
   // 표시 라벨의 정본은 payload 안에 있다(화면이 그걸 읽는다).
   // source_label 컬럼은 목록·필터용 사본이라 여기서 payload로부터 파생시킨다.
   const labelSource = b.payload as {
@@ -281,6 +223,7 @@ function parseInput(body: unknown): ParsedInput | string {
   return {
     slug: b.slug,
     kind: b.kind as ScenarioKind,
+    title: b.title.trim(),
     source_label: sourceLabel.trim(),
     payload: b.payload as Record<string, unknown>,
     status: b.status as ScenarioStatus,
@@ -327,36 +270,18 @@ async function syncSteps(
   return null;
 }
 
-async function fetchOne(
-  supabase: Db,
-  id: string,
-): Promise<AdminScenario | null> {
-  const { data } = await supabase
-    .from("scenarios")
-    .select(`${SCENARIO_COLS}, scenario_steps(${STEP_COLS})`)
-    .eq("id", id)
-    .single();
-  return data ? toScenario(data as ScenarioRow) : null;
-}
-
 export async function GET() {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("scenarios")
-    .select(`${SCENARIO_COLS}, scenario_steps(${STEP_COLS})`)
-    .order("sort_order", { ascending: true });
-  if (error) {
+  const scenarios = await fetchScenarios();
+  if (!scenarios) {
     return NextResponse.json(
       { error: "시나리오를 불러오지 못했습니다." },
       { status: 500 },
     );
   }
-  return NextResponse.json({
-    scenarios: (data ?? []).map((row) => toScenario(row as ScenarioRow)),
-  });
+  return NextResponse.json({ scenarios });
 }
 
 export async function POST(request: Request) {
@@ -401,7 +326,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: stepError }, { status: 400 });
   }
 
-  const created = await fetchOne(supabase, data.id);
+  const created = await fetchScenario(data.id);
   if (created) await logAudit(supabase, "create", created.id, created);
   return NextResponse.json({ scenario: created, warnings }, { status: 201 });
 }
@@ -452,7 +377,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: stepError }, { status: 400 });
   }
 
-  const updated = await fetchOne(supabase, id);
+  const updated = await fetchScenario(id);
   if (!updated) {
     return NextResponse.json(
       { error: "수정에 실패했습니다." },
@@ -474,7 +399,7 @@ export async function DELETE(request: Request) {
 
   const supabase = getSupabaseAdmin();
   // 삭제 전 스냅샷 확보 (로그용). 문항은 FK cascade로 함께 지워진다.
-  const existing = await fetchOne(supabase, id);
+  const existing = await fetchScenario(id);
 
   const { error } = await supabase.from("scenarios").delete().eq("id", id);
   if (error) {

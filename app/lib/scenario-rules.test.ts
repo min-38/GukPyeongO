@@ -16,6 +16,7 @@ const unq = (v: string) => v.replace(/''/g, "'");
 interface SeedScenario {
   slug: string;
   kind: ScenarioKind;
+  title: string;
   payload: Record<string, unknown>;
   steps: { prompt: string; choices: string[]; showUpTo?: number | null }[];
 }
@@ -23,16 +24,17 @@ interface SeedScenario {
 function seedScenarios(): SeedScenario[] {
   const bySlug = new Map<string, SeedScenario>();
 
-  // 지문: (slug, kind, source_label, payload::jsonb, status, sort_order)
+  // 지문: (slug, kind, title, source_label, payload::jsonb, status, sort_order)
   const docRe = new RegExp(
-    `^ {2}\\('${Q}', '${Q}', '${Q}', '${Q}'::jsonb, '[a-z]+', \\d+\\)`,
+    `^ {2}\\('${Q}', '${Q}', '${Q}', '${Q}', '${Q}'::jsonb, '[a-z]+', \\d+\\)`,
     "gm",
   );
   for (const m of SEED_SQL.matchAll(docRe)) {
     bySlug.set(m[1], {
       slug: m[1],
       kind: m[2] as ScenarioKind,
-      payload: JSON.parse(unq(m[4])) as Record<string, unknown>,
+      title: unq(m[3]),
+      payload: JSON.parse(unq(m[5])) as Record<string, unknown>,
       steps: [],
     });
   }
@@ -59,6 +61,8 @@ describe("scenario-rules", () => {
     expect(seeds.length).toBe(7);
     // 파싱이 헛돌면 문항 0개로도 통과해버린다 — 실제로 읽혔는지 먼저 본다.
     expect(seeds.reduce((n, s) => n + s.steps.length, 0)).toBe(32);
+    // 편성 화면에서 문제를 알아보려면 제목이 있어야 한다(#92).
+    for (const seed of seeds) expect(seed.title.length).toBeGreaterThan(0);
     for (const seed of seeds) {
       const { errors } = checkScenarioRules(
         seed.kind,
