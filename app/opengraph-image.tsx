@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 // 공유 미리보기(카카오톡·트위터·구글) 썸네일. opengraph-image 규약 파일이라
 // 트위터 카드에도 동일 이미지가 자동 적용된다.
-export const alt = "국평오 테스트 — 검색 없이 10문제";
+export const alt = "국평오 테스트 — 오늘의 문해력 문제";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

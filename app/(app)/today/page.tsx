@@ -8,7 +8,8 @@ import TodayPlay from "./TodayPlay";
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
-  const scenarios = await getScheduledScenarios(todayKst());
+  const date = todayKst();
+  const scenarios = await getScheduledScenarios(date);
   if (scenarios.length === 0) return <ScenarioUnavailable label="오늘 문제" />;
-  return <TodayPlay scenarios={scenarios} />;
+  return <TodayPlay scenarios={scenarios} date={date} />;
 }

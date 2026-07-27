@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { type ScheduledScenario } from "@/app/lib/schedule.server";
 import { SCENARIO_KIND_LABELS } from "@/app/lib/scenario-admin";
+import { saveTodayResult, useTodayScore } from "@/app/lib/today-result";
 
 import PlayShell from "../play/PlayShell";
 import SurfaceByKind from "../play/SurfaceByKind";
@@ -13,12 +14,17 @@ import TutorialShell from "../play/TutorialShell";
 // 유형이 섞여 나온다 — 하나가 끝나면 다음 시나리오로 넘어가고, 점수는 회차 전체로 합산한다.
 export default function TodayPlay({
   scenarios,
+  date,
 }: {
   scenarios: ScheduledScenario[];
+  // 서버가 계산한 오늘(KST). 클라이언트가 따로 계산하면 자정 언저리에 어긋난다.
+  date: string;
 }) {
   // 지금 푸는 시나리오와 여기까지 쌓인 점수. 마지막이 끝나면 합계를 셸에 넘긴다.
   const [index, setIndex] = useState(0);
   const [scoreSoFar, setScoreSoFar] = useState(0);
+  // 오늘 이미 푼 기록. 있으면 문제 대신 그날 결과부터 보여준다(#90).
+  const seenScore = useTodayScore(date);
 
   const total = scenarios.length;
   const current = scenarios[Math.min(index, total - 1)];
@@ -28,6 +34,7 @@ export default function TodayPlay({
 
   return (
     <PlayShell
+      initialScore={seenScore}
       doneTitle="오늘 문제 끝!"
       tutorial={(start) => (
         <TutorialShell
@@ -88,7 +95,10 @@ export default function TodayPlay({
           slug={current.slug}
           onFinish={(score) => {
             const sum = scoreSoFar + score;
-            if (index + 1 >= total) return onFinish(sum);
+            if (index + 1 >= total) {
+              saveTodayResult({ date, score: sum });
+              return onFinish(sum);
+            }
             setScoreSoFar(sum);
             setIndex(index + 1);
           }}

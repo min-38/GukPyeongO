@@ -19,16 +19,24 @@ export default function PlayShell({
   tutorial,
   renderScenario,
   doneTitle,
+  initialScore,
 }: {
   // start()가 오디오 잠금을 풀고 시나리오를 시작한다.
   tutorial: (start: () => void) => ReactNode;
   renderScenario: (onFinish: (score: number) => void) => ReactNode;
   doneTitle: string;
+  // 이미 푼 사람에게는 문제 대신 결과를 보여준다(#90).
+  // 기록은 브라우저에 있어 마운트 뒤에야 알 수 있으므로 나중에 들어와도 반영한다.
+  initialScore?: number | null;
 }) {
   const isDesktop = useIsDesktop();
   const [started, setStarted] = useState(false);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   const [runId, setRunId] = useState(0); // 다시 하기 시 시나리오 리셋용
+  const [restarted, setRestarted] = useState(false);
+
+  // 이번 회차 점수가 없으면 지난 기록을 보여준다. "다시"를 누른 뒤에는 기록을 무시한다.
+  const shownScore = finalScore ?? (restarted ? null : (initialScore ?? null));
 
   // 이 화면에서는 페이지 자체가 스크롤되지 않는다(머무는 동안만 문서 스크롤 잠금).
   useEffect(() => {
@@ -48,6 +56,7 @@ export default function PlayShell({
     setStarted(true);
   };
   const restart = () => {
+    setRestarted(true);
     setFinalScore(null);
     setRunId((n) => n + 1);
     setStarted(true);
@@ -69,7 +78,7 @@ export default function PlayShell({
     </div>
   );
 
-  if (finalScore !== null) {
+  if (shownScore !== null) {
     return (
       <main
         className={`flex flex-col items-center justify-center gap-5 px-6 text-center ${SCREEN}`}
@@ -78,7 +87,7 @@ export default function PlayShell({
         <span className="text-5xl">🎉</span>
         <p className="text-lg font-bold">{doneTitle}</p>
         <p className="text-base text-muted">
-          획득 점수 <span className="font-bold text-brand">{finalScore}점</span>
+          획득 점수 <span className="font-bold text-brand">{shownScore}점</span>
           <span className="text-sm"> (mock)</span>
         </p>
         <div className="flex gap-3">

@@ -12,9 +12,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = "국평오 테스트 — 검색 없이 10문제";
+const title = "국평오 테스트 — 오늘의 문해력 문제";
 const description =
-  "검색 없이 10문제. 당신의 문해력은 몇 등급?";
+  "매일 바뀌는 실생활 문제. 당신의 문해력은 몇 등급?";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.gukpyeongo.site"),
