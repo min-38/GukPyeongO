@@ -7,6 +7,7 @@ import { readMs } from "@/app/lib/scenario-pacing";
 import { playMessagePop } from "@/app/lib/sfx";
 
 import ReadingScenario from "./ReadingScenario";
+import { CommentRow, PostCard } from "./SurfaceCards";
 
 // 피드에 쌓이는 항목 — 원글 카드 또는 댓글.
 // 댓글은 이미 달려 있는 글이며, 정답/오답에 따라 새로 달리지 않는다.
@@ -15,50 +16,6 @@ type FeedItem =
   | { kind: "comment"; nick: string; text: string; reply?: boolean };
 
 const OPENING_DELAY_MS = 400;
-
-function PostCard({
-  author,
-  title,
-  body,
-}: {
-  author: string;
-  title: string;
-  body: string[];
-}) {
-  return (
-    <div className="animate-rise rounded-2xl border border-border bg-surface-muted/40 p-4">
-      <p className="text-xs text-muted">{author}</p>
-      <h2 className="mt-1 text-base font-bold leading-snug">{title}</h2>
-      <div className="mt-2 flex flex-col gap-1 text-[15px] leading-relaxed">
-        {body.map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CommentRow({
-  nick,
-  text,
-  reply,
-}: {
-  nick: string;
-  text: string;
-  reply?: boolean;
-}) {
-  return (
-    <div className={`animate-rise flex gap-2 ${reply ? "pl-8" : ""}`}>
-      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/20 text-[11px] font-bold text-brand">
-        {nick.slice(0, 1)}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted">{nick}</p>
-        <p className="text-[15px] leading-snug">{text}</p>
-      </div>
-    </div>
-  );
-}
 
 export default function CommunityScenarioView({
   scenario,

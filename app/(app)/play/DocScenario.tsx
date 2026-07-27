@@ -7,30 +7,9 @@ import { readMs } from "@/app/lib/scenario-pacing";
 import { playMessagePop } from "@/app/lib/sfx";
 
 import ReadingScenario from "./ReadingScenario";
+import { DocCard } from "./SurfaceCards";
 
 const OPENING_DELAY_MS = 400;
-
-function DocCard({
-  source,
-  title,
-  body,
-}: {
-  source: string;
-  title: string;
-  body: string[];
-}) {
-  return (
-    <div className="animate-rise rounded-2xl border border-border bg-surface-muted/40 p-4">
-      <p className="text-xs font-medium text-brand">{source}</p>
-      <h2 className="mt-1 text-lg font-bold leading-snug">{title}</h2>
-      <div className="mt-3 flex flex-col gap-2 text-[15px] leading-relaxed">
-        {body.map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function DocScenarioView({
   scenario,

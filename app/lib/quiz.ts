@@ -227,6 +227,42 @@ export interface StoredResult extends ScoreResponse {
   finishedAt?: string;
   // 등급 분포 속 내 위치(#95). 응시 기록이 없는 회차(v1)에는 없다.
   rank?: GradeRank;
+  // 문제 다시 보기가 읽는 문항별 내 답과 정답(#96). v1 회차에는 없다.
+  review?: ReviewStep[];
+}
+
+// 문제 다시 보기 한 문항 (#96).
+// 지문과 보기 글은 화면이 서버에서 따로 받아온다 — 여기엔 답만 담는다.
+export interface ReviewStep {
+  slug: string;
+  stepKey: string;
+  choiceIndex: number | null; // 내가 고른 보기. null이면 시간 초과 등으로 못 푼 문항
+  answerIndex: number;
+}
+
+// 문항 별점 (#96). 별점은 필수, 한마디는 선택.
+export const MAX_RATING_COMMENT_LENGTH = 200;
+export const RATING_STARS = [1, 2, 3, 4, 5] as const;
+
+// 어드민 항의 목록 한 줄 (#96). 어느 문항인지 알아볼 수 있게 문제 제목과 질문을 동봉한다.
+export interface AdminStepReport {
+  id: string;
+  reason: string;
+  detail: string | null;
+  status: "open" | "resolved";
+  createdAt: string;
+  scenarioTitle: string;
+  stepPrompt: string;
+}
+
+// 어드민 별점 집계 한 줄 (#96). 다음 문제를 어느 쪽으로 낼지 보는 자리라 문항 단위로 묶는다.
+export interface AdminStepRating {
+  stepId: string;
+  scenarioTitle: string;
+  stepPrompt: string;
+  average: number;
+  count: number;
+  comments: string[];
 }
 
 // 등급 분포 막대가 쓰는 값 (#95).

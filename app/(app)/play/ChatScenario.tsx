@@ -8,87 +8,10 @@ import { playMessagePop, playSendPop } from "@/app/lib/sfx";
 import { type AnswerResult, useScenario } from "@/app/lib/useScenario";
 
 import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
-
-// 화면에 쌓이는 말풍선. 한 시나리오 동안 계속 누적된다.
-type Bubble = {
-  side: "them" | "me";
-  speaker: string;
-  text: string;
-  at?: string; // 보낸 시각. 묶음의 마지막 줄에만 보인다(showsTime).
-  // 반응 대사의 정답/오답 톤. 대화가 누적되므로 색은 말풍선에 고정해
-  // 다음 문제로 넘어가도 과거 말풍선 색이 바뀌지 않게 한다.
-  tone?: "correct" | "wrong";
-};
+import { type Bubble, ChatBubble } from "./SurfaceCards";
 
 const OPENING_DELAY_MS = 500; // 화면 진입 후 첫 메시지까지
 const REPLY_BEAT_MS = 500; // 내 답장이 눈에 들어온 뒤 상대가 반응하기까지
-
-const TIME = "shrink-0 text-[11px] text-muted";
-
-// 같은 사람이 연달아 보내면 이름과 프로필을 다시 보여주지 않는다 — 실제 메신저와 같게.
-// 시각은 반대쪽 끝, 묶음의 마지막 줄에만 붙는다.
-function ChatBubble({
-  bubble,
-  grouped,
-  timed,
-}: {
-  bubble: Bubble;
-  grouped: boolean;
-  timed: boolean;
-}) {
-  if (bubble.side === "me") {
-    return (
-      <div
-        className={`animate-rise flex flex-col items-end gap-1 ${grouped ? "" : "mt-2"}`}
-      >
-        {!grouped && (
-          <span className="text-xs text-muted">{bubble.speaker}</span>
-        )}
-        <div className="flex items-end gap-1.5">
-          {timed && <span className={TIME}>{bubble.at}</span>}
-          <p className="max-w-[16rem] rounded-2xl rounded-tr-sm bg-brand px-4 py-2.5 text-[15px] font-medium text-brand-foreground">
-            {bubble.text}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const toneClass =
-    bubble.tone === "correct"
-      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-      : bubble.tone === "wrong"
-        ? "bg-red-500/15 text-red-700 dark:text-red-300"
-        : "bg-surface-muted text-foreground";
-
-  return (
-    <div
-      className={`animate-rise flex items-end gap-2 ${grouped ? "" : "mt-2"}`}
-    >
-      {grouped ? (
-        // 자리는 남겨야 말풍선이 좌우로 흔들리지 않는다.
-        <div className="h-8 w-8 shrink-0" />
-      ) : (
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/20 text-xs font-bold text-brand">
-          {bubble.speaker.slice(0, 1)}
-        </div>
-      )}
-      <div className="flex flex-col gap-1">
-        {!grouped && (
-          <span className="text-xs text-muted">{bubble.speaker}</span>
-        )}
-        <div className="flex items-end gap-1.5">
-          <p
-            className={`max-w-[16rem] rounded-2xl rounded-tl-sm px-4 py-2.5 text-[15px] ${toneClass}`}
-          >
-            {bubble.text}
-          </p>
-          {timed && <span className={TIME}>{bubble.at}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TypingIndicator() {
   return (

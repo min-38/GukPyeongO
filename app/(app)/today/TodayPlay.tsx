@@ -9,6 +9,7 @@ import {
   GRADE_TITLES,
   type GradeRank,
   RESULT_STORAGE_KEY,
+  type ReviewStep,
   type StoredResult,
 } from "@/app/lib/quiz";
 import { saveTodayResult, useTodayScore } from "@/app/lib/today-result";
@@ -25,6 +26,7 @@ interface GradeResponse {
   typeStats: { type: string; correct: number; total: number }[];
   finishedAt: string;
   rank?: GradeRank;
+  review: ReviewStep[];
 }
 
 import PlayShell from "../play/PlayShell";
@@ -98,6 +100,7 @@ export default function TodayPlay({
         typeStats: g.typeStats as StoredResult["typeStats"],
         gradeToken: g.gradeToken,
         finishedAt: g.finishedAt,
+        review: g.review,
         ...(g.rank ? { rank: g.rank } : {}),
         perQuestion: [],
         typeLabels: Object.fromEntries(

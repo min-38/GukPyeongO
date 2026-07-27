@@ -15,6 +15,7 @@ import {
 import { type AdminScenario } from "@/app/lib/scenario-admin";
 
 import DashboardTab from "./DashboardTab";
+import FeedbackTab from "./FeedbackTab";
 import KindTab from "./KindTab";
 import ScenarioTab from "./ScenarioTab";
 import ScheduleTab from "./ScheduleTab";
@@ -27,6 +28,7 @@ type Tab =
   | "kinds"
   | "schedule"
   | "reports"
+  | "feedback"
   | "comments"
   | "audit"
   | "patch";
@@ -150,6 +152,8 @@ function PatchForm({
 export default function AdminDashboard() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [reports, setReports] = useState<AdminReport[]>([]);
+  // 시나리오 문항 항의 미처리 수(#96). 목록은 탭이 직접 불러오고 뱃지 숫자만 올려받는다.
+  const [openStepReports, setOpenStepReports] = useState(0);
   const [audits, setAudits] = useState<QuestionAudit[]>([]);
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
   const [scenarios, setScenarios] = useState<AdminScenario[]>([]);
@@ -260,6 +264,7 @@ export default function AdminDashboard() {
     { id: "kinds", emoji: "🏷️", label: "유형", count: 0 },
     { id: "schedule", emoji: "🗓️", label: "편성", count: 0 },
     { id: "reports", emoji: "🚩", label: "신고", count: openReports },
+    { id: "feedback", emoji: "📣", label: "항의·평가", count: openStepReports },
     { id: "comments", emoji: "💬", label: "댓글", count: comments.length },
     { id: "audit", emoji: "🕑", label: "로그", count: audits.length },
     { id: "patch", emoji: "📋", label: "패치노트", count: patchNotes.length },
@@ -287,7 +292,7 @@ export default function AdminDashboard() {
             {n.count > 0 && (
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${
-                  n.id === "reports" && openReports > 0
+                  n.id === "reports" || n.id === "feedback"
                     ? "bg-red-500 text-white"
                     : "bg-surface-muted text-muted"
                 }`}
@@ -373,6 +378,10 @@ export default function AdminDashboard() {
               )}
             </ul>
           </section>
+        )}
+
+        {tab === "feedback" && (
+          <FeedbackTab onOpenCount={setOpenStepReports} />
         )}
 
         {tab === "comments" && (
