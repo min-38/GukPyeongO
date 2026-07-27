@@ -3,10 +3,13 @@
 // 어드민 화면은 "지문 1개 + 문항 N개"를 한 덩어리로 다룬다.
 
 // 렌더링 표면 종류. DB의 scenarios.kind 와 같은 값.
-export type ScenarioKind = "doc" | "community" | "chat" | "email" | "story";
+// 공지와 신문은 화면이 같지만 유형은 나눈다 — 유형별 튜토리얼·안내가 갈라진다(#92).
+export type ScenarioKind =
+  "notice" | "news" | "community" | "chat" | "email" | "story";
 
 export const SCENARIO_KINDS: ScenarioKind[] = [
-  "doc",
+  "notice",
+  "news",
   "community",
   "chat",
   "email",
@@ -14,11 +17,22 @@ export const SCENARIO_KINDS: ScenarioKind[] = [
 ];
 
 export const SCENARIO_KIND_LABELS: Record<ScenarioKind, string> = {
-  doc: "문서형(공지·신문)",
+  notice: "공지",
+  news: "신문",
   community: "커뮤니티",
   chat: "메신저",
   email: "이메일",
   story: "서사",
+};
+
+// 유형이 무엇을 재는지. 목록에서 어떤 유형에 문제를 더 채울지 판단하는 데 쓴다(#92).
+export const SCENARIO_KIND_DESCRIPTIONS: Record<ScenarioKind, string> = {
+  notice: "안내문에 숨은 조건과 낚시 문구를 가려낸다",
+  news: "기사에서 제목낚시와 사실·추측을 갈라낸다",
+  community: "게시물과 댓글에서 요지·반어·논점 이탈을 짚는다",
+  chat: "대화 맥락을 읽고 보낼 답장을 고른다",
+  email: "회신 스레드를 훑거나 원문과 답장을 대조한다",
+  story: "긴 이야기를 읽고 세부·생략·서술자를 따진다",
 };
 
 export type ScenarioStatus = "draft" | "published" | "held";

@@ -58,7 +58,8 @@ function payloadLines(
     speaker?: string;
   };
   switch (kind) {
-    case "doc":
+    case "notice":
+    case "news":
       return [
         `[${p.doc?.source ?? ""}] ${p.doc?.title ?? ""}`,
         ...(p.doc?.body ?? []),

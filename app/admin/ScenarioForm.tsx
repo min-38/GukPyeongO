@@ -43,7 +43,8 @@ const PAYLOAD_EDITORS: Partial<
     }) => React.ReactElement
   >
 > = {
-  doc: DocPayloadEditor,
+  notice: DocPayloadEditor,
+  news: DocPayloadEditor,
   community: CommunityPayloadEditor,
   chat: ChatPayloadEditor,
   email: EmailPayloadEditor,
@@ -268,7 +269,7 @@ export default function ScenarioForm({
   const [saved, setSaved] = useState<AdminScenario | null>(initial);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [kind, setKind] = useState<ScenarioKind>(initial?.kind ?? "doc");
+  const [kind, setKind] = useState<ScenarioKind>(initial?.kind ?? "notice");
   const [status, setStatus] = useState<ScenarioStatus>(
     initial?.status ?? "draft",
   );

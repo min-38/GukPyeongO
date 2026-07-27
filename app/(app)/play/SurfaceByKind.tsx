@@ -28,7 +28,9 @@ export default function SurfaceByKind({
 }) {
   const common = { scenario: scenario as never, slug, onFinish, onAnswered };
   switch (kind) {
-    case "doc":
+    // 공지·신문은 유형은 다르지만 읽는 화면은 같다.
+    case "notice":
+    case "news":
       return <DocScenarioView {...common} />;
     case "community":
       return <CommunityScenarioView {...common} />;

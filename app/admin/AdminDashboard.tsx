@@ -14,13 +14,20 @@ import {
 } from "@/app/lib/quiz";
 import { type AdminScenario } from "@/app/lib/scenario-admin";
 
+import KindTab from "./KindTab";
 import ScenarioTab from "./ScenarioTab";
 import ScheduleTab from "./ScheduleTab";
 
 // 문제·유형 탭은 걷어냈다(#66) — v2에서 문제는 시나리오이고 유형은 시나리오 kind다.
 // questions 테이블과 /test 는 v1 자산으로 남아 있지만 어드민에서는 다루지 않는다.
 type Tab =
-  "scenarios" | "schedule" | "reports" | "comments" | "audit" | "patch";
+  | "scenarios"
+  | "kinds"
+  | "schedule"
+  | "reports"
+  | "comments"
+  | "audit"
+  | "patch";
 
 function PatchForm({
   onSaved,
@@ -247,6 +254,7 @@ export default function AdminDashboard() {
       label: "문제",
       count: scenarios.length,
     },
+    { id: "kinds", emoji: "🏷️", label: "유형", count: 0 },
     { id: "schedule", emoji: "🗓️", label: "편성", count: 0 },
     { id: "reports", emoji: "🚩", label: "신고", count: openReports },
     { id: "comments", emoji: "💬", label: "댓글", count: comments.length },
@@ -304,6 +312,8 @@ export default function AdminDashboard() {
             }
           />
         )}
+
+        {tab === "kinds" && <KindTab scenarios={scenarios} />}
 
         {tab === "schedule" && <ScheduleTab scenarios={scenarios} />}
 

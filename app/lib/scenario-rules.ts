@@ -11,7 +11,8 @@ import { type ScenarioKind } from "./scenario-admin";
 
 // 본문 길이 상한(자). 모바일에서 읽히는 한계 — mock 테스트의 값과 같은 기준.
 const BODY_LIMITS: Partial<Record<ScenarioKind, number>> = {
-  doc: 650,
+  notice: 650,
+  news: 650,
   email: 900,
   story: 1200,
 };
@@ -53,7 +54,8 @@ function bodyText(
     messages?: { body?: string[] }[];
   };
   switch (kind) {
-    case "doc":
+    case "notice":
+    case "news":
       return (p.doc?.body ?? []).join("");
     case "story":
       return (p.body ?? []).join("");

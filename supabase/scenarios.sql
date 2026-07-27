@@ -13,7 +13,8 @@
 --           #74 컬럼안에는 없지만, 라우트가 특정 시나리오를 집어올 키가 필요해 추가했다.
 -- kind    : 렌더링 표면 종류. 어떤 컴포넌트로 그릴지 결정한다.
 -- payload : 유형별 지문 구조(문항 제외). 정본은 아래 TS 타입이다.
---   doc       → app/lib/doc-scenario.ts      DocScenario   { sourceLabel, doc{source,title,body[]} }
+--   notice    → app/lib/doc-scenario.ts      DocScenario   { sourceLabel, doc{source,title,body[]} }
+--   news      → 위와 같은 구조. 화면은 같지만 유형은 나눈다 — 유형별 튜토리얼이 갈라진다(#92)
 --   community → app/lib/mock-community.ts    CommunityScenario { boardName, post{...}, comments[] }
 --   email     → app/lib/email-scenario.ts    EmailScenario { sourceLabel, subject, layout?, messages[] }
 --   story     → app/lib/story-scenario.ts    StoryScenario { sourceLabel, source, title, readSec, body[] }
@@ -22,7 +23,7 @@
 create table if not exists public.scenarios (
   id uuid primary key default gen_random_uuid(),
   slug text not null unique,
-  kind text not null check (kind in ('doc', 'community', 'chat', 'email', 'story')),
+  kind text not null check (kind in ('notice', 'news', 'community', 'chat', 'email', 'story')),
   source_label text not null default '',
   payload jsonb not null,
   status text not null default 'draft' check (status in ('draft', 'published', 'held')),

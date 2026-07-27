@@ -77,14 +77,14 @@ describe("scenario-rules", () => {
   });
 
   it("본문이 비면 거부한다", () => {
-    const { errors } = checkScenarioRules("doc", { doc: { body: [] } }, []);
+    const { errors } = checkScenarioRules("notice", { doc: { body: [] } }, []);
     expect(errors.join()).toContain("본문이 비어");
   });
 
   it("본문 길이 초과는 경고로 남기고 저장은 막지 않는다", () => {
     const long = "가".repeat(700);
     const { errors, warnings } = checkScenarioRules(
-      "doc",
+      "news",
       { doc: { body: [long] } },
       [],
     );
