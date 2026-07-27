@@ -140,6 +140,8 @@ export default function TodayPlay({
           ]}
           startLabel="시작하기"
           onStart={() => {
+            // 시작만 하고 이탈한 사람도 세야 이탈 지점이 보인다(#91).
+            void fetch("/api/today-session", { method: "POST" });
             // 다시 하기로 들어와도 처음부터 — 셸이 이 트리를 새로 마운트한다.
             setIndex(0);
             setScoreSoFar(0);

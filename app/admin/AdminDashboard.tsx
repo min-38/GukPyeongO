@@ -14,6 +14,7 @@ import {
 } from "@/app/lib/quiz";
 import { type AdminScenario } from "@/app/lib/scenario-admin";
 
+import DashboardTab from "./DashboardTab";
 import KindTab from "./KindTab";
 import ScenarioTab from "./ScenarioTab";
 import ScheduleTab from "./ScheduleTab";
@@ -21,6 +22,7 @@ import ScheduleTab from "./ScheduleTab";
 // 문제·유형 탭은 걷어냈다(#66) — v2에서 문제는 시나리오이고 유형은 시나리오 kind다.
 // questions 테이블과 /test 는 v1 자산으로 남아 있지만 어드민에서는 다루지 않는다.
 type Tab =
+  | "dashboard"
   | "scenarios"
   | "kinds"
   | "schedule"
@@ -153,7 +155,7 @@ export default function AdminDashboard() {
   const [scenarios, setScenarios] = useState<AdminScenario[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [tab, setTab] = useState<Tab>("scenarios");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [editingPatch, setEditingPatch] = useState<"new" | null>(null);
 
   useEffect(() => {
@@ -248,6 +250,7 @@ export default function AdminDashboard() {
   const openReports = reports.filter((r) => r.status === "open").length;
 
   const nav: { id: Tab; emoji: string; label: string; count: number }[] = [
+    { id: "dashboard", emoji: "📈", label: "대시보드", count: 0 },
     {
       id: "scenarios",
       emoji: "🎬",
@@ -304,6 +307,8 @@ export default function AdminDashboard() {
 
       {/* 본문 */}
       <main className="flex-1 overflow-x-hidden px-5 py-6 lg:px-8">
+        {tab === "dashboard" && <DashboardTab />}
+
         {tab === "scenarios" && (
           <ScenarioTab
             scenarios={scenarios}
