@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
 import {
+  gradeBlurb,
   gradeTheme,
   type QuizMode,
   QUIZ_MODES,
-  resolveTypeLabel,
-  RESULT_STORAGE_KEY,
   type StoredResult,
 } from "@/app/lib/quiz";
 
@@ -17,36 +16,34 @@ import useIsDesktop from "@/app/lib/useIsDesktop";
 import AdFitBanner from "../AdFitBanner";
 import Footer from "../Footer";
 import GradeCharacter from "../GradeCharacter";
-import { scoreForGrade } from "@/app/lib/scoring";
 
 import Comments from "./Comments";
-import QuestionStats from "./QuestionStats";
+import GradeBar from "./GradeBar";
+import useStoredResult from "./useStoredResult";
 
-// sessionStorage의 채점 결과를 읽는다. getSnapshot은 참조가 안정적이어야 하므로
-// raw 문자열이 같으면 파싱 결과를 캐시해 동일 객체를 반환한다.
-let cachedRaw: string | null = null;
-let cachedResult: StoredResult | null = null;
-
-function subscribe() {
-  // 결과는 마운트 후 바뀌지 않으므로 구독은 비워둔다.
-  return () => {};
+// 응시 시각 — "2026년 7월 28일 오전 03시 16분". 서버가 찍은 시각을 한국 시간으로 읽는다.
+// toLocaleString은 "오전 03:16"까지만 만들어줘서 조각을 직접 잇는다.
+function formatFinishedAt(iso: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const part: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date))
+    part[p.type] = p.value;
+  return `${part.year}년 ${part.month}월 ${part.day}일 ${part.dayPeriod} ${part.hour}시 ${part.minute}분`;
 }
 
-function readResult(): StoredResult | null {
-  let raw: string | null = null;
-  try {
-    raw = sessionStorage.getItem(RESULT_STORAGE_KEY);
-  } catch {
-    raw = null;
-  }
-  if (raw === cachedRaw) return cachedResult;
-  cachedRaw = raw;
-  try {
-    cachedResult = raw ? (JSON.parse(raw) as StoredResult) : null;
-  } catch {
-    cachedResult = null;
-  }
-  return cachedResult;
+// 등급 아래 한 줄을 고를 값. 채점 시각이 있으면 회차마다 다른 문장이 나오고,
+// 없으면(v1) 맞힌 개수를 쓴다. 결과가 같으면 늘 같은 문장이라 새로고침해도 안 바뀐다.
+function blurbSeed(r: StoredResult): number {
+  return r.finishedAt ? Date.parse(r.finishedAt) / 60000 : r.correctCount;
 }
 
 // 응시 모드 해석. 저장된 mode가 없으면(구버전 데이터) 문항 수로 추정한다.
@@ -56,7 +53,7 @@ function resultMode(r: StoredResult): QuizMode {
 }
 
 export default function ResultPage() {
-  const result = useSyncExternalStore(subscribe, readResult, () => null);
+  const result = useStoredResult();
   const [copied, setCopied] = useState(false);
   const isDesktop = useIsDesktop();
 
@@ -105,8 +102,9 @@ export default function ResultPage() {
   }
 
   const theme = gradeTheme(result.grade);
-  const avgSec = (result.avgReactionMs / 1000).toFixed(1);
-  const modeCfg = QUIZ_MODES[resultMode(result)];
+  const finishedAt = result.finishedAt
+    ? formatFinishedAt(result.finishedAt)
+    : null;
 
   return (
     <>
@@ -122,48 +120,38 @@ export default function ResultPage() {
             />
           </div>
         )}
-        {/* 왼쪽 위: 등급·통계·공유 카드 */}
+        {/* 왼쪽 위: 등급·점수·응시 시각·버튼 카드 */}
         <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-          <div className="animate-pop flex flex-col items-center text-center">
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
-              {modeCfg.emoji} {result.modeLabel ?? modeCfg.label} ·{" "}
-              {result.totalCount}문제
-            </span>
-            <GradeCharacter grade={result.grade} className="mt-2 h-28 w-28" />
-            <p className="mt-3 text-sm font-bold tracking-widest text-muted">
-              나의 문해력 캐릭터
-            </p>
+          <h1 className="mb-3 font-display text-2xl">테스트 결과</h1>
+          <div className="animate-pop flex flex-col items-center rounded-2xl border border-border p-6 text-center">
+            <GradeCharacter grade={result.grade} className="h-32 w-32" />
             <p
-              className="mt-1 font-display text-5xl leading-tight tracking-tight lg:text-6xl"
+              className="mt-3 font-display text-4xl leading-tight tracking-tight"
               style={{ color: theme.color }}
-            >
-              {result.title}
-            </p>
-            <p
-              className="mt-3 rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
-              style={{ backgroundColor: theme.color }}
             >
               {result.grade}등급
             </p>
-            <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
+              {gradeBlurb(result.grade, blurbSeed(result))}
+            </p>
           </div>
 
-          <dl className="mt-8 grid grid-cols-2 gap-3">
+          <dl className="mt-3 grid grid-cols-2 gap-3">
             {/* v2는 점수로 등급을 매긴다(#89) — 개수보다 점수를 먼저 보여준다. */}
             {result.score !== undefined && result.maxScore !== undefined && (
-              <div className="rounded-2xl bg-surface-muted p-4">
-                <dt className="text-sm font-medium text-muted">획득 점수</dt>
+              <div className="rounded-2xl bg-surface-muted p-4 text-center">
+                <dt className="text-sm font-medium text-muted">얻은 점수</dt>
                 <dd className="mt-1 text-2xl font-extrabold">
                   {result.score}
                   <span className="text-base font-bold text-muted">
                     {" / "}
-                    {result.maxScore}점
+                    {result.maxScore}
                   </span>
                 </dd>
               </div>
             )}
-            <div className="rounded-2xl bg-surface-muted p-4">
-              <dt className="text-sm font-medium text-muted">맞힌 문제</dt>
+            <div className="rounded-2xl bg-surface-muted p-4 text-center">
+              <dt className="text-sm font-medium text-muted">맞춘 문제 수</dt>
               <dd className="mt-1 text-2xl font-extrabold">
                 {result.correctCount}
                 <span className="text-base font-bold text-muted">
@@ -172,65 +160,36 @@ export default function ResultPage() {
                 </span>
               </dd>
             </div>
-            {/* v2 회차는 반응속도를 재지 않는다 — 0으로 표시하면 잘못 읽힌다(#89). */}
-            {result.avgReactionMs > 0 && (
-              <div className="rounded-2xl bg-surface-muted p-4">
-                <dt className="text-sm font-medium text-muted">
-                  평균 반응속도
-                </dt>
-                <dd className="mt-1 text-2xl font-extrabold">
-                  {avgSec}
-                  <span className="text-base font-bold text-muted"> 초</span>
-                </dd>
-              </div>
-            )}
           </dl>
 
-          {/* 다음 등급까지 몇 점 남았는지 — 점수로 등급을 매기니 목표가 보여야 한다(#89). */}
-          {result.score !== undefined && result.grade > 1 && (
-            <p className="mt-3 text-center text-sm text-muted">
-              {result.grade - 1}등급까지{" "}
-              <span className="font-bold text-foreground">
-                {Math.max(0, scoreForGrade(result.grade - 1) - result.score)}점
-              </span>{" "}
-              남았어요 · {scoreForGrade(1)}점부터 1등급
-            </p>
+          {/* 응시 시각과 등급 분포 속 내 위치. v1 회차에는 둘 다 없어 통째로 빠진다. */}
+          {(finishedAt || result.rank) && (
+            <div className="mt-3 rounded-2xl border border-border p-4">
+              {finishedAt && (
+                <p className="text-center text-base font-bold">{finishedAt}</p>
+              )}
+              {result.rank && (
+                <div className="mt-2">
+                  <GradeBar grade={result.grade} rank={result.rank} />
+                </div>
+              )}
+            </div>
           )}
 
-          <div className="mt-3 rounded-2xl bg-surface-muted p-4">
-            <p className="text-sm font-medium text-muted">취약 유형</p>
-            {result.weakTypes.length === 0 ? (
-              <p className="mt-2 text-base font-bold">
-                🎯 약점이 안 보여요. 고르게 잘 봤네요!
-              </p>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {result.weakTypes.map((type) => (
-                  <span
-                    key={type}
-                    className="rounded-full bg-surface px-3 py-1 text-sm font-bold"
-                  >
-                    {resolveTypeLabel(type, result.typeLabels)}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          <Link
+            href="/result/review"
+            className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+          >
+            문제 다시 보기
+          </Link>
 
           <button
             type="button"
             onClick={handleShare}
-            className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+            className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-brand text-base font-bold text-brand transition-colors hover:bg-brand/10 active:scale-[0.99]"
           >
-            {copied ? "✅ 링크가 복사됐어요!" : "📣 결과 공유하기"}
+            {copied ? "링크가 복사됐어요!" : "공유하기"}
           </button>
-
-          <Link
-            href="/test"
-            className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-border text-base font-bold transition-colors hover:bg-surface-muted active:scale-[0.99]"
-          >
-            다시 도전
-          </Link>
         </div>
 
         {/* 오른쪽 전체: 댓글 (데스크톱) */}
@@ -247,13 +206,6 @@ export default function ResultPage() {
             </div>
           )}
           <Comments grade={result.grade} gradeToken={result.gradeToken} />
-        </div>
-
-        {/* 왼쪽 아래: 문항 통계 — v1 문제 기준이라 v2 회차(perQuestion 없음)에서는 감춘다(#89). */}
-        <div className="lg:col-start-1 lg:row-start-2 lg:[&>section]:mt-0">
-          {result.perQuestion.length > 0 && (
-            <QuestionStats results={result.perQuestion} />
-          )}
         </div>
       </main>
       <Footer />

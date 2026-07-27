@@ -7,12 +7,14 @@ import { type ScheduledScenario } from "@/app/lib/schedule.server";
 import { SCENARIO_KIND_LABELS } from "@/app/lib/scenario-admin";
 import {
   GRADE_TITLES,
+  type GradeRank,
   RESULT_STORAGE_KEY,
   type StoredResult,
 } from "@/app/lib/quiz";
 import { saveTodayResult, useTodayScore } from "@/app/lib/today-result";
 
 // 회차 채점 응답 (#89). 정답·배점·만점은 서버가 DB에서 읽어 계산한다.
+// 라우트가 server-only 모듈을 끌고 오므로 타입을 여기서 다시 적는다.
 interface GradeResponse {
   grade: number;
   score: number;
@@ -21,6 +23,8 @@ interface GradeResponse {
   totalCount: number;
   gradeToken: string;
   typeStats: { type: string; correct: number; total: number }[];
+  finishedAt: string;
+  rank?: GradeRank;
 }
 
 import PlayShell from "../play/PlayShell";
@@ -93,6 +97,8 @@ export default function TodayPlay({
           .map((t) => t.type),
         typeStats: g.typeStats as StoredResult["typeStats"],
         gradeToken: g.gradeToken,
+        finishedAt: g.finishedAt,
+        ...(g.rank ? { rank: g.rank } : {}),
         perQuestion: [],
         typeLabels: Object.fromEntries(
           g.typeStats.map((t) => [t.type, t.type]),

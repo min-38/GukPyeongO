@@ -78,6 +78,22 @@ export function scoreForGrade(grade: number): number {
   return GRADE_CUTS[Math.min(9, Math.max(1, grade)) - 1];
 }
 
+// 등급 분포 막대의 한 칸 (#95). 축은 득점률(0~100)이고 경계는 GRADE_CUTS를 그대로 쓴다.
+// 등급 폭이 고르지 않은 것(9등급 20%p, 2등급 7%p)은 등급컷 자체가 그런 것이라 그대로 보여준다.
+export interface GradeSegment {
+  grade: number;
+  from: number; // 이 등급이 시작되는 득점률 (포함)
+  to: number; // 다음 등급이 시작되는 득점률 (미포함, 1등급은 100)
+}
+
+export function gradeSegments(): GradeSegment[] {
+  return GRADE_CUTS.map((from, i) => ({
+    grade: i + 1,
+    from,
+    to: i === 0 ? 100 : GRADE_CUTS[i - 1],
+  }));
+}
+
 // v2 — 획득 점수 ÷ 만점 기준 (#89).
 // 난이도별 배점이 1/3/8로 벌어져 있어 개수로 세면 킬러 문항의 무게가 사라진다.
 export function gradeForScore(score: number, maxScore: number): number {
