@@ -64,11 +64,13 @@ export default function CommunityScenarioView({
   scenario,
   onFinish,
   slug,
+  onAnswered,
 }: {
   scenario: CommunityScenario;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const addItem = (item: FeedItem) => setFeed((prev) => [...prev, item]);
@@ -110,6 +112,7 @@ export default function CommunityScenarioView({
       steps={scenario.steps}
       onFinish={onFinish}
       slug={slug}
+      onAnswered={onAnswered}
       revealOnce={revealOnce}
     >
       {feed.map((item, i) =>

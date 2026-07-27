@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { POINTS_BY_DIFFICULTY } from "./scenario-points";
+
 // 유형(회사 메신저·커뮤니티…)이 공유하는 진행 상태머신.
 // "무엇을 어떻게 보여줄지"(맥락 재생·반응 연출)는 표면이 콜백으로 주입하고,
 // 이 훅은 문제 진행·타이머·점수·정답 공개만 담당한다.
@@ -17,12 +19,8 @@ export interface ScenarioStep {
   timeLimitSec: number;
 }
 
-// 난이도 → 배점. 킬러(3)를 크게 둬 쉬운 것만으론 고득점 불가.
-export const POINTS_BY_DIFFICULTY: Record<1 | 2 | 3, number> = {
-  1: 1,
-  2: 3,
-  3: 8,
-};
+// 배점은 서버 채점(#89)과 공유해야 해서 중립 모듈에 둔다.
+export { POINTS_BY_DIFFICULTY } from "./scenario-points";
 
 // 서버 채점 (#83). 정답이 클라이언트에 없을 때만 부른다.
 async function gradeOnServer(
@@ -57,6 +55,8 @@ export function useScenario<S extends ScenarioStep>({
   onFinish,
   // DB에서 온 시나리오의 라우트 키. 있으면 정답 판정을 서버에 맡긴다(#83).
   slug,
+  // 회차 채점(#89)을 위해 고른 답을 위로 흘려보낸다. 무응답은 null.
+  onAnswered,
   // 현재 스텝의 맥락을 재생한다. 다 보여준 뒤 open()을 호출하면 선택지가 열린다.
   // 정리 함수를 반환한다(예약 타이머 취소).
   reveal,
@@ -66,6 +66,7 @@ export function useScenario<S extends ScenarioStep>({
   steps: S[];
   onFinish: (score: number) => void;
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
   reveal: (step: S, index: number, open: () => void) => () => void;
   respond: (step: S, result: AnswerResult, next: () => void) => () => void;
 }) {
@@ -113,6 +114,8 @@ export function useScenario<S extends ScenarioStep>({
         revealed = graded.answerIndex;
       }
 
+      onAnswered?.(step.id ?? "", choiceIndex);
+
       const isCorrect = choiceIndex !== null && choiceIndex === revealed;
       const gained = isCorrect ? POINTS_BY_DIFFICULTY[step.difficulty] : 0;
       scoreRef.current += gained;
@@ -152,7 +155,7 @@ export function useScenario<S extends ScenarioStep>({
         cleanupRespond();
       };
     },
-    [step, isLast, onFinish, slug],
+    [step, isLast, onFinish, slug, onAnswered],
   );
 
   // 스텝 진입 → 맥락 재생 → open()으로 선택지 노출.

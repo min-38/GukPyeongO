@@ -17,6 +17,8 @@ import useIsDesktop from "@/app/lib/useIsDesktop";
 import AdFitBanner from "../AdFitBanner";
 import Footer from "../Footer";
 import GradeCharacter from "../GradeCharacter";
+import { scoreForGrade } from "@/app/lib/scoring";
+
 import Comments from "./Comments";
 import QuestionStats from "./QuestionStats";
 
@@ -64,7 +66,7 @@ export default function ResultPage() {
     if (!result) return;
     const url = window.location.origin;
     const modeCfg = QUIZ_MODES[resultMode(result)];
-    const text = `국평오 ${modeCfg.label}(${result.totalCount}문제): 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
+    const text = `국평오 ${result.modeLabel ?? modeCfg.label}(${result.totalCount}문제): 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -108,121 +110,153 @@ export default function ResultPage() {
 
   return (
     <>
-    <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
-     {/* 모바일 상단 배너 320×50 */}
-     {isDesktop === false && (
-       <div className="flex justify-center">
-         <AdFitBanner
-           unit="DAN-lgDU2Dq4xvULyTQD"
-           width={320}
-           height={50}
-           className="mb-6"
-         />
-       </div>
-     )}
-     {/* 왼쪽 위: 등급·통계·공유 카드 */}
-     <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-      <div className="animate-pop flex flex-col items-center text-center">
-        <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
-          {modeCfg.emoji} {modeCfg.label} · {result.totalCount}문제
-        </span>
-        <GradeCharacter grade={result.grade} className="mt-2 h-28 w-28" />
-        <p className="mt-3 text-sm font-bold tracking-widest text-muted">
-          나의 문해력 캐릭터
-        </p>
-        <p
-          className="mt-1 font-display text-5xl leading-tight tracking-tight lg:text-6xl"
-          style={{ color: theme.color }}
-        >
-          {result.title}
-        </p>
-        <p
-          className="mt-3 rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
-          style={{ backgroundColor: theme.color }}
-        >
-          {result.grade}등급
-        </p>
-        <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
-      </div>
-
-      <dl className="mt-8 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-surface-muted p-4">
-          <dt className="text-sm font-medium text-muted">맞힌 문제</dt>
-          <dd className="mt-1 text-2xl font-extrabold">
-            {result.correctCount}
-            <span className="text-base font-bold text-muted">
-              {" / "}
-              {result.totalCount}
-            </span>
-          </dd>
-        </div>
-        <div className="rounded-2xl bg-surface-muted p-4">
-          <dt className="text-sm font-medium text-muted">평균 반응속도</dt>
-          <dd className="mt-1 text-2xl font-extrabold">
-            {avgSec}
-            <span className="text-base font-bold text-muted"> 초</span>
-          </dd>
-        </div>
-      </dl>
-
-      <div className="mt-3 rounded-2xl bg-surface-muted p-4">
-        <p className="text-sm font-medium text-muted">취약 유형</p>
-        {result.weakTypes.length === 0 ? (
-          <p className="mt-2 text-base font-bold">
-            🎯 약점이 안 보여요. 고르게 잘 봤네요!
-          </p>
-        ) : (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {result.weakTypes.map((type) => (
-              <span
-                key={type}
-                className="rounded-full bg-surface px-3 py-1 text-sm font-bold"
-              >
-                {resolveTypeLabel(type, result.typeLabels)}
-              </span>
-            ))}
+      <main className="flex flex-1 flex-col px-6 py-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-12 lg:py-12">
+        {/* 모바일 상단 배너 320×50 */}
+        {isDesktop === false && (
+          <div className="flex justify-center">
+            <AdFitBanner
+              unit="DAN-lgDU2Dq4xvULyTQD"
+              width={320}
+              height={50}
+              className="mb-6"
+            />
           </div>
         )}
-      </div>
+        {/* 왼쪽 위: 등급·통계·공유 카드 */}
+        <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+          <div className="animate-pop flex flex-col items-center text-center">
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">
+              {modeCfg.emoji} {result.modeLabel ?? modeCfg.label} ·{" "}
+              {result.totalCount}문제
+            </span>
+            <GradeCharacter grade={result.grade} className="mt-2 h-28 w-28" />
+            <p className="mt-3 text-sm font-bold tracking-widest text-muted">
+              나의 문해력 캐릭터
+            </p>
+            <p
+              className="mt-1 font-display text-5xl leading-tight tracking-tight lg:text-6xl"
+              style={{ color: theme.color }}
+            >
+              {result.title}
+            </p>
+            <p
+              className="mt-3 rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
+              style={{ backgroundColor: theme.color }}
+            >
+              {result.grade}등급
+            </p>
+            <p className="mt-4 max-w-xs text-base text-muted">{theme.blurb}</p>
+          </div>
 
-      <button
-        type="button"
-        onClick={handleShare}
-        className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
-      >
-        {copied ? "✅ 링크가 복사됐어요!" : "📣 결과 공유하기"}
-      </button>
+          <dl className="mt-8 grid grid-cols-2 gap-3">
+            {/* v2는 점수로 등급을 매긴다(#89) — 개수보다 점수를 먼저 보여준다. */}
+            {result.score !== undefined && result.maxScore !== undefined && (
+              <div className="rounded-2xl bg-surface-muted p-4">
+                <dt className="text-sm font-medium text-muted">획득 점수</dt>
+                <dd className="mt-1 text-2xl font-extrabold">
+                  {result.score}
+                  <span className="text-base font-bold text-muted">
+                    {" / "}
+                    {result.maxScore}점
+                  </span>
+                </dd>
+              </div>
+            )}
+            <div className="rounded-2xl bg-surface-muted p-4">
+              <dt className="text-sm font-medium text-muted">맞힌 문제</dt>
+              <dd className="mt-1 text-2xl font-extrabold">
+                {result.correctCount}
+                <span className="text-base font-bold text-muted">
+                  {" / "}
+                  {result.totalCount}
+                </span>
+              </dd>
+            </div>
+            {/* v2 회차는 반응속도를 재지 않는다 — 0으로 표시하면 잘못 읽힌다(#89). */}
+            {result.avgReactionMs > 0 && (
+              <div className="rounded-2xl bg-surface-muted p-4">
+                <dt className="text-sm font-medium text-muted">
+                  평균 반응속도
+                </dt>
+                <dd className="mt-1 text-2xl font-extrabold">
+                  {avgSec}
+                  <span className="text-base font-bold text-muted"> 초</span>
+                </dd>
+              </div>
+            )}
+          </dl>
 
-      <Link
-        href="/test"
-        className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-border text-base font-bold transition-colors hover:bg-surface-muted active:scale-[0.99]"
-      >
-        다시 도전
-      </Link>
-     </div>
+          {/* 다음 등급까지 몇 점 남았는지 — 점수로 등급을 매기니 목표가 보여야 한다(#89). */}
+          {result.score !== undefined && result.grade > 1 && (
+            <p className="mt-3 text-center text-sm text-muted">
+              {result.grade - 1}등급까지{" "}
+              <span className="font-bold text-foreground">
+                {Math.max(0, scoreForGrade(result.grade - 1) - result.score)}점
+              </span>{" "}
+              남았어요 · {scoreForGrade(1)}점부터 1등급
+            </p>
+          )}
 
-     {/* 오른쪽 전체: 댓글 (데스크톱) */}
-     <div className="lg:col-start-2 lg:row-span-2 lg:[&>section]:mt-0">
-      {/* PC 전용: 댓글 위 250×250 */}
-      {isDesktop === true && (
-        <div className="flex justify-center">
-          <AdFitBanner
-            unit="DAN-AVHY1ki21whWnOYz"
-            width={250}
-            height={250}
-            className="mb-6"
-          />
+          <div className="mt-3 rounded-2xl bg-surface-muted p-4">
+            <p className="text-sm font-medium text-muted">취약 유형</p>
+            {result.weakTypes.length === 0 ? (
+              <p className="mt-2 text-base font-bold">
+                🎯 약점이 안 보여요. 고르게 잘 봤네요!
+              </p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {result.weakTypes.map((type) => (
+                  <span
+                    key={type}
+                    className="rounded-full bg-surface px-3 py-1 text-sm font-bold"
+                  >
+                    {resolveTypeLabel(type, result.typeLabels)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+          >
+            {copied ? "✅ 링크가 복사됐어요!" : "📣 결과 공유하기"}
+          </button>
+
+          <Link
+            href="/test"
+            className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-border text-base font-bold transition-colors hover:bg-surface-muted active:scale-[0.99]"
+          >
+            다시 도전
+          </Link>
         </div>
-      )}
-      <Comments grade={result.grade} gradeToken={result.gradeToken} />
-     </div>
 
-     {/* 왼쪽 아래: 문항 통계 */}
-     <div className="lg:col-start-1 lg:row-start-2 lg:[&>section]:mt-0">
-      <QuestionStats results={result.perQuestion} />
-     </div>
-    </main>
-    <Footer />
+        {/* 오른쪽 전체: 댓글 (데스크톱) */}
+        <div className="lg:col-start-2 lg:row-span-2 lg:[&>section]:mt-0">
+          {/* PC 전용: 댓글 위 250×250 */}
+          {isDesktop === true && (
+            <div className="flex justify-center">
+              <AdFitBanner
+                unit="DAN-AVHY1ki21whWnOYz"
+                width={250}
+                height={250}
+                className="mb-6"
+              />
+            </div>
+          )}
+          <Comments grade={result.grade} gradeToken={result.gradeToken} />
+        </div>
+
+        {/* 왼쪽 아래: 문항 통계 — v1 문제 기준이라 v2 회차(perQuestion 없음)에서는 감춘다(#89). */}
+        <div className="lg:col-start-1 lg:row-start-2 lg:[&>section]:mt-0">
+          {result.perQuestion.length > 0 && (
+            <QuestionStats results={result.perQuestion} />
+          )}
+        </div>
+      </main>
+      <Footer />
     </>
   );
 }

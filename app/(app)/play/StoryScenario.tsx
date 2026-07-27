@@ -13,11 +13,13 @@ export default function StoryScenarioView({
   scenario,
   onFinish,
   slug,
+  onAnswered,
 }: {
   scenario: StoryScenario;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
   const [shown, setShown] = useState(false);
   // 읽는 단계. 남은 시간이 0이 되거나 다 읽었다고 누르면 문제로 넘어간다.
@@ -71,6 +73,7 @@ export default function StoryScenarioView({
       steps={scenario.steps}
       onFinish={onFinish}
       slug={slug}
+      onAnswered={onAnswered}
       revealOnce={revealOnce}
     >
       {shown && (

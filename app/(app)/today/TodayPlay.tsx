@@ -1,10 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
 import { type ScheduledScenario } from "@/app/lib/schedule.server";
 import { SCENARIO_KIND_LABELS } from "@/app/lib/scenario-admin";
+import {
+  GRADE_TITLES,
+  RESULT_STORAGE_KEY,
+  type StoredResult,
+} from "@/app/lib/quiz";
 import { saveTodayResult, useTodayScore } from "@/app/lib/today-result";
+
+// 회차 채점 응답 (#89). 정답·배점·만점은 서버가 DB에서 읽어 계산한다.
+interface GradeResponse {
+  grade: number;
+  score: number;
+  maxScore: number;
+  correctCount: number;
+  totalCount: number;
+  gradeToken: string;
+  typeStats: { type: string; correct: number; total: number }[];
+}
 
 import PlayShell from "../play/PlayShell";
 import SurfaceByKind from "../play/SurfaceByKind";
@@ -21,8 +38,13 @@ export default function TodayPlay({
   date: string;
 }) {
   // 지금 푸는 시나리오와 여기까지 쌓인 점수. 마지막이 끝나면 합계를 셸에 넘긴다.
+  const router = useRouter();
   const [index, setIndex] = useState(0);
   const [scoreSoFar, setScoreSoFar] = useState(0);
+  // 고른 답을 모아 둔다. 점수는 서버가 다시 계산하므로 여기서 만든 값은 보내지 않는다.
+  const answersRef = useRef<
+    { slug: string; stepKey: string; choiceIndex: number | null }[]
+  >([]);
   // 오늘 이미 푼 기록. 있으면 문제 대신 그날 결과부터 보여준다(#90).
   const seenScore = useTodayScore(date);
 
@@ -31,6 +53,45 @@ export default function TodayPlay({
   const kinds = [...new Set(scenarios.map((s) => s.kind))]
     .map((k) => SCENARIO_KIND_LABELS[k])
     .join(" · ");
+
+  // 회차가 끝나면 서버에 답을 보내 등급을 받고 결과 화면으로 넘긴다.
+  async function gradeAndGo() {
+    try {
+      const res = await fetch("/api/today-grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: answersRef.current }),
+      });
+      if (!res.ok) return;
+      const g = (await res.json()) as GradeResponse;
+
+      // 결과 화면은 v1 채점 응답 모양을 그대로 읽는다. 없는 값(반응 속도 등)은 비워 둔다.
+      const stored: StoredResult = {
+        mode: "quick",
+        modeLabel: "오늘의 문제",
+        score: g.score,
+        maxScore: g.maxScore,
+        grade: g.grade,
+        title: GRADE_TITLES[g.grade] ?? "",
+        correctCount: g.correctCount,
+        totalCount: g.totalCount,
+        avgReactionMs: 0,
+        weakTypes: g.typeStats
+          .filter((t) => t.correct < t.total)
+          .map((t) => t.type),
+        typeStats: g.typeStats as StoredResult["typeStats"],
+        gradeToken: g.gradeToken,
+        perQuestion: [],
+        typeLabels: Object.fromEntries(
+          g.typeStats.map((t) => [t.type, t.type]),
+        ),
+      };
+      sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(stored));
+      router.push("/result");
+    } catch {
+      // 채점을 못 받아도 완료 화면의 점수는 남는다.
+    }
+  }
 
   return (
     <PlayShell
@@ -93,10 +154,18 @@ export default function TodayPlay({
           kind={current.kind}
           scenario={current.content}
           slug={current.slug}
+          onAnswered={(stepId, choiceIndex) =>
+            answersRef.current.push({
+              slug: current.slug,
+              stepKey: stepId,
+              choiceIndex,
+            })
+          }
           onFinish={(score) => {
             const sum = scoreSoFar + score;
             if (index + 1 >= total) {
               saveTodayResult({ date, score: sum });
+              void gradeAndGo();
               return onFinish(sum);
             }
             setScoreSoFar(sum);

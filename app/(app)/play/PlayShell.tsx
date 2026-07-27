@@ -88,7 +88,6 @@ export default function PlayShell({
         <p className="text-lg font-bold">{doneTitle}</p>
         <p className="text-base text-muted">
           획득 점수 <span className="font-bold text-brand">{shownScore}점</span>
-          <span className="text-sm"> (mock)</span>
         </p>
         <div className="flex gap-3">
           <button

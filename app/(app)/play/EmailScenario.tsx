@@ -67,11 +67,13 @@ export default function EmailScenarioView({
   scenario,
   onFinish,
   slug,
+  onAnswered,
 }: {
   scenario: EmailScenario;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
   // 지금까지 열린 메일 수. 이미 열린 메일은 다시 닫히지 않으므로 원문을 계속 대조할 수 있다.
   const [visible, setVisible] = useState(0);
@@ -124,6 +126,7 @@ export default function EmailScenarioView({
       steps={scenario.steps}
       onFinish={onFinish}
       slug={slug}
+      onAnswered={onAnswered}
       revealOnce={revealOnce}
       revealNext={revealNext}
     >

@@ -36,11 +36,13 @@ export default function DocScenarioView({
   scenario,
   onFinish,
   slug,
+  onAnswered,
 }: {
   scenario: DocScenario;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
   const [docShown, setDocShown] = useState(false);
 
@@ -64,6 +66,7 @@ export default function DocScenarioView({
       steps={scenario.steps}
       onFinish={onFinish}
       slug={slug}
+      onAnswered={onAnswered}
       revealOnce={revealOnce}
     >
       {docShown && (

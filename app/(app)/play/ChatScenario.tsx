@@ -75,11 +75,13 @@ export default function ChatScenario({
   scenario,
   onFinish,
   slug,
+  onAnswered,
 }: {
   scenario: ChatScenario;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [typing, setTyping] = useState(false);
@@ -146,6 +148,7 @@ export default function ChatScenario({
     steps: scenario.steps,
     onFinish,
     slug,
+    onAnswered,
     reveal,
     respond,
   });

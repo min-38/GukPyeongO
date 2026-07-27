@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { POINTS_BY_DIFFICULTY } from "@/app/lib/scenario-points";
 import {
   type AdminScenario,
   SCENARIO_KIND_LABELS,
@@ -13,6 +14,19 @@ import { INPUT } from "./ui";
 // 날짜별 편성 (#87).
 // 유저는 slug로 시나리오에 직접 가지 않는다 — 그날 편성된 문제들을 순서대로 푼다.
 // 여기서 날짜를 고르고, 그날 낼 시나리오와 순서를 정한다.
+
+// 하루치 만점. 서버도 이 값으로 막는다(app/api/admin/schedule/route.ts).
+// 등급이 획득 점수 ÷ 만점이라(#89) 날마다 만점이 다르면 같은 등급이 다른 실력을 뜻하게 된다.
+const DAILY_MAX_SCORE = 100;
+
+// 시나리오 하나의 배점 합 — 문항 난이도로 정해진다.
+function scenarioPoints(s: AdminScenario): number {
+  return s.steps.reduce(
+    (sum, step) =>
+      sum + (POINTS_BY_DIFFICULTY[step.difficulty as 1 | 2 | 3] ?? 0),
+    0,
+  );
+}
 
 interface ScheduleDay {
   date: string;
@@ -74,7 +88,15 @@ export default function ScheduleTab({
 
   const published = scenarios.filter((s) => s.status === "published");
   const byId = new Map(scenarios.map((s) => [s.id, s]));
+  const byIdPoints = new Map(scenarios.map((s) => [s.id, scenarioPoints(s)]));
   const addable = published.filter((s) => !picked.includes(s.id));
+
+  // 그날 만점. 100이 아니면 게시하지 않는다(서버도 같은 값으로 막는다).
+  const totalPoints = picked.reduce(
+    (sum, id) => sum + (byIdPoints.get(id) ?? 0),
+    0,
+  );
+  const canSave = picked.length === 0 || totalPoints === DAILY_MAX_SCORE;
 
   async function save() {
     setSaving(true);
@@ -158,11 +180,20 @@ export default function ScheduleTab({
           <div className="flex items-center justify-between">
             <h3 className="font-bold">
               {date} <span className="text-muted">· {picked.length}개</span>
+              <span
+                className={`ml-2 text-sm ${
+                  canSave
+                    ? "text-muted"
+                    : "font-bold text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                {totalPoints} / {DAILY_MAX_SCORE}점
+              </span>
             </h3>
             <button
               type="button"
               onClick={save}
-              disabled={saving}
+              disabled={saving || !canSave}
               className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-brand-foreground disabled:opacity-50"
             >
               {saving ? "저장 중…" : "편성 저장"}
@@ -188,7 +219,8 @@ export default function ScheduleTab({
                       {s?.sourceLabel || "(라벨 없음)"}
                     </span>
                     <span className="ml-2 text-xs text-muted">
-                      문항 {s?.steps.length ?? 0}개
+                      문항 {s?.steps.length ?? 0}개 · {byIdPoints.get(id) ?? 0}
+                      점
                     </span>
                   </span>
                   <RowButtons
@@ -216,7 +248,8 @@ export default function ScheduleTab({
                     onClick={() => setPicked([...picked, s.id])}
                     className="rounded-xl border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
                   >
-                    + {SCENARIO_KIND_LABELS[s.kind]} · {s.sourceLabel || s.slug}
+                    + {SCENARIO_KIND_LABELS[s.kind]} · {s.sourceLabel || s.slug}{" "}
+                    <span className="text-muted">{scenarioPoints(s)}점</span>
                   </button>
                 </li>
               ))}
@@ -228,6 +261,13 @@ export default function ScheduleTab({
             </ul>
           </div>
 
+          {!canSave && (
+            <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
+              하루 만점은 {DAILY_MAX_SCORE}점이어야 게시할 수 있습니다. 지금{" "}
+              {totalPoints}점 ({totalPoints > DAILY_MAX_SCORE ? "초과" : "부족"}{" "}
+              {Math.abs(DAILY_MAX_SCORE - totalPoints)}점).
+            </p>
+          )}
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
           {saved && (
             <p className="mt-3 text-sm font-bold text-emerald-600 dark:text-emerald-400">

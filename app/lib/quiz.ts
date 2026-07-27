@@ -23,7 +23,7 @@ export interface QuestionTypeDef {
 // 유형 키 → 라벨 해석 (DB 맵 우선, 내장 fallback, 최후엔 키 그대로)
 export function resolveTypeLabel(
   type: string,
-  labels?: Record<string, string>
+  labels?: Record<string, string>,
 ): string {
   return labels?.[type] ?? QUESTION_TYPE_LABELS[type] ?? type;
 }
@@ -105,7 +105,7 @@ function shuffle<T>(arr: readonly T[]): T[] {
 export function pickStratified<T extends { type: string; difficulty: number }>(
   pool: readonly T[],
   size: number,
-  mix: Record<number, number>
+  mix: Record<number, number>,
 ): T[] {
   // 난이도별 후보 큐 (사전 셔플로 동일 유형·난이도 내 순서도 무작위)
   const byDifficulty = new Map<number, T[]>();
@@ -217,6 +217,12 @@ export interface ScoreResponse extends ScoreResult {
 // mode는 결과/인증샷에 "빠른/정밀 테스트"를 표시하기 위해 함께 저장한다.
 export interface StoredResult extends ScoreResponse {
   mode: QuizMode;
+  // v2 회차(오늘의 문제)는 v1 응시 모드(빠른/정밀)에 해당하지 않는다.
+  // 결과 화면이 쓸 라벨을 직접 넘긴다(#89). 없으면 모드 라벨을 쓴다.
+  modeLabel?: string;
+  // v2는 등급을 점수로 매긴다(#89). 맞힌 개수만으로는 킬러 문항의 무게가 안 보인다.
+  score?: number;
+  maxScore?: number;
 }
 
 // 관리자 화면용 문제 형태 (정답 포함 — 인증된 관리자에게만 노출)
@@ -289,7 +295,8 @@ const NICKNAME_WORDS = [
   "불특정",
 ];
 export function randomNickname(): string {
-  const word = NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
+  const word =
+    NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
   return `${word}${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
@@ -361,15 +368,51 @@ export interface GradeTheme {
 }
 
 const GRADE_THEMES: Record<number, GradeTheme> = {
-  1: { color: "#f59e0b", emoji: "🧙", blurb: "검색 마법 없이 이 경지라니. 길드가 당신을 찾고 있습니다." },
-  2: { color: "#10b981", emoji: "📜", blurb: "왕국의 고문서쯤은 막힘없이 해독하는 두뇌." },
-  3: { color: "#14b8a6", emoji: "⚔️", blurb: "웬만한 던전 비문은 술술 읽어내는 베테랑." },
-  4: { color: "#6366f1", emoji: "🛡️", blurb: "가능성이 보입니다. 검을 조금만 더 갈면 정예." },
-  5: { color: "#7c3aed", emoji: "🧭", blurb: "딱 평균. 여기서부터가 진짜 모험입니다." },
-  6: { color: "#f97316", emoji: "🪄", blurb: "기초 주문서가 아직 버겁군요. 수련이 필요합니다." },
-  7: { color: "#fb7185", emoji: "🏘️", blurb: "모험은 이릅니다. 마을 간판부터 천천히 읽어봅시다." },
-  8: { color: "#ef4444", emoji: "🌫️", blurb: "심각합니다. 글자 앞에서 길을 잃었어요." },
-  9: { color: "#dc2626", emoji: "🟢", blurb: "긴급 상황. 튜토리얼 마을로 돌아가야 할 수준입니다." },
+  1: {
+    color: "#f59e0b",
+    emoji: "🧙",
+    blurb: "검색 마법 없이 이 경지라니. 길드가 당신을 찾고 있습니다.",
+  },
+  2: {
+    color: "#10b981",
+    emoji: "📜",
+    blurb: "왕국의 고문서쯤은 막힘없이 해독하는 두뇌.",
+  },
+  3: {
+    color: "#14b8a6",
+    emoji: "⚔️",
+    blurb: "웬만한 던전 비문은 술술 읽어내는 베테랑.",
+  },
+  4: {
+    color: "#6366f1",
+    emoji: "🛡️",
+    blurb: "가능성이 보입니다. 검을 조금만 더 갈면 정예.",
+  },
+  5: {
+    color: "#7c3aed",
+    emoji: "🧭",
+    blurb: "딱 평균. 여기서부터가 진짜 모험입니다.",
+  },
+  6: {
+    color: "#f97316",
+    emoji: "🪄",
+    blurb: "기초 주문서가 아직 버겁군요. 수련이 필요합니다.",
+  },
+  7: {
+    color: "#fb7185",
+    emoji: "🏘️",
+    blurb: "모험은 이릅니다. 마을 간판부터 천천히 읽어봅시다.",
+  },
+  8: {
+    color: "#ef4444",
+    emoji: "🌫️",
+    blurb: "심각합니다. 글자 앞에서 길을 잃었어요.",
+  },
+  9: {
+    color: "#dc2626",
+    emoji: "🟢",
+    blurb: "긴급 상황. 튜토리얼 마을로 돌아가야 할 수준입니다.",
+  },
 };
 
 export function gradeTheme(grade: number): GradeTheme {

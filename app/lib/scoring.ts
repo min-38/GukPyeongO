@@ -32,7 +32,7 @@ function normalizeSpacing(s: string): string {
 // 한 문항의 응답 여부와 정답 여부를 형식에 맞게 판정한다.
 function judge(
   key: AnswerKeyEntry,
-  item: ScoreRequestItem | undefined
+  item: ScoreRequestItem | undefined,
 ): { answered: boolean; correct: boolean } {
   if (!item) return { answered: false, correct: false };
   if (key.format === "short_answer" || key.format === "spacing") {
@@ -44,7 +44,7 @@ function judge(
     const correct = key.answers.some((a) =>
       key.format === "spacing"
         ? normalizeSpacing(a) === norm
-        : normalize(a) === norm
+        : normalize(a) === norm,
     );
     return { answered: true, correct };
   }
@@ -53,14 +53,38 @@ function judge(
   return { answered: true, correct: item.choiceIndex === key.answerIndex };
 }
 
-// 맞힌 개수(0~total)를 1~9 등급으로 환산한다.
-// 만점에 가까울수록 1등급, 적게 맞힐수록 9등급.
-export function gradeForCorrect(correct: number, total: number): number {
-  if (total <= 0) return 9;
-  const ratio = correct / total;
+// 달성 비율(0~1)을 1~9 등급으로 환산한다. 만점에 가까울수록 1등급.
+// v1(맞힌 개수)과 v2(획득 점수)가 같은 경계값을 쓰도록 여기 한 곳에 둔다.
+function gradeForRatio(ratio: number): number {
   // 9개 구간으로 균등 분할. ratio가 높을수록 좋은(낮은) 등급.
   const grade = 9 - Math.floor(ratio * 9);
   return Math.min(9, Math.max(1, grade));
+}
+
+// v1 — 맞힌 개수(0~total) 기준.
+export function gradeForCorrect(correct: number, total: number): number {
+  if (total <= 0) return 9;
+  return gradeForRatio(correct / total);
+}
+
+// v2 등급컷 (#89). 하루 만점이 100점으로 고정돼 있어(편성 단계에서 강제) 점수를 그대로 읽는다.
+// 균등 분할(9등분)로 두면 "88.9점부터 1등급" 같은 수가 나와 화면에 적을 수가 없다.
+// 수능 등급컷을 본떠 상위 구간을 촘촘히, 하위를 넓게 잡는다 — 중간 등급에서 변별이 생긴다.
+// GRADE_CUTS[i] = (i+1)등급이 되는 최소 점수.
+export const GRADE_CUTS = [90, 83, 73, 63, 49, 37, 27, 20, 0] as const;
+
+// 등급을 받으려면 몇 점이 필요한지. 화면 안내용.
+export function scoreForGrade(grade: number): number {
+  return GRADE_CUTS[Math.min(9, Math.max(1, grade)) - 1];
+}
+
+// v2 — 획득 점수 ÷ 만점 기준 (#89).
+// 난이도별 배점이 1/3/8로 벌어져 있어 개수로 세면 킬러 문항의 무게가 사라진다.
+export function gradeForScore(score: number, maxScore: number): number {
+  if (maxScore <= 0) return 9;
+  const percent = (score / maxScore) * 100;
+  const index = GRADE_CUTS.findIndex((cut) => percent >= cut);
+  return index === -1 ? 9 : index + 1;
 }
 
 // 문항별 응답/정답 여부 (통계 집계용). 정답 내용은 노출하지 않는다.
@@ -72,7 +96,7 @@ export interface PerQuestionResult {
 
 export function perQuestionResults(
   answerKey: AnswerKey,
-  items: ScoreRequestItem[]
+  items: ScoreRequestItem[],
 ): PerQuestionResult[] {
   const submitted = new Map(items.map((it) => [it.questionId, it]));
   return Object.entries(answerKey).map(([questionId, key]) => {
@@ -83,7 +107,7 @@ export function perQuestionResults(
 
 export function scoreSubmission(
   answerKey: AnswerKey,
-  items: ScoreRequestItem[]
+  items: ScoreRequestItem[],
 ): ScoreResult {
   const submitted = new Map(items.map((it) => [it.questionId, it]));
 
@@ -130,7 +154,8 @@ export function scoreSubmission(
     title: GRADE_TITLES[grade] ?? "",
     correctCount,
     totalCount,
-    avgReactionMs: reactionCount > 0 ? Math.round(reactionSum / reactionCount) : 0,
+    avgReactionMs:
+      reactionCount > 0 ? Math.round(reactionSum / reactionCount) : 0,
     weakTypes,
     typeStats,
   };

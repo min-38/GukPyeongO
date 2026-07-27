@@ -16,14 +16,17 @@ export default function SurfaceByKind({
   scenario,
   slug,
   onFinish,
+  onAnswered,
 }: {
   kind: ScenarioKind;
   scenario: Record<string, unknown>;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
   onFinish: (score: number) => void;
+  // 회차 채점(#89)을 위해 고른 답을 위로 흘려보낸다.
+  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
-  const common = { scenario: scenario as never, slug, onFinish };
+  const common = { scenario: scenario as never, slug, onFinish, onAnswered };
   switch (kind) {
     case "doc":
       return <DocScenarioView {...common} />;

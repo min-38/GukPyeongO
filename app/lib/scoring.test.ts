@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { ScoreRequestItem } from "./quiz";
-import { type AnswerKey, gradeForCorrect, scoreSubmission } from "./scoring";
+import {
+  type AnswerKey,
+  gradeForCorrect,
+  gradeForScore,
+  scoreForGrade,
+  scoreSubmission,
+} from "./scoring";
 
 const mc = (type: AnswerKey[string]["type"], answerIndex: number) =>
   ({ type, format: "multiple_choice", answerIndex, answers: [] }) as const;
@@ -17,7 +23,7 @@ const answerKey: AnswerKey = {
 function pick(
   questionId: string,
   choiceIndex: number | null,
-  reactionMs = 1000
+  reactionMs = 1000,
 ): ScoreRequestItem {
   return { questionId, choiceIndex, text: null, reactionMs };
 }
@@ -25,7 +31,7 @@ function pick(
 function typeText(
   questionId: string,
   text: string | null,
-  reactionMs = 1000
+  reactionMs = 1000,
 ): ScoreRequestItem {
   return { questionId, choiceIndex: null, text, reactionMs };
 }
@@ -165,5 +171,43 @@ describe("scoreSubmission - 띄어쓰기(spacing)", () => {
   it("띄어쓰기가 틀리면 오답 (공백을 무시하지 않음)", () => {
     const r = scoreSubmission(spKey, [typeText("p1", "나는학교에간다")]);
     expect(r.correctCount).toBe(0);
+  });
+});
+
+// v2 등급 — 획득 점수 ÷ 만점 (#89). 만점 100 기준 10점 단위 컷.
+describe("gradeForScore", () => {
+  it("만점이면 1등급, 0점이면 9등급", () => {
+    expect(gradeForScore(100, 100)).toBe(1);
+    expect(gradeForScore(0, 100)).toBe(9);
+  });
+
+  it("컷 경계에서 등급이 갈린다", () => {
+    expect(gradeForScore(90, 100)).toBe(1);
+    expect(gradeForScore(89, 100)).toBe(2);
+    expect(gradeForScore(83, 100)).toBe(2);
+    expect(gradeForScore(82, 100)).toBe(3);
+    expect(gradeForScore(49, 100)).toBe(5);
+    expect(gradeForScore(48, 100)).toBe(6);
+    expect(gradeForScore(20, 100)).toBe(8);
+    expect(gradeForScore(19, 100)).toBe(9);
+  });
+
+  it("상위 구간이 하위 구간보다 좁다 — 중간 등급에서 변별이 생긴다", () => {
+    const width = (g: number) => scoreForGrade(g) - scoreForGrade(g + 1);
+    expect(width(1)).toBeLessThan(width(5)); // 1등급 폭 7 < 5등급 폭 12
+  });
+
+  it("개수가 아니라 배점으로 가른다 — 킬러 하나가 쉬운 여러 개보다 무겁다", () => {
+    // 쉬움(1) 3개 = 3점 vs 킬러(8) 1개 = 8점. 만점 11.
+    expect(gradeForScore(3, 11)).toBeGreaterThan(gradeForScore(8, 11));
+  });
+
+  it("만점이 0이면 9등급", () => {
+    expect(gradeForScore(0, 0)).toBe(9);
+  });
+
+  it("등급에 필요한 점수를 알려준다", () => {
+    expect(scoreForGrade(1)).toBe(90);
+    expect(scoreForGrade(9)).toBe(0);
   });
 });
