@@ -56,13 +56,11 @@ export async function POST(request: Request) {
   const result = scoreSubmission(answerKey, items);
   const perQ = perQuestionResults(answerKey, items);
 
-  // 문항별 통계 집계 — 로컬 개발 환경에서는 prod DB 오염 방지를 위해 스킵
-  if (process.env.NODE_ENV !== "development") {
-    try {
-      await bumpQuestionStats(perQ);
-    } catch {
-      // 통계 갱신 실패는 무시
-    }
+  // 문항별 통계 집계
+  try {
+    await bumpQuestionStats(perQ);
+  } catch {
+    // 통계 갱신 실패는 무시
   }
 
   const gradeToken = createGradeToken(result.grade, getSigningSecret());
