@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -108,6 +109,8 @@ export default function TodayPlay({
         ),
       };
       sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(stored));
+      // 다시 들어온 사람에게도 결과를 보여주려면 탭이 닫혀도 남아야 한다(#97).
+      saveTodayResult({ date, score: g.score, result: stored });
       // 채점이 더 오래 걸렸으면 기다린 만큼만, 빨리 끝났으면 최소 시간까지.
       await shown;
       router.push("/result");
@@ -132,6 +135,14 @@ export default function TodayPlay({
     <PlayShell
       initialScore={seenScore}
       doneTitle="오늘 문제 끝!"
+      doneLink={
+        <Link
+          href="/result"
+          className="rounded-2xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-foreground active:scale-95"
+        >
+          결과 보기
+        </Link>
+      }
       tutorial={(start) => (
         <TutorialShell
           framed

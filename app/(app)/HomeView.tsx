@@ -103,6 +103,8 @@ export default function HomeView({
     : solved
       ? "오늘 결과 보기"
       : "오늘 문제 풀기";
+  // 이미 푼 사람을 문제 화면으로 보내면 "오늘 문제 끝!"만 다시 본다(#97).
+  const ctaHref = solved ? "/result" : "/today";
   const [activeGrade, setActiveGrade] = useState(5);
   const theme = gradeTheme(activeGrade);
 
@@ -180,7 +182,7 @@ export default function HomeView({
             </div>
 
             <Link
-              href="/today"
+              href={ctaHref}
               className="group mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] lg:mt-10 lg:h-16 lg:w-auto lg:self-start lg:px-12 lg:text-xl"
             >
               {ctaLabel}
@@ -540,7 +542,7 @@ export default function HomeView({
           </Reveal>
           <Reveal delay={200}>
             <Link
-              href="/today"
+              href={ctaHref}
               className="group mt-8 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-brand px-10 text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
             >
               {ctaLabel}
@@ -565,7 +567,7 @@ export default function HomeView({
         }`}
       >
         <Link
-          href="/today"
+          href={ctaHref}
           className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-xl shadow-brand/40 transition-all hover:bg-brand-strong active:scale-[0.98]"
         >
           {ctaLabel} →

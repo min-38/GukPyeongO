@@ -19,12 +19,15 @@ export default function PlayShell({
   tutorial,
   renderScenario,
   doneTitle,
+  doneLink,
   initialScore,
 }: {
   // start()가 오디오 잠금을 풀고 시나리오를 시작한다.
   tutorial: (start: () => void) => ReactNode;
   renderScenario: (onFinish: (score: number) => void) => ReactNode;
   doneTitle: string;
+  // 끝낸 화면에 덧붙일 링크(#97). 오늘의 문제는 여기서 결과 화면으로 보낸다.
+  doneLink?: ReactNode;
   // 이미 푼 사람에게는 문제 대신 결과를 보여준다(#90).
   // 기록은 브라우저에 있어 마운트 뒤에야 알 수 있으므로 나중에 들어와도 반영한다.
   initialScore?: number | null;
@@ -89,6 +92,7 @@ export default function PlayShell({
         <p className="text-base text-muted">
           획득 점수 <span className="font-bold text-brand">{shownScore}점</span>
         </p>
+        {doneLink}
         <div className="flex gap-3">
           <button
             type="button"
