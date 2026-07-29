@@ -39,6 +39,10 @@ function readResult(): StoredResult | null {
   return cachedResult;
 }
 
-export default function useStoredResult(): StoredResult | null {
-  return useSyncExternalStore(subscribe, readResult, () => null);
+// 아직 읽기 전이면 undefined, 다 읽었는데 없으면 null.
+// 서버 렌더에서는 저장소를 볼 수 없어 첫 그림이 무조건 "결과 없음"이 된다 —
+// 둘을 구분하지 않으면 결과가 있는 사람에게도 "아직 응시한 결과가 없어요"가 한 번 스친다.
+export default function useStoredResult(): StoredResult | null | undefined {
+  // 서버 스냅샷은 undefined — 하이드레이션 첫 그림까지 이 값이 쓰인다.
+  return useSyncExternalStore(subscribe, readResult, () => undefined);
 }

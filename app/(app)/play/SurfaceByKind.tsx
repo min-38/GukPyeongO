@@ -1,6 +1,9 @@
 "use client";
 
-import { type ScenarioKind } from "@/app/lib/scenario-admin";
+import {
+  SCENARIO_KIND_TITLES,
+  type ScenarioKind,
+} from "@/app/lib/scenario-admin";
 
 import ChatScenarioView from "./ChatScenario";
 import CommunityScenarioView from "./CommunityScenario";
@@ -26,11 +29,20 @@ export default function SurfaceByKind({
   // 회차 채점(#89)을 위해 고른 답을 위로 흘려보낸다.
   onAnswered?: (stepId: string, choiceIndex: number | null) => void;
 }) {
-  const common = { scenario: scenario as never, slug, onFinish, onAnswered };
+  // 상단바 이름은 유형에서 나온다(#99) — 지문에 적힌 게시판 이름·방 제목은 쓰지 않는다.
+  const common = {
+    scenario: scenario as never,
+    label: SCENARIO_KIND_TITLES[kind],
+    slug,
+    onFinish,
+    onAnswered,
+  };
   switch (kind) {
-    // 공지·신문은 유형은 다르지만 읽는 화면은 같다.
+    // 공지·신문·계약서·사용설명서는 유형은 다르지만 읽는 화면은 같다 — 문서 한 장을 읽는다.
     case "notice":
     case "news":
+    case "contract":
+    case "manual":
       return <DocScenarioView {...common} />;
     case "community":
       return <CommunityScenarioView {...common} />;

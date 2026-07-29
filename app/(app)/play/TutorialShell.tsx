@@ -84,25 +84,28 @@ export default function TutorialShell({
     // onStart는 렌더마다 새로 오므로 의존성에 넣으면 타이머가 계속 다시 걸린다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
-  // 유형명을 먼저 보여준 뒤 제자리로 올려보낸다. 무슨 유형인지 눈에 박히게(#93).
-  // 공통 튜토리얼은 유형이 없으므로 그냥 뜬다.
+  // 유형명이 화면 정중앙에서 크게 떠 있다가 카드 안 제자리로 들어간다(#93, #99).
+  // 무슨 유형인지 눈에 박히게. 공통 튜토리얼은 유형이 없으므로 그냥 뜬다.
   const intro = framed === "example";
   const [entered, setEntered] = useState(!intro);
   // 제자리에서 화면 정중앙까지의 거리. 재서 계산해야 어느 화면에서든 정확히 가운데서 시작한다.
-  const labelRef = useRef<HTMLHeadingElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const [riseFrom, setRiseFrom] = useState(0);
   const [measured, setMeasured] = useState(!intro);
   useLayoutEffect(() => {
     if (!intro) return;
     const measure = () => {
-      const el = labelRef.current;
+      const el = titleRef.current;
       if (!el) return;
       // getBoundingClientRect는 지금 걸어둔 transform까지 반영해 다시 잴 때 값이 오염된다.
       // offsetTop은 레이아웃 위치라 transform과 무관하다.
       let top = 0;
       for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement)
         top += n.offsetTop;
-      setRiseFrom(window.innerHeight / 2 - (top + el.offsetHeight / 2));
+      const next = window.innerHeight / 2 - (top + el.offsetHeight / 2);
+      // 광고가 늦게 자리를 잡아 다시 잴 때, 값이 같으면 건드리지 않는다 —
+      // 상태가 바뀌면 카드가 한 번 다시 그려지며 깜빡인다.
+      setRiseFrom((prev) => (Math.abs(prev - next) < 1 ? prev : next));
       setMeasured(true);
     };
     measure();
@@ -115,6 +118,7 @@ export default function TutorialShell({
     const t = window.setTimeout(() => setEntered(true), 650);
     return () => clearTimeout(t);
   }, [intro]);
+
   useEffect(() => {
     if (dismissKey === undefined) return;
     if (seen(dismissKey)) onStart();
@@ -130,6 +134,9 @@ export default function TutorialShell({
 
   const page = pages[index];
   const isLast = index === last;
+  // 유형 소개에서는 제목만 먼저 뜬다. 제목이 제자리로 내려앉을 때 카드와 나머지가 함께 나타난다(#99).
+  // 제목의 조상에 opacity를 걸면 제목까지 같이 흐려지므로 형제들에게 따로 건다.
+  const veil = `transition-opacity duration-500 ${entered ? "opacity-100" : "opacity-0"}`;
   // 예시만 있는 장은 자리를 더 준다 — 실제 표면이 잘리면 눌러볼 수가 없다.
   const exampleOnly = !!page.visual && !page.title && !page.desc;
 
@@ -184,24 +191,38 @@ export default function TutorialShell({
       <div
         key={index}
         className={`animate-rise flex min-h-0 flex-col justify-center gap-3 ${
-          framed ? "h-[24rem] shrink-0 overflow-hidden" : "flex-1"
-        }`}
+          framed
+            ? // 작은 화면에서 높이를 고정하면 글이 잘린다 — 내용만큼 늘리되 화면을 넘지 않게(#99).
+              "max-h-[68dvh] shrink-0 sm:h-[18rem]"
+            : "flex-1"
+        } ${entered ? "overflow-hidden" : ""}`}
       >
-        <header className="flex min-h-0 flex-1 flex-col items-center text-center">
+        <header className="flex min-h-0 flex-1 shrink flex-col items-center justify-center overflow-y-auto text-center">
           {/* 이모지 자리는 높이를 고정한다 — 배지처럼 다른 그림이 오면 아래가 밀린다. */}
           {page.emoji && (
-            <span className="flex h-16 shrink-0 items-center justify-center text-6xl">
+            <span className={`flex h-16 shrink-0 items-center justify-center text-6xl ${veil}`}>
               {page.emoji}
             </span>
           )}
           {page.title && (
-            <h1 className="mt-4 text-2xl font-extrabold">{page.title}</h1>
+            <h1
+              ref={titleRef}
+              className="mt-4 font-display text-3xl transition-transform duration-500 ease-out"
+              style={
+                entered
+                  ? undefined
+                  : { transform: `translateY(${riseFrom}px) scale(1.6)` }
+              }
+            >
+              {page.title}
+            </h1>
           )}
           {/* 글 상자는 가운데, 글줄은 왼쪽 — 여러 줄일 때 가운데 정렬은 읽기 불편하다.
-              상자 크기는 장마다 같게 고정한다. 글 길이에 따라 늘었다 줄면 카드가 흔들린다. */}
+              상자는 최소 높이만 지키고 글이 길면 그만큼 늘어난다(#99) — 남는 높이까지 다 먹지는 않는다.
+              카드 높이는 고정이라 장을 넘겨도 버튼이 튀지 않는다. */}
           {page.desc &&
             (Array.isArray(page.desc) ? (
-              <ul className="mt-3 flex min-h-0 w-full flex-1 flex-col justify-center gap-3 overflow-y-auto rounded-2xl bg-surface-muted/30 px-4 py-3 text-left text-[17px] font-medium leading-[1.7] text-foreground/85">
+              <ul className={`mt-3 flex min-h-[10rem] w-full shrink flex-col justify-center gap-3 overflow-y-auto rounded-2xl bg-surface-muted/30 px-4 py-4 text-left text-[17px] font-medium leading-[1.7] text-foreground/85 ${veil}`}>
                 {page.desc.map((line, i) => (
                   <li key={i} className="flex gap-2.5">
                     {/* 순서가 있는 절차가 아니라 나열이라 번호 대신 점을 찍는다. */}
@@ -214,21 +235,21 @@ export default function TutorialShell({
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 flex min-h-0 w-full flex-1 items-center overflow-y-auto rounded-2xl bg-surface-muted/30 px-4 py-3 text-left text-[17px] font-medium leading-[1.7] text-foreground/85">
+              <p className={`mt-3 flex min-h-[10rem] w-full shrink items-center overflow-y-auto rounded-2xl bg-surface-muted/30 px-4 py-4 text-left text-[17px] font-medium leading-[1.7] text-foreground/85 ${veil}`}>
                 {page.desc}
               </p>
             ))}
         </header>
         {/* 예시만 있는 장에서는 예시가 자리를 다 쓴다. */}
         {page.visual && (
-          <div className={`min-h-0 ${exampleOnly ? "flex-1" : "mt-5 shrink"}`}>
+          <div className={`min-h-0 ${exampleOnly ? "flex-1" : "mt-5 shrink"} ${veil}`}>
             {page.visual}
           </div>
         )}
       </div>
 
       {pages.length > 1 && (
-        <div className="mt-4 flex shrink-0 justify-center gap-2">
+        <div className={`mt-4 flex shrink-0 justify-center gap-2 ${veil}`}>
           {pages.map((_, i) => (
             <span
               key={i}
@@ -240,7 +261,7 @@ export default function TutorialShell({
         </div>
       )}
 
-      <div className="flex shrink-0 flex-col gap-2">
+      <div className={`flex shrink-0 flex-col gap-2 ${veil}`}>
         <div className="flex gap-2">
           {index > 0 && (
             <button
@@ -282,22 +303,15 @@ export default function TutorialShell({
           measured ? "" : "invisible"
         }`}
       >
-        {label && (
-          <h2
-            ref={labelRef}
-            className="font-display text-3xl transition-transform duration-500 ease-out"
-            style={
-              entered
-                ? undefined
-                : { transform: `translateY(${riseFrom}px) scale(1.6)` }
-            }
-          >
-            {label}
-          </h2>
+        {/* 유형 소개는 제목이 카드 안에서 등장한다 — 여기는 공통 튜토리얼 라벨 자리다. */}
+        {!intro && label && (
+          <h2 className="font-display text-3xl">{label}</h2>
         )}
         <div
-          className={`flex w-full max-w-md flex-col gap-5 rounded-[2rem] border border-border bg-surface p-6 transition-opacity duration-500 ${
-            entered ? "opacity-100" : "opacity-0"
+          className={`flex w-full max-w-md flex-col gap-5 rounded-[2rem] border p-6 ${
+            entered
+              ? "animate-rise border-border bg-surface"
+              : "border-transparent bg-transparent shadow-none"
           }`}
         >
           {body}

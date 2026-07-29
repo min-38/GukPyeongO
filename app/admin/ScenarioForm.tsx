@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { DIFFICULTY_LABELS } from "@/app/lib/quiz";
 import {
   type AdminScenario,
   type AdminScenarioStep,
@@ -17,14 +16,15 @@ import {
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
 
-import { INPUT } from "./ui";
+import { CARD, INPUT, LABEL } from "./ui";
 
-import ChatPayloadEditor from "./ChatPayloadEditor";
 import ChatStepFields from "./ChatStepFields";
 import CommunityPayloadEditor from "./CommunityPayloadEditor";
 import DocPayloadEditor from "./DocPayloadEditor";
 import EmailPayloadEditor from "./EmailPayloadEditor";
-import ScenarioPreview from "./ScenarioPreview";
+import { stepPoints } from "@/app/lib/scenario-points";
+
+import LivePreview from "./LivePreview";
 import StoryPayloadEditor from "./StoryPayloadEditor";
 
 // 시나리오 편집 폼 (#66).
@@ -45,11 +45,23 @@ const PAYLOAD_EDITORS: Partial<
 > = {
   notice: DocPayloadEditor,
   news: DocPayloadEditor,
+  contract: DocPayloadEditor,
+  manual: DocPayloadEditor,
   community: CommunityPayloadEditor,
-  chat: ChatPayloadEditor,
   email: EmailPayloadEditor,
   story: StoryPayloadEditor,
 };
+
+// 만드는 순서. 번호는 순서를 뜻한다 — 기본을 정해야 지문을, 지문이 있어야 문항을 쓴다.
+// 메신저는 지문이 없다 — 대화가 문항마다 흩어져 있어 지문 단계를 건너뛴다.
+type PaneId = "basic" | "payload" | "steps";
+function panes(kind: ScenarioKind): { id: PaneId; label: string }[] {
+  return [
+    { id: "basic" as const, label: "기본" },
+    ...(kind === "chat" ? [] : [{ id: "payload" as const, label: "지문" }]),
+    { id: "steps" as const, label: "문항" },
+  ];
+}
 
 const EMPTY_STEP: AdminScenarioStep = {
   id: "",
@@ -59,12 +71,42 @@ const EMPTY_STEP: AdminScenarioStep = {
   choices: ["", ""],
   answerIndex: 0,
   difficulty: 2,
+  points: 3,
   timeLimitSec: 30,
   showUpTo: null,
   extra: {},
   attempts: 0,
   correctCount: 0,
 };
+
+// 문항을 JSON으로 뽑아 다른 문제에 붙여 넣거나 운영 DB 시드로 옮긴다.
+function CopyJsonButton({
+  value,
+  label,
+  className = "font-medium",
+}: {
+  value: unknown;
+  label: string;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(JSON.stringify(value, null, 2))
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+      }}
+      className={className}
+    >
+      {copied ? "복사됨" : label}
+    </button>
+  );
+}
 
 function StepEditor({
   step,
@@ -90,6 +132,21 @@ function StepEditor({
 
   const rate = correctRate(step);
 
+  // 보기를 옮기면 정답도 같이 따라간다. 자리만 바뀌고 정답이 남으면 엉뚱한 보기가 정답이 된다.
+  function moveChoice(i: number, dir: -1 | 1) {
+    const to = i + dir;
+    if (to < 0 || to >= step.choices.length) return;
+    const choices = [...step.choices];
+    [choices[i], choices[to]] = [choices[to], choices[i]];
+    const answerIndex =
+      step.answerIndex === i
+        ? to
+        : step.answerIndex === to
+          ? i
+          : step.answerIndex;
+    onChange({ ...step, choices, answerIndex });
+  }
+
   return (
     <li className="rounded-2xl border border-border bg-surface-muted/30 p-4">
       <div className="flex items-center justify-between text-xs text-muted">
@@ -100,6 +157,7 @@ function StepEditor({
           )}
         </span>
         <span className="flex gap-3">
+          <CopyJsonButton value={step} label="JSON 복사" />
           <button
             type="button"
             onClick={() => onMove(-1)}
@@ -165,6 +223,27 @@ function StepEditor({
               onChange={() => set("answerIndex", i)}
               title="정답"
             />
+            {/* 보기 순서는 적은 그대로 나간다 — 섞지 않으므로 여기 자리가 유저가 보는 자리다. */}
+            <span className="flex shrink-0 flex-col leading-none">
+              <button
+                type="button"
+                onClick={() => moveChoice(i, -1)}
+                disabled={i === 0}
+                aria-label={`보기 ${i + 1} 위로`}
+                className="px-1 text-[10px] text-muted disabled:opacity-25"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                onClick={() => moveChoice(i, 1)}
+                disabled={i === step.choices.length - 1}
+                aria-label={`보기 ${i + 1} 아래로`}
+                className="px-1 text-[10px] text-muted disabled:opacity-25"
+              >
+                ▼
+              </button>
+            </span>
             <input
               value={choice}
               onChange={(e) =>
@@ -205,18 +284,15 @@ function StepEditor({
 
       <div className="mt-2 flex flex-wrap gap-2">
         <label className="text-xs font-medium text-muted">
-          난이도
-          <select
-            value={step.difficulty}
-            onChange={(e) => set("difficulty", Number(e.target.value))}
-            className={`mt-1 block ${INPUT}`}
-          >
-            {[1, 2, 3].map((d) => (
-              <option key={d} value={d}>
-                {DIFFICULTY_LABELS[d] ?? d}
-              </option>
-            ))}
-          </select>
+          배점(점)
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={step.points}
+            onChange={(e) => set("points", Number(e.target.value))}
+            className={`mt-1 block w-24 ${INPUT}`}
+          />
         </label>
         <label className="text-xs font-medium text-muted">
           제한시간(초)
@@ -273,7 +349,36 @@ export default function ScenarioForm({
   const [status, setStatus] = useState<ScenarioStatus>(
     initial?.status ?? "draft",
   );
-  const [sortOrder, setSortOrder] = useState(initial?.sortOrder ?? 0);
+  // 목록 순서는 최근 수정순으로 정한다(#99). 기존 값은 그대로 두고 보내기만 한다.
+  const sortOrder = initial?.sortOrder ?? 0;
+  // 읽기 시간은 유형과 무관하게 지문 전체에 걸리므로 지문 편집기가 아니라 여기서 다룬다(#99).
+  const [readSec, setReadSec] = useState<number>(
+    Number((initial?.payload as { readSec?: unknown })?.readSec ?? 0),
+  );
+  // 만드는 순서 — 기본 → 지문 → 문항. 미리보기는 늘 오른쪽에 있다(#99).
+  const [paneState, setPane] = useState<PaneId>("basic");
+  // 지문 단계를 보던 중 메신저로 바꾸면 없는 탭에 남는다 — 기본으로 되돌린다.
+  const pane = kind === "chat" && paneState === "payload" ? "basic" : paneState;
+  // 이미 쓰이는 식별자인지 저장 전에 알려준다(#99). 서버도 막지만 눌러본 뒤에야 알면 늦다.
+  const [taken, setTaken] = useState<{ slug: string; title: string }[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/scenarios")
+      .then((r) => r.json() as Promise<{ scenarios?: AdminScenario[] }>)
+      .then((d) => {
+        if (!alive) return;
+        setTaken(
+          (d.scenarios ?? [])
+            .filter((x) => x.id !== initial?.id)
+            .map((x) => ({ slug: x.slug, title: x.title || x.slug })),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [initial?.id]);
   const [payloadText, setPayloadText] = useState(
     JSON.stringify(initial?.payload ?? {}, null, 2),
   );
@@ -284,13 +389,11 @@ export default function ScenarioForm({
   const [saving, setSaving] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [done, setDone] = useState(false);
-  const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
 
   // 전용 편집기가 있는 유형이면 지문을 객체로 넘긴다.
   // 원본은 payloadText 하나만 두고 편집기는 그때그때 직렬화한다 — 두 벌이 어긋나지 않게.
   // JSON이 깨져 있으면 편집기를 열 수 없으므로 JSON 입력으로 되돌린다.
   const editorPayload = (() => {
-    if (!PAYLOAD_EDITORS[kind]) return null;
     try {
       const parsed = JSON.parse(payloadText) as Record<string, unknown>;
       return typeof parsed === "object" &&
@@ -309,31 +412,13 @@ export default function ScenarioForm({
       ? (editorPayload as { speaker: string }).speaker
       : "";
 
-  // 표시 라벨의 정본은 지문 안에 있다(화면이 그걸 읽는다). 여기선 보여주기만 한다.
-  const derivedLabel = (() => {
-    try {
-      const p = JSON.parse(payloadText) as {
-        sourceLabel?: unknown;
-        boardName?: unknown;
-      };
-      if (typeof p.sourceLabel === "string") return p.sourceLabel;
-      if (typeof p.boardName === "string") return p.boardName;
-    } catch {
-      // JSON이 깨져 있으면 라벨을 알 수 없다
-    }
-    return "";
-  })();
 
-  // 미리보기에 넘길 지문. 열 때 JSON을 한 번 해석해 두고, 닫으면 비운다.
-  function togglePreview() {
-    if (preview) return setPreview(null);
-    try {
-      setPreview(JSON.parse(payloadText) as Record<string, unknown>);
-      setError(null);
-    } catch {
-      setError("지문 JSON을 해석할 수 없어 미리보기를 열 수 없습니다.");
-    }
-  }
+  // 미리보기에 넘길 지문 — 읽기 시간까지 얹어 실제로 나갈 모양 그대로 본다.
+  const livePayload = editorPayload
+    ? { ...editorPayload, ...(readSec > 0 ? { readSec } : {}) }
+    : null;
+  const totalPoints = steps.reduce((sum, st) => sum + stepPoints(st), 0);
+  const clash = taken.find((t) => t.slug === slug.trim());
 
   function moveStep(index: number, dir: -1 | 1) {
     const to = index + dir;
@@ -348,12 +433,22 @@ export default function ScenarioForm({
     setError(null);
     setDone(false);
 
-    let payload: unknown;
+    if (clash) {
+      setPane("basic");
+      return setError(
+        `식별자 '${clash.slug}'는 이미 '${clash.title}'가 쓰고 있습니다.`,
+      );
+    }
+
+    let payload: Record<string, unknown>;
     try {
-      payload = JSON.parse(payloadText);
+      payload = JSON.parse(payloadText) as Record<string, unknown>;
     } catch {
       return setError("지문 JSON을 해석할 수 없습니다.");
     }
+    // 읽기 시간은 폼에서 따로 받아 지문에 얹는다. 0이면 넣지 않아 글 길이로 계산된다.
+    if (readSec > 0) payload = { ...payload, readSec };
+    else delete payload.readSec;
 
     setSaving(true);
     const res = await fetch("/api/admin/scenarios", {
@@ -390,181 +485,231 @@ export default function ScenarioForm({
   }
 
   return (
-    <form
-      onSubmit={save}
-      className="rounded-2xl border border-border bg-surface p-4"
-    >
-      <label className="text-xs font-medium text-muted">
-        제목 — 목록·편성에서 이 문제를 알아볼 이름
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="청년 지원사업 모집 공고 — 낚시 조항"
-          className={`mt-1 w-full ${INPUT}`}
-        />
-      </label>
-
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <label className="text-xs font-medium text-muted">
-          slug (라우트 키)
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="news"
-            className={`mt-1 w-full ${INPUT}`}
-          />
-        </label>
-        <label className="text-xs font-medium text-muted">
-          유형
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value as ScenarioKind)}
-            className={`mt-1 w-full ${INPUT}`}
-          >
-            {SCENARIO_KINDS.map((k) => (
-              <option key={k} value={k}>
-                {SCENARIO_KIND_LABELS[k]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-medium text-muted">
-          표시 라벨 (지문에서 가져온다)
-          <input
-            value={derivedLabel}
-            readOnly
-            placeholder="지문 편집기에서 입력"
-            className={`mt-1 w-full ${INPUT} opacity-60`}
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-medium text-muted">
-            상태
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ScenarioStatus)}
-              className={`mt-1 w-full ${INPUT}`}
+    <form onSubmit={save} className="flex gap-6">
+      {/* 왼쪽 — 만드는 순서대로 세 단계. 한 화면에 다 쌓으면 어디를 고치는지가 흐려진다(#99). */}
+      <div className="min-w-0 flex-1">
+        <div className="flex gap-1.5">
+          {panes(kind).map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setPane(s.id)}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${
+                pane === s.id
+                  ? "bg-brand text-brand-foreground"
+                  : "bg-surface-muted text-muted hover:text-foreground"
+              }`}
             >
-              {SCENARIO_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {SCENARIO_STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs font-medium text-muted">
-            정렬
-            <input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(Number(e.target.value))}
-              className={`mt-1 w-full ${INPUT}`}
-            />
-          </label>
+              <span className="tabular-nums opacity-60">{i + 1}</span>
+              {s.label}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* 유형별 지문 편집기 슬롯. 전용 편집기가 없는 유형은 JSON으로 다룬다(#79~#82에서 교체). */}
-      <div className="mt-3">
-        <p className="text-xs font-medium text-muted">
-          지문 ({SCENARIO_KIND_LABELS[kind]})
-          {!editorPayload && " — 전용 편집기는 준비 중, 지금은 JSON"}
-        </p>
-        {editorPayload && PayloadEditor ? (
-          <div className="mt-1">
-            <PayloadEditor
-              payload={editorPayload}
-              steps={steps}
-              onChange={(next) => setPayloadText(JSON.stringify(next, null, 2))}
-            />
-          </div>
-        ) : (
-          <textarea
-            value={payloadText}
-            onChange={(e) => setPayloadText(e.target.value)}
-            rows={10}
-            spellCheck={false}
-            className={`mt-1 w-full font-mono !text-xs ${INPUT}`}
-          />
-        )}
-      </div>
+        <div className={`mt-4 ${CARD} p-4`}>
+          {pane === "basic" && (
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-medium text-muted">
+                제목 — 목록·편성에서 이 문제를 알아볼 이름
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="청년 지원사업 모집 공고 — 낚시 조항"
+                  className={`mt-1 w-full ${INPUT}`}
+                />
+              </label>
 
-      <div className="mt-4 flex items-center justify-between">
-        <h3 className="text-sm font-bold">문항 ({steps.length})</h3>
-        <button
-          type="button"
-          onClick={() => setSteps([...steps, { ...EMPTY_STEP }])}
-          className="text-xs font-medium text-brand"
-        >
-          + 문항 추가
-        </button>
-      </div>
-      <ul className="mt-2 flex flex-col gap-3">
-        {steps.map((step, i) => (
-          <StepEditor
-            key={i}
-            step={step}
-            index={i}
-            kind={kind}
-            chatSpeaker={chatSpeaker}
-            onChange={(next) =>
-              setSteps(steps.map((s, j) => (j === i ? next : s)))
-            }
-            onRemove={() => setSteps(steps.filter((_, j) => j !== i))}
-            onMove={(dir) => moveStep(i, dir)}
-          />
-        ))}
-      </ul>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-medium text-muted">
+                  식별자 — 채점·다시 보기가 문항을 찾는 열쇠
+                  <input
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    placeholder="news"
+                    className={`mt-1 w-full ${INPUT} ${
+                      clash ? "border-red-500" : ""
+                    }`}
+                  />
+                  {clash && (
+                    <span className="mt-1 block font-medium text-red-500">
+                      이미 &lsquo;{clash.title}&rsquo;가 쓰고 있습니다.
+                    </span>
+                  )}
+                </label>
+                <label className="text-xs font-medium text-muted">
+                  유형
+                  <select
+                    value={kind}
+                    onChange={(e) => setKind(e.target.value as ScenarioKind)}
+                    className={`mt-1 w-full ${INPUT}`}
+                  >
+                    {SCENARIO_KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {SCENARIO_KIND_LABELS[k]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-muted">
+                  읽기 시간(초) — 비우면 글 길이로 자동 계산
+                  <input
+                    type="number"
+                    min={0}
+                    value={readSec}
+                    onChange={(e) => setReadSec(Number(e.target.value))}
+                    className={`mt-1 w-full ${INPUT}`}
+                  />
+                </label>
+                <label className="text-xs font-medium text-muted">
+                  상태
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ScenarioStatus)}
+                    className={`mt-1 w-full ${INPUT}`}
+                  >
+                    {SCENARIO_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {SCENARIO_STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
-      {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+              {/* 메신저는 지문 단계가 없다 — 시나리오가 갖는 값이 이것 하나뿐이라 여기서 받는다. */}
+              {kind === "chat" && (
+                <label className="text-xs font-medium text-muted">
+                  상대 화자 — 반응 대사가 이 이름으로 나갑니다
+                  <input
+                    value={chatSpeaker}
+                    onChange={(e) =>
+                      setPayloadText(
+                        JSON.stringify(
+                          { ...(editorPayload ?? {}), speaker: e.target.value },
+                          null,
+                          2,
+                        ),
+                      )
+                    }
+                    placeholder="김부장"
+                    className={`mt-1 w-full ${INPUT}`}
+                  />
+                </label>
+              )}
+            </div>
+          )}
 
-      <div className="mt-4 flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-brand-foreground disabled:opacity-50"
-        >
-          {saving ? "저장 중…" : "저장"}
-        </button>
-        <button
-          type="button"
-          onClick={togglePreview}
-          className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
-        >
-          {preview ? "미리보기 닫기" : "미리보기"}
-        </button>
-        <Link
-          href="/admin?tab=scenarios"
-          className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
-        >
-          목록으로
-        </Link>
-      </div>
+          {pane === "payload" &&
+            (editorPayload && PayloadEditor ? (
+              <PayloadEditor
+                payload={editorPayload}
+                steps={steps}
+                onChange={(next) =>
+                  setPayloadText(JSON.stringify(next, null, 2))
+                }
+              />
+            ) : (
+              <>
+                <p className="mb-2 text-xs text-muted">
+                  이 유형은 전용 편집기가 없어 JSON으로 다룹니다.
+                </p>
+                <textarea
+                  value={payloadText}
+                  onChange={(e) => setPayloadText(e.target.value)}
+                  rows={20}
+                  spellCheck={false}
+                  className={`w-full font-mono !text-xs ${INPUT}`}
+                />
+              </>
+            ))}
 
-      {done && (
-        <div className="mt-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
-          <p className="font-bold text-emerald-700 dark:text-emerald-300">
-            저장했습니다.
-          </p>
-          {warnings.length > 0 && (
-            <ul className="mt-1 flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-              {warnings.map((w, i) => (
-                <li key={i}>⚠️ {w}</li>
-              ))}
-            </ul>
+          {pane === "steps" && (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold">
+                  문항 <span className="tabular-nums text-muted">{steps.length}</span>
+                  <span className="ml-2 text-xs font-medium text-muted">
+                    합계 {totalPoints}점
+                  </span>
+                </p>
+                <span className="flex items-center gap-3">
+                  {steps.length > 0 && (
+                    <CopyJsonButton
+                      value={steps}
+                      label="전체 JSON 복사"
+                      className="text-xs font-bold text-muted"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSteps([...steps, { ...EMPTY_STEP }])}
+                    className="text-xs font-bold text-brand"
+                  >
+                    문항 추가
+                  </button>
+                </span>
+              </div>
+              <ul className="mt-3 flex flex-col gap-3">
+                {steps.map((step, i) => (
+                  <StepEditor
+                    key={i}
+                    step={step}
+                    index={i}
+                    kind={kind}
+                    chatSpeaker={chatSpeaker}
+                    onChange={(next) =>
+                      setSteps(steps.map((s, j) => (j === i ? next : s)))
+                    }
+                    onRemove={() => setSteps(steps.filter((_, j) => j !== i))}
+                    onMove={(dir) => moveStep(i, dir)}
+                  />
+                ))}
+              </ul>
+            </>
           )}
         </div>
-      )}
 
-      {/* 저장 전 편집 중인 내용 그대로 확인한다(#77). */}
-      {preview && (
-        <ScenarioPreview
-          kind={kind}
-          payload={preview}
-          steps={steps}
-          onClose={() => setPreview(null)}
-        />
-      )}
+        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+
+        {done && (
+          <div className="mt-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+            <p className="font-bold text-emerald-700 dark:text-emerald-300">
+              저장했습니다.
+            </p>
+            {warnings.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-0.5 text-xs text-amber-600 dark:text-amber-400">
+                {warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 flex gap-2">
+          <button
+            type="submit"
+            disabled={saving || !!clash}
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-brand-foreground disabled:opacity-50"
+          >
+            {saving ? "저장 중…" : "저장"}
+          </button>
+          <Link
+            href="/admin/scenarios"
+            className="rounded-xl bg-surface-muted px-4 py-2 text-sm font-medium text-muted"
+          >
+            목록으로
+          </Link>
+        </div>
+      </div>
+
+      {/* 오른쪽 — 지금 쓰고 있는 그대로. 스크롤을 따라다녀 내려가며 고칠 수 있다. */}
+      <aside className="sticky top-6 hidden w-[26rem] shrink-0 self-start xl:block">
+        <p className={`mb-2 ${LABEL}`}>이렇게 나옵니다</p>
+        <div className="max-h-[calc(100dvh-9rem)] overflow-y-auto">
+          <LivePreview kind={kind} payload={livePayload} steps={steps} />
+        </div>
+      </aside>
     </form>
   );
 }

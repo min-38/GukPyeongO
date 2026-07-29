@@ -17,7 +17,7 @@ export default function CommunityTutorial({
       label={`${boardName}`}
       pages={[
         {
-          title: "커뮤니티 유형",
+          title: "커뮤니티",
           desc: [
             "커뮤니티 상황에서의 읽기 능력을 평가합니다.",
             "맥락 없는 글, 뜬금없는 댓글. 커뮤니티에선 흔하죠.",

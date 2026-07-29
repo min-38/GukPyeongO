@@ -1,7 +1,9 @@
 "use client";
 
 import CommunityTutorial from "../community/CommunityTutorial";
+import ContractTutorial from "../contract/ContractTutorial";
 import EmailTutorial from "../email/EmailTutorial";
+import ManualTutorial from "../manual/ManualTutorial";
 import NewsTutorial from "../news/NewsTutorial";
 import NoticeTutorial from "../notice/NoticeTutorial";
 import StoryTutorial from "../story/StoryTutorial";
@@ -35,16 +37,15 @@ export default function TutorialByKind({
         />
       );
     case "chat":
-      return (
-        <ChatTutorial
-          roomTitle={(scenario.roomTitle as string) ?? "회사 메신저"}
-          onStart={onStart}
-        />
-      );
+      return <ChatTutorial onStart={onStart} />;
     case "email":
       return <EmailTutorial onStart={onStart} />;
     case "story":
       return <StoryTutorial onStart={onStart} />;
+    case "contract":
+      return <ContractTutorial onStart={onStart} />;
+    case "manual":
+      return <ManualTutorial onStart={onStart} />;
     default:
       // 튜토리얼이 없는 유형은 그냥 문제로 넘어간다.
       onStart();

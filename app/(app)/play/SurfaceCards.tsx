@@ -13,20 +13,42 @@ export function DocCard({
   source,
   title,
   body,
+  html,
 }: {
   source: string;
   title: string;
   body: string[];
+  // 어드민이 쓴 HTML 조각(#99). 어드민만 쓸 수 있는 자리라 그대로 그린다.
+  // 조각 안 <style>은 앱 전체로 새므로 인라인 style 속성을 쓰기로 한다.
+  html?: string;
 }) {
   return (
     <div className="animate-rise rounded-2xl border border-border bg-surface-muted/40 p-4">
-      <p className="text-xs font-medium text-brand">{source}</p>
-      <h2 className="mt-1 text-lg font-bold leading-snug">{title}</h2>
-      <div className="mt-3 flex flex-col gap-2 text-[15px] leading-relaxed">
-        {body.map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
-      </div>
+      {/* HTML 조각으로 쓴 지문은 출처·제목까지 조각 안에 있다(#99). */}
+      {!html?.trim() && (
+        <>
+          {source.trim() && (
+            <p className="text-xs font-medium text-brand">{source}</p>
+          )}
+          <h2 className="text-lg font-bold leading-snug">{title}</h2>
+        </>
+      )}
+      {/* HTML 조각으로 쓴 지문은 그대로 그린다. 아니면 문단 배열을 쓴다 —
+          문단 안의 줄바꿈(번호 목록 등)은 살리고 빈 문단은 건너뛴다(#99). */}
+      {html?.trim() ? (
+        <div
+          className="scenario-html text-[15px] leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <div className="mt-3 flex flex-col gap-2 whitespace-pre-line text-[15px] leading-relaxed">
+          {body
+            .filter((line) => line.trim().length > 0)
+            .map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -81,10 +103,20 @@ export function CommentRow({
 export function MessageCard({ msg }: { msg: EmailMessage }) {
   const [quoteOpen, setQuoteOpen] = useState(false);
 
+  // 메일 한 통을 HTML로 쓴 경우(#99) — 보낸사람 줄까지 조각이 갖는다.
+  if (msg.html?.trim()) {
+    return (
+      <div
+        className="scenario-html animate-rise border-b border-border pb-3 text-[15px] leading-relaxed last:border-b-0"
+        dangerouslySetInnerHTML={{ __html: msg.html }}
+      />
+    );
+  }
+
   return (
     <div className="animate-rise flex gap-2 border-b border-border pb-3 last:border-b-0">
       <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/20 text-[11px] font-bold text-brand">
-        {msg.from.slice(0, 1)}
+        {(msg.from ?? "").slice(0, 1)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1.5">
@@ -97,7 +129,7 @@ export function MessageCard({ msg }: { msg: EmailMessage }) {
           {msg.cc ? ` · 참조 ${msg.cc}` : ""}
         </p>
         <div className="mt-2 flex flex-col gap-1 text-[15px] leading-relaxed">
-          {msg.body.map((line, i) => (
+          {(msg.body ?? []).map((line, i) => (
             <p key={i}>{line}</p>
           ))}
         </div>
@@ -135,13 +167,41 @@ export type Bubble = {
   // 반응 대사의 정답/오답 톤. 대화가 누적되므로 색은 말풍선에 고정해
   // 다음 문제로 넘어가도 과거 말풍선 색이 바뀌지 않게 한다.
   tone?: "correct" | "wrong";
+  // 이 말풍선 앞에 찍을 날짜 구분선. 대화가 며칠에 걸칠 때 날이 바뀌는 자리에만 붙는다.
+  date?: string;
 };
 
 const TIME = "shrink-0 text-[11px] text-muted";
 
+// 날이 바뀌면 대화 가운데에 날짜를 끼워 넣는다 — 실제 메신저와 같게.
+export function DateDivider({ date }: { date: string }) {
+  return (
+    <div className="my-3 flex justify-center">
+      <span className="rounded-full bg-surface-muted px-3 py-1 text-[11px] font-medium text-muted">
+        {date}
+      </span>
+    </div>
+  );
+}
+
+export function ChatBubble(props: {
+  bubble: Bubble;
+  grouped: boolean;
+  timed: boolean;
+}) {
+  if (!props.bubble.date) return <BubbleBody {...props} />;
+  return (
+    <>
+      <DateDivider date={props.bubble.date} />
+      {/* 날이 바뀌었으면 이름·프로필을 다시 보여준다. */}
+      <BubbleBody {...props} grouped={false} />
+    </>
+  );
+}
+
 // 같은 사람이 연달아 보내면 이름과 프로필을 다시 보여주지 않는다 — 실제 메신저와 같게.
 // 시각은 반대쪽 끝, 묶음의 마지막 줄에만 붙는다.
-export function ChatBubble({
+function BubbleBody({
   bubble,
   grouped,
   timed,
@@ -207,49 +267,61 @@ export function ChatBubble({
 // 메일 스레드 한 덩어리. 몇 통까지 보일지(visible)와 지금 보는 탭은 바깥이 정한다 —
 // 풀 때는 문항이 진행되며 열리고, 다시 볼 때는 그 문항 시점까지 펼쳐 둔다.
 export function EmailThread({
-  subject,
   messages,
-  layout,
   visible,
   tab,
   onTab,
 }: {
-  subject: string;
   messages: EmailMessage[];
-  layout?: "thread" | "toggle";
   visible: number;
   tab: number;
   onTab: (i: number) => void;
 }) {
+  // 아직 메일이 한 통도 없을 때(어드민 새 문제 작성 중) — 보여줄 스레드가 없다.
+  if (!messages[tab]) return null;
+
   return (
-    // 다른 유형(공지·신문·커뮤니티)의 첫 카드와 같은 표면 — 광고 아래 여백이 같아 보이도록.
-    <div className="animate-rise flex flex-col gap-3 rounded-2xl border border-border bg-surface-muted/40 p-4">
-      <h2 className="text-lg font-bold leading-snug">{subject}</h2>
-      {layout === "toggle" ? (
-        <>
-          <div className="flex gap-2">
-            {messages.slice(0, visible).map((msg, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onTab(i)}
-                className={`rounded-full px-3 py-1 text-sm font-bold ${
-                  i === tab
-                    ? "bg-brand text-white"
-                    : "bg-surface-muted text-muted"
-                }`}
-              >
-                {i === 0 ? "원문" : "답장"}
-              </button>
-            ))}
-          </div>
-          <MessageCard key={tab} msg={messages[tab]} />
-        </>
-      ) : (
-        messages
-          .slice(0, visible)
-          .map((msg, i) => <MessageCard key={i} msg={msg} />)
-      )}
-    </div>
+    <>
+      {/* 메일 탭은 상자 밖 위에 둔다(#99) — 편지를 갈아끼우는 손잡이라
+          내용과 같은 상자 안에 있으면 지문의 일부처럼 읽힌다.
+          이름은 번호로 붙인다. 두 번째 메일이 늘 답장인 것은 아니다(공지·후속 안내일 수도). */}
+      <div className="flex shrink-0 gap-2">
+        {messages.slice(0, visible).map((msg, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onTab(i)}
+            className={`rounded-full px-3 py-1 text-sm font-bold ${
+              i === tab
+                ? "bg-brand text-brand-foreground"
+                : "bg-surface-muted text-muted"
+            }`}
+          >
+            {i + 1}번
+          </button>
+        ))}
+      </div>
+
+      {/* 다른 유형(공지·신문·커뮤니티)의 첫 카드와 같은 표면 — 광고 아래 여백이 같아 보이도록. */}
+      {/* 제목은 메일마다 조각 안에 있다(#99) — 회신 스레드는 같은 제목을 잇지만
+          따로 보낸 메일은 제목이 다르다. 스레드에 하나만 두면 그 차이를 못 보여준다. */}
+      <div className="animate-rise flex flex-col gap-3 rounded-2xl border border-border bg-surface-muted/40 p-4">
+        <MessageCard key={tab} msg={messages[tab]} />
+      </div>
+    </>
+  );
+}
+
+// 어드민이 쓴 HTML 조각 한 덩어리(#99).
+// card=true면 다른 유형의 첫 카드와 같은 표면을 두르고, false면 배경 없이 그대로 흐른다.
+// 조각 안에서 쓸 수 있는 클래스는 globals.css의 지문용 @source 목록에 있다.
+export function HtmlBlock({ html, card }: { html: string; card?: boolean }) {
+  return (
+    <div
+      className={`scenario-html animate-rise text-[15px] leading-relaxed ${
+        card ? "rounded-2xl border border-border bg-surface-muted/40 p-4" : ""
+      }`}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

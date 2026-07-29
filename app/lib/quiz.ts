@@ -258,6 +258,7 @@ export interface AdminStepReport {
 // 어드민 별점 집계 한 줄 (#96). 다음 문제를 어느 쪽으로 낼지 보는 자리라 문항 단위로 묶는다.
 export interface AdminStepRating {
   stepId: string;
+  scenarioId: string;
   scenarioTitle: string;
   stepPrompt: string;
   average: number;

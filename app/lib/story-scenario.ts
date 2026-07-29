@@ -21,6 +21,8 @@ export interface StoryScenario {
   source: string; // 상황 라벨 (예: "명절 전날")
   title: string;
   body: string[]; // 문단 단위
-  readSec: number; // 문제 전에 주는 읽기 시간. 조기 시작 가능
+  readSec: number;
+  // 지문을 HTML 조각으로 쓸 때(#99). 있으면 source·title·body 대신 이걸 그린다.
+  html?: string; // 문제 전에 주는 읽기 시간. 조기 시작 가능
   steps: StoryStep[];
 }

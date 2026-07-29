@@ -9,3 +9,12 @@ export const POINTS_BY_DIFFICULTY: Record<1 | 2 | 3, number> = {
   2: 3,
   3: 8,
 };
+
+// 문항 배점(#99). 이제 문항이 직접 점수를 갖는다 — 없으면(옛 데이터) 난이도 환산표를 쓴다.
+export function stepPoints(step: {
+  points?: number | null;
+  difficulty?: number;
+}): number {
+  if (typeof step.points === "number" && step.points > 0) return step.points;
+  return POINTS_BY_DIFFICULTY[(step.difficulty ?? 2) as 1 | 2 | 3] ?? 0;
+}

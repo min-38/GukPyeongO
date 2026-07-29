@@ -86,3 +86,16 @@ export function ParagraphList({
     </ul>
   );
 }
+
+// 본문 한 덩어리 ↔ 문단 배열 (#99).
+// 저장 형태는 문단 배열 그대로 두고, 편집만 텍스트 한 칸으로 한다 —
+// 빈 줄이 문단을 가른다. 문단 안의 줄바꿈(번호 목록 등)은 그대로 살린다.
+// 빈 문단을 버리지 않는다 — 타이핑 중에 빈 줄을 지워버리면 문단을 새로 시작할 수가 없다.
+// 화면과 시드는 빈 문단을 건너뛴다.
+export function toParagraphs(text: string): string[] {
+  return text.split(/\n\s*\n/).map((p) => p.replace(/[ \t]+$/gm, ""));
+}
+
+export function fromParagraphs(body: string[]): string {
+  return body.join("\n\n");
+}

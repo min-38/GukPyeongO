@@ -13,9 +13,9 @@ import { getSupabaseAdmin } from "./supabase-admin.server";
 // 공개 로더(scenarios.server.ts)와 달리 정답·통계까지 그대로 가져온다 — 출제자에게는 필요하다.
 
 export const SCENARIO_COLS =
-  "id, slug, kind, title, source_label, payload, status, sort_order";
+  "id, slug, kind, title, source_label, payload, status, sort_order, updated_at";
 export const STEP_COLS =
-  "id, step_key, type, prompt, choices, answer_index, difficulty, time_limit_sec, show_up_to, extra, sort_order, attempts, correct_count";
+  "id, step_key, type, prompt, choices, answer_index, difficulty, points, time_limit_sec, show_up_to, extra, sort_order, attempts, correct_count";
 
 interface StepRow {
   id: string;
@@ -25,6 +25,7 @@ interface StepRow {
   choices: string[];
   answer_index: number;
   difficulty: number;
+  points: number | null;
   time_limit_sec: number;
   show_up_to: number | null;
   extra: Record<string, unknown> | null;
@@ -54,6 +55,7 @@ function toStep(row: StepRow): AdminScenarioStep {
     choices: row.choices,
     answerIndex: row.answer_index,
     difficulty: row.difficulty,
+    points: row.points ?? 3,
     timeLimitSec: row.time_limit_sec,
     showUpTo: row.show_up_to,
     extra: row.extra ?? {},
@@ -85,7 +87,9 @@ export async function fetchScenarios(): Promise<AdminScenario[] | null> {
   const { data, error } = await getSupabaseAdmin()
     .from("scenarios")
     .select(SELECT)
-    .order("sort_order", { ascending: true });
+    // 최근에 손댄 문제가 위로(#99). 예전엔 sort_order로 줄을 세웠는데
+    // 문제가 늘수록 번호를 손으로 매기는 일이 되어 걷어냈다.
+    .order("updated_at", { ascending: false });
   if (error) return null;
   return (data ?? []).map((row) => toScenario(row as ScenarioRow));
 }

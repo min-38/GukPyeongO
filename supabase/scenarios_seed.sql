@@ -222,7 +222,7 @@ on conflict (scenario_id, step_key) do update set
 
 -- chat
 insert into public.scenarios (slug, kind, title, source_label, payload, status, sort_order) values
-  ('chat', 'chat', '회사 메신저 — 부장 답장 고르기', '회사 메신저', '{"id":"mock-company","roomTitle":"회사 메신저","speaker":"김부장","sourceLabel":"회사 메신저"}'::jsonb, 'published', 7)
+  ('chat', 'chat', '회사 메신저 — 부장 답장 고르기', '회사 메신저', '{"id":"mock-company","speaker":"김부장","sourceLabel":"회사 메신저"}'::jsonb, 'published', 7)
 on conflict (slug) do update set
   kind = excluded.kind,
   title = excluded.title,

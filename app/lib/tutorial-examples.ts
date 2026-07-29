@@ -90,7 +90,6 @@ export const TUTORIAL_EXAMPLES: Partial<
 
   chat: {
     id: "tutorial-chat",
-    roomTitle: "회사 메신저",
     speaker: "김부장",
     steps: [
       {

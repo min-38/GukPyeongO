@@ -1,6 +1,7 @@
 "use client";
 
 import { type CommunityScenario } from "@/app/lib/community-scenario";
+import { SCENARIO_KIND_TITLES } from "@/app/lib/scenario-admin";
 
 import CommunityScenarioView from "../play/CommunityScenario";
 import PlayShell from "../play/PlayShell";
@@ -18,7 +19,7 @@ export default function CommunityPlay({
         <CommunityTutorial boardName={scenario.boardName} onStart={start} />
       )}
       renderScenario={(onFinish) => (
-        <CommunityScenarioView scenario={scenario} onFinish={onFinish} />
+        <CommunityScenarioView label={SCENARIO_KIND_TITLES.community} scenario={scenario} onFinish={onFinish} />
       )}
     />
   );

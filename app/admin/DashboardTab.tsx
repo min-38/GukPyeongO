@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 
 // 운영 대시보드 (#91). 오늘 지표와 최근 추이를 본다.
 
+import PageHeader from "./PageHeader";
+import { CARD, FIGURE, LABEL } from "./ui";
+
 interface DayMetrics {
   date: string;
   started: number;
@@ -39,10 +42,10 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4">
-      <p className="text-xs font-medium text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
+    <div className={`${CARD} p-5`}>
+      <p className={LABEL}>{label}</p>
+      <p className={`mt-2 ${FIGURE}`}>{value}</p>
+      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
     </div>
   );
 }
@@ -81,12 +84,12 @@ export default function DashboardTab() {
 
   return (
     <section>
-      <h2 className="text-xl font-bold">대시보드</h2>
-      <p className="mt-1 text-sm text-muted">
-        오늘 {today.date} 기준입니다. 시작만 하고 나간 사람도 함께 셉니다.
-      </p>
+      <PageHeader
+        title="대시보드"
+        desc={`${today.date} 기준. 시작만 하고 나간 사람도 함께 셉니다.`}
+      />
 
-      <div className="mt-4 grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Stat label="시작" value={`${today.started}명`} />
         <Stat label="완주" value={`${today.finished}명`} />
         <Stat

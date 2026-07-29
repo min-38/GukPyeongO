@@ -7,15 +7,13 @@ import {
   type AdminStepReport,
 } from "@/app/lib/quiz";
 
+import PageHeader from "./PageHeader";
+
 // 문항 항의·평가 (#96).
 // 항의는 "이 문제 이상하다"는 제보라 처리 상태를 넘긴다.
 // 평가는 별점 평균이라 낮은 순으로 쌓아 둔다 — 손볼 문항과 다음에 낼 방향이 여기서 보인다.
 
-export default function FeedbackTab({
-  onOpenCount,
-}: {
-  onOpenCount: (n: number) => void;
-}) {
+export default function FeedbackTab() {
   const [reports, setReports] = useState<AdminStepReport[]>([]);
   const [ratings, setRatings] = useState<AdminStepRating[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,21 +32,17 @@ export default function FeedbackTab({
         if (!alive) return;
         setReports(data.reports ?? []);
         setRatings(data.ratings ?? []);
-        onOpenCount(
-          (data.reports ?? []).filter((r) => r.status === "open").length,
-        );
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [onOpenCount]);
+  }, []);
 
   async function setStatus(id: string, status: "open" | "resolved") {
     const next = reports.map((r) => (r.id === id ? { ...r, status } : r));
     setReports(next);
-    onOpenCount(next.filter((r) => r.status === "open").length);
     await fetch("/api/admin/step-feedback", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -65,12 +59,11 @@ export default function FeedbackTab({
   return (
     <section className="flex flex-col gap-8">
       <div>
-        <h2 className="text-xl font-bold">
-          항의{" "}
-          <span className="text-muted">
-            ({open} / {reports.length})
-          </span>
-        </h2>
+        <PageHeader
+          title="항의"
+          count={reports.length}
+          desc={`미처리 ${open}건. 문제가 틀렸다는 제보입니다.`}
+        />
         <ul className="mt-4 flex flex-col gap-3">
           {reports.length === 0 ? (
             <li className="py-8 text-center text-sm text-muted">
@@ -115,12 +108,11 @@ export default function FeedbackTab({
       </div>
 
       <div>
-        <h2 className="text-xl font-bold">
-          문항 평가 <span className="text-muted">({ratings.length})</span>
-        </h2>
-        <p className="mt-1 text-xs text-muted">
-          별점이 낮은 문항부터. 다음 문제를 어느 쪽으로 낼지 보는 자리입니다.
-        </p>
+        <PageHeader
+          title="문항 평가"
+          count={ratings.length}
+          desc="별점이 낮은 문항부터. 다음 문제를 어느 쪽으로 낼지 보는 자리입니다."
+        />
         <ul className="mt-4 flex flex-col gap-3">
           {ratings.length === 0 ? (
             <li className="py-8 text-center text-sm text-muted">

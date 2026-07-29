@@ -147,60 +147,58 @@ export default function TodayPlay({
         <TutorialShell
           framed
           countdown
-          label="국평오 테스트"
           dismissKey={TODAY_TUTORIAL_KEY}
           pages={[
             {
-              emoji: "📝",
               title: "테스트 방식",
-              desc: (
-                <>
-                  다양한 유형의 문항이 연속으로 출제됩니다.
-                  <br />
-                  지문을 잘 읽고 문제에 알맞은 답을 선택해 보세요.
-                </>
-              ),
+              desc: [
+                "다양한 유형의 문항이 연속으로 출제됩니다.",
+                "지문을 잘 읽고 문제에 알맞은 답을 선택해 보세요."
+              ]
             },
             {
-              emoji: (
-                <div className="flex justify-center">
-                  <span className="rounded-full px-5 py-2 text-lg font-bold tabular-nums bg-surface-muted text-foreground mr-2">
-                    ⏱ 90s
-                  </span>
-                  <span className="animate-pulse rounded-full bg-red-500 px-5 py-2 text-lg font-bold tabular-nums text-white">
-                    ⏱ 5s
-                  </span>
-                </div>
-              ),
+  
               title: "시간 제한",
-              desc: (
-                <>
-                  문제가 나오고 제한시간이 시작됩니다.
-                  <br />
-                  제한시간이 각각 다르며, 시간 초과 시 오답 처리됩니다.
-                </>
-              ),
+              desc: [
+                "문제가 나오고 제한시간이 시작됩니다.",
+                "시간 초과 시 오답 처리됩니다.",
+              ]
             },
             {
-              emoji: "💯",
+              title: "읽기 시간",
+              desc: [
+                "긴 지문의 경우 읽기 시간을 드립니다.",
+                "독서 타이머를 눌러 스킵하고 바로 진행할 수 있어요.",
+              ]
+            },
+            {
               title: "점수 배점",
-              desc: (
-                <>
-                  문제의 난이도마다 배점을 달리 정했습니다.
-                  <br />각 문제마다 배점을 보여줍니다.
-                </>
-              ),
+              desc: [
+                "문제의 난이도마다 배점을 달리 정했습니다.",
+                "각 문제마다 배점을 보여줍니다."
+              ]
             },
             {
-              emoji: "🥇🥈🥉",
+              title: "문제 갱신",
+              desc: [
+                "문제는 매일 자정에 새로 올라옵니다.",
+                "하루 한 번만 응시할 수 있어요."
+              ],
+            },
+            {
               title: `등급 산정`,
-              desc: (
-                <>
-                  정답을 맞춘 점수를 합산해 등급을 매겨요.
-                  <br />
-                  2026 수능 국어 영역 등급 기준을 참고했습니다.
-                </>
-              ),
+              desc: [
+                "정답을 맞춘 점수를 합산해 등급을 매겨요.",
+                "26년도 수능 국어 영역 등급 기준을 참고했습니다.",
+              ],
+            },
+            {
+              title: "모두 지어낸 이야기",
+              desc: [
+                "지문의 인물·기관·도시·법령 등은 모두 가상의 설정입니다.",
+                "실제 정보로 받아들이지 마세요.",
+                "읽는 능력을 재기 위해 만든 글입니다.",
+              ],
             },
           ]}
           startLabel="시작하기"

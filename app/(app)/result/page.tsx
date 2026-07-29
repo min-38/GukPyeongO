@@ -19,7 +19,46 @@ import GradeCharacter from "../GradeCharacter";
 
 import Comments from "./Comments";
 import GradeBar from "./GradeBar";
+import GradeDistribution from "./GradeDistribution";
 import useStoredResult from "./useStoredResult";
+
+// 공유 아이콘. 아이콘 묶음을 새로 들이지 않고 필요한 두 개만 그린다.
+function ShareIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 12.5l5 5L20 6.5" />
+    </svg>
+  );
+}
 
 // 응시 시각 — "2026년 7월 28일 오전 03시 16분". 서버가 찍은 시각을 한국 시간으로 읽는다.
 // toLocaleString은 "오전 03:16"까지만 만들어줘서 조각을 직접 잇는다.
@@ -83,6 +122,12 @@ export default function ResultPage() {
     }
   }
 
+  // 저장소를 아직 못 읽었거나 뷰포트가 안 정해졌다. 지금 그리면 광고 자리가
+  // 나중에 끼어들며 화면이 한 번 밀린다 — 다 정해진 뒤에 한 번에 그린다(#99).
+  if (result === undefined || isDesktop === null) {
+    return <main className="flex flex-1" aria-busy />;
+  }
+
   // 결과 없이 직접 접근한 경우
   if (!result) {
     return (
@@ -120,8 +165,10 @@ export default function ResultPage() {
             />
           </div>
         )}
-        {/* 왼쪽 위: 등급·점수·응시 시각·버튼 카드 */}
-        <div className="lg:col-start-1 lg:row-start-1 lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+        {/* 왼쪽 위: 등급·점수·응시 시각·버튼 카드.
+            데스크톱에서는 댓글이 길어져도 자리를 지킨다 — 공유하기를 누르려고 위로 올라갈 일이 없게.
+            화면이 낮아 카드가 다 안 들어가면 카드 안에서만 스크롤한다. */}
+        <div className="lg:sticky lg:top-6 lg:col-start-1 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:border-border lg:bg-surface lg:p-8 lg:shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
           <h1 className="mb-3 font-display text-2xl">테스트 결과</h1>
           <div className="animate-pop flex flex-col items-center rounded-2xl border border-border p-6 text-center">
             <GradeCharacter grade={result.grade} className="h-32 w-32" />
@@ -171,6 +218,7 @@ export default function ResultPage() {
               {result.rank && (
                 <div className="mt-2">
                   <GradeBar grade={result.grade} rank={result.rank} />
+                  <GradeDistribution grade={result.grade} rank={result.rank} />
                 </div>
               )}
             </div>
@@ -183,17 +231,27 @@ export default function ResultPage() {
             문제 다시 보기
           </Link>
 
-          <button
-            type="button"
-            onClick={handleShare}
-            className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-brand text-base font-bold text-brand transition-colors hover:bg-brand/10 active:scale-[0.99]"
-          >
-            {copied ? "링크가 복사됐어요!" : "공유하기"}
-          </button>
+          <div className="mt-3 flex gap-2">
+            <Link
+              href="/"
+              className="flex h-12 flex-1 items-center justify-center rounded-2xl border-2 border-border text-base font-bold transition-colors hover:bg-surface-muted active:scale-[0.99]"
+            >
+              홈으로
+            </Link>
+            {/* 공유는 아이콘만. 글자를 빼서 '홈으로'가 주가 되게 한다. */}
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label={copied ? "링크가 복사됐어요" : "결과 공유하기"}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border-2 border-brand text-brand transition-colors hover:bg-brand/10 active:scale-[0.98]"
+            >
+              {copied ? <CheckIcon /> : <ShareIcon />}
+            </button>
+          </div>
         </div>
 
         {/* 오른쪽 전체: 댓글 (데스크톱) */}
-        <div className="lg:col-start-2 lg:row-span-2 lg:[&>section]:mt-0">
+        <div className="lg:col-start-2 lg:[&>section]:mt-0">
           {/* PC 전용: 댓글 위 250×250 */}
           {isDesktop === true && (
             <div className="flex justify-center">

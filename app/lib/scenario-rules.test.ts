@@ -95,18 +95,9 @@ describe("scenario-rules", () => {
   describe("서사", () => {
     const body = ["나".repeat(600)];
 
-    it("읽기 시간이 모자라면 거부하고 권장값을 알려준다", () => {
+    // 읽기 시간은 만드는 사람이 정한다(#99) — 짧게 줬다고 저장을 막지 않는다.
+    it("읽기 시간이 짧아도 막지 않는다", () => {
       const { errors } = checkScenarioRules("story", { body, readSec: 30 }, []);
-      // 600자 ÷ 400자/분 = 1.5분 = 90초
-      expect(errors.join()).toContain("90초");
-    });
-
-    it("읽기 시간이 넉넉하면 통과한다", () => {
-      const { errors } = checkScenarioRules(
-        "story",
-        { body, readSec: 120 },
-        [],
-      );
       expect(errors).toEqual([]);
     });
 

@@ -10,7 +10,7 @@ export default function EmailTutorial({ onStart }: { onStart: () => void }) {
       label="OO님께서 보낸 메일"
       pages={[
         {
-          title: "메일 유형",
+          title: "메일",
           desc: [
             "이메일은 오래 전부터 지금까지 가장 흔하게 사용하는 커뮤니케이션 수단입니다.",
             "정중한 문장 속에 숨겨진 진짜 목적과 세부 요청 사항을 정확히 읽어내야 합니다.",
@@ -18,7 +18,7 @@ export default function EmailTutorial({ onStart }: { onStart: () => void }) {
           ],
         },
       ]}
-      startLabel="메일 읽기"
+      startLabel="시작하기"
       onStart={onStart}
     />
   );

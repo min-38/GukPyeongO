@@ -11,7 +11,7 @@ export default function StoryTutorial({ onStart }: { onStart: () => void }) {
       label="국평오 단편선"
       pages={[
         {
-          title: "문학 유형",
+          title: "문학",
           desc: [
             "문학 작품을 읽고 이해하는 능력도 핵심 문해력 중 하나입니다.",
             "시대적 배경이나 주인공의 심정을 묻는 감상형 문제는 없으니 안심하세요.",
@@ -20,7 +20,7 @@ export default function StoryTutorial({ onStart }: { onStart: () => void }) {
           ],
         },
       ]}
-      startLabel="이야기 읽기"
+      startLabel="시작하기"
       onStart={onStart}
     />
   );

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isAdmin } from "@/app/lib/admin-session.server";
-import { POINTS_BY_DIFFICULTY } from "@/app/lib/scenario-points";
+import { stepPoints } from "@/app/lib/scenario-points";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 // 하루치 만점. 등급은 획득 점수 ÷ 만점이라(#89) 날마다 만점이 달라지면
@@ -94,7 +94,7 @@ export async function PUT(request: Request) {
   if (ids.length > 0) {
     const { data: steps, error: stepError } = await supabase
       .from("scenario_steps")
-      .select("difficulty, scenario_id")
+      .select("difficulty, points, scenario_id")
       .in("scenario_id", ids);
     if (stepError) {
       return NextResponse.json(
@@ -104,7 +104,7 @@ export async function PUT(request: Request) {
     }
     const total = (steps ?? []).reduce(
       (sum, st) =>
-        sum + (POINTS_BY_DIFFICULTY[st.difficulty as 1 | 2 | 3] ?? 0),
+        sum + stepPoints(st),
       0,
     );
     if (total !== DAILY_MAX_SCORE) {

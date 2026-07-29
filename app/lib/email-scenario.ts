@@ -3,12 +3,14 @@
 // 그래서 "답장이 원문을 잘못 옮긴 곳 찾기" 문제를 낼 수 있다.
 
 export interface EmailMessage {
-  from: string;
-  address: string;
-  to: string;
+  // 메일 한 통을 HTML 조각으로 쓸 때(#99). 있으면 아래 항목 대신 이걸 그린다.
+  html?: string;
+  from?: string;
+  address?: string;
+  to?: string;
   cc?: string;
-  at: string;
-  body: string[];
+  at?: string;
+  body?: string[];
   quote?: string[]; // 접힌 인용. 펼쳐야 원문과 대조할 수 있다.
 }
 
@@ -26,12 +28,11 @@ export interface EmailStep {
 }
 
 export interface EmailScenario {
+  // 문제가 열리기 전 지문을 훑는 시간(#99). 없으면 글 길이로 계산한다.
+  readSec?: number;
   id: string;
   sourceLabel: string; // 상단바 라벨
   subject: string; // 스레드 제목 — 최상단에 한 번만
   messages: EmailMessage[]; // 시간 오름차순
   steps: EmailStep[];
-  // thread(기본) — 짧은 회신을 세로로 쌓아 오간 흔적을 훑는다.
-  // toggle — 장문 원문과 답장을 탭으로 갈아끼우며 대조한다. 세로로 쌓으면 대조가 안 되므로.
-  layout?: "thread" | "toggle";
 }

@@ -14,6 +14,7 @@ interface StepRow {
   prompt: string;
   choices: string[];
   difficulty: number;
+  points: number | null;
   time_limit_sec: number;
   show_up_to: number | null;
   extra: Record<string, unknown> | null;
@@ -28,6 +29,7 @@ function toStep(row: StepRow) {
     prompt: row.prompt,
     choices: row.choices,
     difficulty: row.difficulty,
+    ...(row.points === null ? {} : { points: row.points }),
     timeLimitSec: row.time_limit_sec,
     // 이메일 전용 필드 — 없는 유형에 빈 값을 남기지 않는다.
     ...(row.show_up_to === null ? {} : { showUpTo: row.show_up_to }),
@@ -41,7 +43,7 @@ export async function getScenario<T>(slug: string): Promise<T | null> {
     const { data, error } = await getSupabaseAdmin()
       .from("scenarios")
       .select(
-        "payload, scenario_steps(step_key, type, prompt, choices, difficulty, time_limit_sec, show_up_to, extra)"
+        "payload, scenario_steps(step_key, type, prompt, choices, difficulty, points, time_limit_sec, show_up_to, extra)"
       )
       .eq("slug", slug)
       .eq("status", "published")

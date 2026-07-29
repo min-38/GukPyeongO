@@ -2,11 +2,9 @@ import { redirect } from "next/navigation";
 
 import { isAdmin } from "@/app/lib/admin-session.server";
 
-import AdminDashboard from "./AdminDashboard";
+import DashboardTab from "./DashboardTab";
 
-export default async function AdminPage() {
-  if (!(await isAdmin())) {
-    redirect("/admin/login");
-  }
-  return <AdminDashboard />;
+export default async function AdminHomePage() {
+  if (!(await isAdmin())) redirect("/admin/login");
+  return <DashboardTab />;
 }

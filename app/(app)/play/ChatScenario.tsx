@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
-import { type ChatScenario, showsTime } from "@/app/lib/chat-scenario";
+import { type ChatScenario, dateMark, showsTime } from "@/app/lib/chat-scenario";
 import { readMs, scheduleTyping } from "@/app/lib/scenario-pacing";
 import { playMessagePop, playSendPop } from "@/app/lib/sfx";
 import { type AnswerResult, useScenario } from "@/app/lib/useScenario";
 
 import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
-import { type Bubble, ChatBubble } from "./SurfaceCards";
+import { type Bubble, ChatBubble, DateDivider } from "./SurfaceCards";
 
 const OPENING_DELAY_MS = 500; // 화면 진입 후 첫 메시지까지
 const REPLY_BEAT_MS = 500; // 내 답장이 눈에 들어온 뒤 상대가 반응하기까지
@@ -28,11 +28,14 @@ function TypingIndicator() {
 
 export default function ChatScenario({
   scenario,
+  label,
   onFinish,
   slug,
   onAnswered,
 }: {
   scenario: ChatScenario;
+  // 상단바 이름 — 유형에서 온다(#99).
+  label: string;
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
@@ -41,17 +44,43 @@ export default function ChatScenario({
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [typing, setTyping] = useState(false);
 
-  const addBubble = (b: Bubble) => setBubbles((prev) => [...prev, b]);
+  // 날짜 구분선은 문항이 시작하는 순간 바로 찍는다 — 첫 말풍선을 기다렸다 같이 나오면
+  // 날이 바뀐 걸 대사와 함께 읽게 된다. 몇 번째 말풍선 앞자리인지로 위치를 기억한다.
+  const [dividers, setDividers] = useState<Record<number, string>>({});
+  const count = useRef(0);
+  const addBubble = (b: Bubble) => {
+    count.current += 1;
+    setBubbles((prev) => [...prev, b]);
+  };
 
   // 맥락 대사를 하나씩 타이핑 연출로 등장시킨 뒤 선택지를 연다.
   const reveal = (
     step: ChatScenario["steps"][number],
-    _index: number,
+    index: number,
     open: () => void,
   ) => {
     const timers: number[] = [];
+    const mark = dateMark(scenario.steps, index);
+    if (mark) setDividers((d) => ({ ...d, [count.current]: mark }));
     let at = OPENING_DELAY_MS;
     step.context.forEach((msg) => {
+      // 내가 이미 한 말은 타이핑 연출 없이 바로 나간다 — 내 손이 친 것이므로.
+      if (msg.mine) {
+        const shownAt = at + REPLY_BEAT_MS;
+        timers.push(
+          window.setTimeout(() => {
+            playSendPop();
+            addBubble({
+              side: "me",
+              speaker: "나",
+              text: msg.text,
+              at: msg.at,
+            });
+          }, shownAt),
+        );
+        at = shownAt + readMs(msg.text);
+        return;
+      }
       const shownAt = scheduleTyping(timers, at, msg.text, setTyping, () => {
         playMessagePop();
         addBubble({
@@ -90,6 +119,13 @@ export default function ChatScenario({
         : isCorrect
           ? step.reactCorrect
           : step.reactWrong;
+    // 반응 화자를 따로 적었으면 그 사람이 답한다. 안 적었으면 지문의 상대 화자.
+    const reactSpeaker =
+      (choiceIndex === null
+        ? step.reactTimeoutSpeaker
+        : isCorrect
+          ? step.reactCorrectSpeaker
+          : step.reactWrongSpeaker) || scenario.speaker;
     const shownAt = scheduleTyping(
       timers,
       REPLY_BEAT_MS,
@@ -99,7 +135,7 @@ export default function ChatScenario({
         playMessagePop();
         addBubble({
           side: "them",
-          speaker: scenario.speaker,
+          speaker: reactSpeaker,
           text: reactText,
           at: step.at,
           tone: isCorrect ? "correct" : "wrong",
@@ -123,18 +159,20 @@ export default function ChatScenario({
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [bubbles, typing, s.stage, s.picked]);
+  }, [bubbles, dividers, typing, s.stage, s.picked]);
 
   const { step } = s;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col lg:mx-auto lg:max-w-xl">
       <ScenarioTopBar
-        label={scenario.roomTitle}
+        label={label}
         stepIndex={s.stepIndex}
         total={s.total}
         stage={s.stage}
         remaining={s.remaining}
+        readLeft={s.readLeft}
+        onSkipRead={s.skipRead}
       />
 
       {/* 대화 영역 — 시나리오 내내 누적. 여기만 스크롤(스크롤바 감춤). */}
@@ -142,14 +180,25 @@ export default function ChatScenario({
         {bubbles.map((b, i) => {
           const prev = bubbles[i - 1];
           return (
-            <ChatBubble
-              key={i}
-              bubble={b}
-              grouped={prev?.side === b.side && prev?.speaker === b.speaker}
-              timed={showsTime(bubbles, i)}
-            />
+            <Fragment key={i}>
+              {dividers[i] && <DateDivider date={dividers[i]} />}
+              <ChatBubble
+                bubble={b}
+                // 날이 바뀌었으면 이름·프로필을 다시 보여준다.
+                grouped={
+                  !dividers[i] &&
+                  prev?.side === b.side &&
+                  prev?.speaker === b.speaker
+                }
+                timed={showsTime(bubbles, i)}
+              />
+            </Fragment>
           );
         })}
+        {/* 아직 그 날의 첫 말풍선이 오기 전 — 날짜만 먼저 서 있다. */}
+        {dividers[bubbles.length] && (
+          <DateDivider date={dividers[bubbles.length]} />
+        )}
         {typing && <TypingIndicator />}
         <div ref={endRef} />
       </div>

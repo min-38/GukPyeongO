@@ -13,16 +13,32 @@ interface ChatExtra {
   reactCorrect?: string;
   reactWrong?: string;
   reactTimeout?: string;
+  reactCorrectSpeaker?: string;
+  reactWrongSpeaker?: string;
+  reactTimeoutSpeaker?: string;
   at?: string;
+  date?: string;
 }
 
 const REACTIONS: {
   key: "reactCorrect" | "reactWrong" | "reactTimeout";
+  speakerKey:
+    | "reactCorrectSpeaker"
+    | "reactWrongSpeaker"
+    | "reactTimeoutSpeaker";
   label: string;
 }[] = [
-  { key: "reactCorrect", label: "정답일 때" },
-  { key: "reactWrong", label: "오답일 때" },
-  { key: "reactTimeout", label: "무응답(시간 초과)일 때" },
+  {
+    key: "reactCorrect",
+    speakerKey: "reactCorrectSpeaker",
+    label: "정답일 때",
+  },
+  { key: "reactWrong", speakerKey: "reactWrongSpeaker", label: "오답일 때" },
+  {
+    key: "reactTimeout",
+    speakerKey: "reactTimeoutSpeaker",
+    label: "무응답(시간 초과)일 때",
+  },
 ];
 
 export default function ChatStepFields({
@@ -50,6 +66,17 @@ export default function ChatStepFields({
 
   return (
     <div className="mt-3 rounded-2xl border border-border p-3">
+      {/* 대화가 며칠에 걸칠 수 있다. 앞 문항과 날이 다르면 대화 가운데 구분선이 뜬다. */}
+      <label className="mb-3 block text-xs text-muted">
+        날짜 — 앞 문항과 다를 때만 대화에 표시됩니다. 같은 날이면 비워 두세요
+        <input
+          value={e.date ?? ""}
+          onChange={(ev) => onChange({ ...extra, date: ev.target.value })}
+          placeholder="2월 3일 월요일"
+          className={`mt-1 w-full ${INPUT}`}
+        />
+      </label>
+
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted">
           이 문제 앞에 오는 대화 ({context.length})
@@ -69,18 +96,42 @@ export default function ChatStepFields({
         {context.map((msg, i) => (
           <li key={i} className="flex items-start gap-2">
             <span className="flex w-24 shrink-0 flex-col gap-1">
-              <input
-                value={msg.speaker}
-                onChange={(ev) =>
+              {/* 내가 이미 한 말이면 오른쪽 말풍선으로 나간다 — 대화가 오가다 문제가 나오게. */}
+              <button
+                type="button"
+                onClick={() =>
                   setContext(
                     context.map((m, j) =>
-                      j === i ? { ...m, speaker: ev.target.value } : m,
+                      j === i
+                        ? m.mine
+                          ? { ...m, mine: false, speaker: defaultSpeaker }
+                          : { ...m, mine: true, speaker: "나" }
+                        : m,
                     ),
                   )
                 }
-                placeholder="화자"
-                className={`w-full ${INPUT}`}
-              />
+                className={`w-full rounded-lg px-2 py-1 text-[11px] font-bold ${
+                  msg.mine
+                    ? "bg-brand text-brand-foreground"
+                    : "bg-surface-muted text-muted"
+                }`}
+              >
+                {msg.mine ? "나" : "상대"}
+              </button>
+              {!msg.mine && (
+                <input
+                  value={msg.speaker}
+                  onChange={(ev) =>
+                    setContext(
+                      context.map((m, j) =>
+                        j === i ? { ...m, speaker: ev.target.value } : m,
+                      ),
+                    )
+                  }
+                  placeholder="화자"
+                  className={`w-full ${INPUT}`}
+                />
+              )}
               <input
                 value={msg.at ?? ""}
                 onChange={(ev) =>
@@ -144,14 +195,25 @@ export default function ChatStepFields({
         <span className="text-xs font-medium text-muted">
           답변 후 상대 반응 — 무응답은 오답과 상황이 다르므로 따로 씁니다
         </span>
-        {REACTIONS.map(({ key, label }) => (
+        {REACTIONS.map(({ key, speakerKey, label }) => (
           <label key={key} className="text-xs text-muted">
             {label}
-            <input
-              value={(e[key] as string) ?? ""}
-              onChange={(ev) => onChange({ ...extra, [key]: ev.target.value })}
-              className={`mt-1 w-full ${INPUT}`}
-            />
+            {/* 답하는 사람이 매번 같지는 않다. 비우면 지문의 상대 화자가 말한다. */}
+            <span className="mt-1 flex gap-2">
+              <input
+                value={e[speakerKey] ?? ""}
+                onChange={(ev) =>
+                  onChange({ ...extra, [speakerKey]: ev.target.value })
+                }
+                placeholder={defaultSpeaker || "화자"}
+                className={`w-24 shrink-0 ${INPUT}`}
+              />
+              <input
+                value={(e[key] as string) ?? ""}
+                onChange={(ev) => onChange({ ...extra, [key]: ev.target.value })}
+                className={`flex-1 ${INPUT}`}
+              />
+            </span>
           </label>
         ))}
       </div>

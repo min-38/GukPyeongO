@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { POINTS_BY_DIFFICULTY } from "./scenario-points";
-import { playCorrect, playWrong } from "./sfx";
+import { stepPoints } from "./scenario-points";
+import { playCorrect, playCountTick, playWrong } from "./sfx";
 
 // 유형(회사 메신저·커뮤니티…)이 공유하는 진행 상태머신.
 // "무엇을 어떻게 보여줄지"(맥락 재생·반응 연출)는 표면이 콜백으로 주입하고,
@@ -11,12 +11,17 @@ import { playCorrect, playWrong } from "./sfx";
 
 export type ScenarioStage = "replaying" | "answering" | "answered";
 
+// 지문을 훑는 동안 남은 시간을 상단바에 보여주려면 표면이 그 길이를 알려줘야 한다(#99).
+// 표면이 콘텐츠를 띄우는 시점에 plan(ms)을 부르고, 훅이 초를 세며 건너뛰기를 받는다.
+export type PlanRead = (ms: number) => void;
+
 // 유형별 문제 스텝의 최소 공통 형태.
 // answerIndex는 서버 채점(#83)으로 오면 클라이언트에 내려오지 않는다.
 export interface ScenarioStep {
   id?: string;
   answerIndex?: number;
   difficulty: 1 | 2 | 3;
+  points?: number; // 문항 배점(#99). 없으면 난이도 환산표를 쓴다.
   timeLimitSec: number;
 }
 
@@ -44,6 +49,9 @@ async function gradeOnServer(
 }
 
 const SCORE_POP_MS = 1000; // 점수 애니메이션 길이 (globals.css의 score-pop과 동일)
+// 남은 시간이 이만큼일 때 한 번 알린다. 상단 타이머가 빨갛게 변하는 시점과 같은 값이라
+// 눈으로 보든 소리로 듣든 같은 순간에 알아챈다(ScenarioUI의 remaining <= 5).
+const WARN_SEC = 5;
 
 export interface AnswerResult {
   choiceIndex: number | null; // null = 무응답(시간 초과)
@@ -68,11 +76,18 @@ export function useScenario<S extends ScenarioStep>({
   onFinish: (score: number) => void;
   slug?: string;
   onAnswered?: (stepId: string, choiceIndex: number | null) => void;
-  reveal: (step: S, index: number, open: () => void) => () => void;
+  reveal: (
+    step: S,
+    index: number,
+    open: () => void,
+    plan: PlanRead,
+  ) => () => void;
   respond: (step: S, result: AnswerResult, next: () => void) => () => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [stage, setStage] = useState<ScenarioStage>("replaying");
+  // 지문 읽는 시간 중 남은 초. null이면 표시하지 않는다(#99).
+  const [readLeft, setReadLeft] = useState<number | null>(null);
   // timeLimitSec이 0이면 제한시간 없음 — 튜토리얼 예시를 눌러보는 용도(#93).
   const [remaining, setRemaining] = useState(steps[0].timeLimitSec);
   const [picked, setPicked] = useState<number | null>(null);
@@ -119,7 +134,7 @@ export function useScenario<S extends ScenarioStep>({
       onAnswered?.(step.id ?? "", choiceIndex);
 
       const isCorrect = choiceIndex !== null && choiceIndex === revealed;
-      const gained = isCorrect ? POINTS_BY_DIFFICULTY[step.difficulty] : 0;
+      const gained = isCorrect ? stepPoints(step) : 0;
       scoreRef.current += gained;
 
       setAnswerIndex(revealed);
@@ -166,15 +181,54 @@ export function useScenario<S extends ScenarioStep>({
   );
 
   // 스텝 진입 → 맥락 재생 → open()으로 선택지 노출.
+  // 재생 중에는 남은 읽기 시간을 세고, 건너뛰기를 누르면 남은 연출을 끊고 바로 연다.
+  const openRef = useRef<() => void>(() => {});
+  const endRevealRef = useRef<() => void>(() => {});
+  const readTickRef = useRef<number | null>(null);
+
+  const stopReadClock = () => {
+    if (readTickRef.current !== null) window.clearInterval(readTickRef.current);
+    readTickRef.current = null;
+    setReadLeft(null);
+  };
+
   useEffect(() => {
     const open = () => {
+      stopReadClock();
       setPicked(null);
       setCorrect(false);
       setRemaining(step.timeLimitSec);
       setStage("answering");
     };
-    return revealRef.current(step, stepIndex, open);
+    openRef.current = open;
+
+    const plan: PlanRead = (ms) => {
+      // 같은 스텝에서 두 번 불려도 시계가 겹치지 않게 먼저 멈춘다.
+      if (readTickRef.current !== null)
+        window.clearInterval(readTickRef.current);
+      if (ms <= 0) return;
+      let left = Math.ceil(ms / 1000);
+      setReadLeft(left);
+      readTickRef.current = window.setInterval(() => {
+        left -= 1;
+        setReadLeft(left > 0 ? left : 0);
+      }, 1000);
+    };
+
+    const cleanup = revealRef.current(step, stepIndex, open, plan);
+    endRevealRef.current = cleanup ?? (() => {});
+    return () => {
+      stopReadClock();
+      cleanup?.();
+    };
   }, [step, stepIndex]);
+
+  // 다 읽었으면 기다리지 않고 넘어간다.
+  const skipRead = useCallback(() => {
+    if (stage !== "replaying") return;
+    endRevealRef.current();
+    openRef.current();
+  }, [stage]);
 
   // 제한시간 타이머 — 선택지가 열린 뒤(answering)부터. 초과 시 무응답 처리.
   useEffect(() => {
@@ -183,6 +237,8 @@ export function useScenario<S extends ScenarioStep>({
     const tick = setInterval(() => {
       left -= 1;
       setRemaining(left > 0 ? left : 0);
+      // 제한시간이 원래 짧은 문항은 시작하자마자 울리게 되므로 건너뛴다.
+      if (left === WARN_SEC && step.timeLimitSec > WARN_SEC) playCountTick();
     }, 1000);
     const deadline = window.setTimeout(
       () => answer(null),
@@ -201,6 +257,8 @@ export function useScenario<S extends ScenarioStep>({
     stage,
     // 제한시간이 없는 스텝(튜토리얼 예시)은 null — 표면이 타이머를 감춘다.
     remaining: step.timeLimitSec > 0 ? remaining : null,
+    readLeft,
+    skipRead,
     picked,
     correct,
     scorePop,

@@ -21,6 +21,7 @@ interface StepRow {
   prompt: string;
   choices: string[];
   difficulty: number;
+  points: number | null;
   time_limit_sec: number;
   show_up_to: number | null;
   extra: Record<string, unknown> | null;
@@ -44,6 +45,7 @@ function toStep(row: StepRow) {
     prompt: row.prompt,
     choices: row.choices,
     difficulty: row.difficulty,
+    ...(row.points === null ? {} : { points: row.points }),
     timeLimitSec: row.time_limit_sec,
     ...(row.show_up_to === null ? {} : { showUpTo: row.show_up_to }),
     ...(row.extra ?? {}),
@@ -62,10 +64,16 @@ export async function getScheduledScenarios(
     const { data, error } = await getSupabaseAdmin()
       .from("scenario_schedule")
       .select(
-        "sort_order, scenarios(slug, kind, payload, status, scenario_steps(step_key, type, prompt, choices, difficulty, time_limit_sec, show_up_to, extra))"
+        "sort_order, scenarios(slug, kind, payload, status, scenario_steps(step_key, type, prompt, choices, difficulty, points, time_limit_sec, show_up_to, extra))"
       )
       .eq("publish_date", date)
-      .order("sort_order", { ascending: true });
+      .order("sort_order", { ascending: true })
+      // 문항 순서까지 정해줘야 한다. 안 정하면 DB가 돌려주는 대로라 출제 순서가 뒤섞인다 —
+      // 메신저는 대화가 이어지는 유형이라 날짜가 거꾸로 가버린다.
+      .order("sort_order", {
+        referencedTable: "scenarios.scenario_steps",
+        ascending: true,
+      });
 
     if (error || !data) return [];
 

@@ -27,9 +27,15 @@ export interface CommunityStep {
 }
 
 export interface CommunityScenario {
+  // 문제가 열리기 전 지문을 훑는 시간(#99). 없으면 글 길이로 계산한다.
+  readSec?: number;
   id: string;
   boardName: string;
   post: CommunityPost;
   comments: CommunityComment[];
   steps: CommunityStep[];
+  // 지문을 HTML 조각으로 쓸 때(#99). 둘 중 하나라도 있으면 그쪽을 그린다.
+  // 게시판 이름·작성자·글 제목도 조각 안에 함께 쓰므로 따로 채우지 않는다.
+  postHtml?: string;
+  commentsHtml?: string;
 }

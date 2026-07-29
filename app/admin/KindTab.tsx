@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { POINTS_BY_DIFFICULTY } from "@/app/lib/scenario-points";
+import { stepPoints } from "@/app/lib/scenario-points";
+
+import PageHeader from "./PageHeader";
 import {
   type AdminScenario,
   SCENARIO_KIND_DESCRIPTIONS,
@@ -20,7 +22,7 @@ import {
 function points(s: AdminScenario): number {
   return s.steps.reduce(
     (sum, step) =>
-      sum + (POINTS_BY_DIFFICULTY[step.difficulty as 1 | 2 | 3] ?? 0),
+      sum + stepPoints(step),
     0,
   );
 }
@@ -31,7 +33,7 @@ export default function KindTab({ scenarios }: { scenarios: AdminScenario[] }) {
 
   return (
     <section>
-      <h2 className="text-xl font-bold">유형</h2>
+      <PageHeader title="유형" desc="유형마다 문제가 몇 편, 몇 점어치 있는지." />
       <p className="mt-1 text-sm text-muted">
         유형은 화면(표면)과 짝지어져 있어 새로 만들 수 없습니다. 문제를 유형별로
         모아 봅니다.

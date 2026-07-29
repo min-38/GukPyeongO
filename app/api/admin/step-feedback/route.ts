@@ -13,6 +13,7 @@ import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 interface StepJoin {
   prompt: string;
+  scenario_id: string;
   scenarios: { title: string } | null;
 }
 
@@ -52,6 +53,7 @@ function toRatings(rows: RatingRow[]): AdminStepRating[] {
   for (const row of rows) {
     const acc = byStep.get(row.step_id) ?? {
       stepId: row.step_id,
+      scenarioId: row.scenario_steps?.scenario_id ?? "",
       scenarioTitle: row.scenario_steps?.scenarios?.title ?? "(삭제된 문제)",
       stepPrompt: row.scenario_steps?.prompt ?? "(삭제된 문항)",
       average: 0,
@@ -78,7 +80,7 @@ export async function GET() {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
   const supabase = getSupabaseAdmin();
-  const select = "scenario_steps(prompt, scenarios(title))";
+  const select = "scenario_steps(prompt, scenario_id, scenarios(title))";
 
   const [reports, ratings] = await Promise.all([
     supabase

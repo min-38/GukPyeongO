@@ -18,12 +18,13 @@ export function payloadLines(
     comments?: { nick?: string; text?: string }[];
     subject?: string;
     messages?: { from?: string; body?: string[] }[];
-    roomTitle?: string;
     speaker?: string;
   };
   switch (kind) {
     case "notice":
     case "news":
+    case "contract":
+    case "manual":
       return [
         `[${p.doc?.source ?? ""}] ${p.doc?.title ?? ""}`,
         ...(p.doc?.body ?? []),
@@ -45,7 +46,7 @@ export function payloadLines(
         ]),
       ];
     case "chat":
-      return [`${p.roomTitle ?? ""} · 상대: ${p.speaker ?? ""}`];
+      return [`상대: ${p.speaker ?? ""}`];
     default:
       return [];
   }
@@ -58,4 +59,28 @@ export function chatContextLines(step: Record<string, unknown>): string[] {
   return context.map(
     (m) => `${m.speaker}: ${m.text}${m.at ? ` (${m.at})` : ""}`,
   );
+}
+
+// 지문을 HTML 조각으로 쓴 경우 그 조각들(#99). 없으면 빈 배열 — 그러면 문단 배열을 쓴다.
+// 유형마다 조각이 놓이는 자리가 다르다: 문서형은 doc.html, 커뮤니티는 원글·댓글 둘.
+export function payloadHtml(
+  kind: ScenarioKind,
+  payload: Record<string, unknown>,
+): string[] {
+  const p = payload as {
+    doc?: { html?: string };
+    postHtml?: string;
+    commentsHtml?: string;
+    html?: string;
+    messages?: { html?: string }[];
+  };
+  const fragments =
+    kind === "community"
+      ? [p.postHtml, p.commentsHtml]
+      : kind === "story"
+        ? [p.html]
+        : kind === "email"
+          ? (p.messages ?? []).map((m) => m.html)
+          : [p.doc?.html];
+  return fragments.filter((f): f is string => !!f?.trim());
 }

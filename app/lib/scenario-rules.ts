@@ -18,6 +18,8 @@ const BODY_LIMITS: Partial<Record<ScenarioKind, number>> = {
 };
 
 // 분당 읽기 속도 상한. 이보다 빠르게 읽어야 하면 독해가 아니라 속독 시험이 된다.
+// 읽는 속도의 눈금(#99). 저장을 막는 데는 쓰지 않는다 — 얼마를 줄지는 만드는 사람이 정한다.
+// 편집기가 "분당 몇 자"를 계산해 보여주는 데만 쓴다.
 export const MAX_CHARS_PER_MINUTE = 400;
 
 // 감정·심정·분위기·주제는 본문이 확정하지 못한다. 채점자가 정하는 문제가 되어버린다(#73).
@@ -49,13 +51,30 @@ function bodyText(
 ): string {
   const p = payload as {
     body?: string[];
-    doc?: { body?: string[] };
+    doc?: { body?: string[]; html?: string };
     post?: { body?: string[] };
-    messages?: { body?: string[] }[];
+    postHtml?: string;
+    commentsHtml?: string;
+    html?: string;
+    messages?: { body?: string[]; html?: string }[];
   };
+  // HTML 조각으로 쓴 지문(#99)도 본문으로 친다 — 태그를 걷어낸 글자만 센다.
+  const html = [
+    p.doc?.html,
+    p.postHtml,
+    p.commentsHtml,
+    p.html,
+    ...(p.messages ?? []).map((m) => m.html),
+  ]
+    .filter(Boolean)
+    .join("")
+    .replace(/<[^>]*>/g, "");
+  if (html.trim().length > 0) return html;
   switch (kind) {
     case "notice":
     case "news":
+    case "contract":
+    case "manual":
       return (p.doc?.body ?? []).join("");
     case "story":
       return (p.body ?? []).join("");
@@ -82,10 +101,8 @@ export function checkScenarioRules(
   }
 
   if (kind === "chat") {
-    // 메신저는 지문 자리에 방 제목·상대 화자만 있다. 화자가 없으면 반응 대사를 누가 하는지 모른다.
-    const p = payload as { roomTitle?: unknown; speaker?: unknown };
-    if (typeof p.roomTitle !== "string" || p.roomTitle.trim().length === 0)
-      errors.push("대화방 제목을 입력해주세요.");
+    // 메신저는 지문이 없고 상대 화자만 있다. 화자가 없으면 반응 대사를 누가 하는지 모른다.
+    const p = payload as { speaker?: unknown };
     if (typeof p.speaker !== "string" || p.speaker.trim().length === 0)
       errors.push("상대 화자를 입력해주세요.");
   }
@@ -95,21 +112,6 @@ export function checkScenarioRules(
     warnings.push(
       `본문이 ${body.length}자입니다. 권장 상한 ${limit}자를 넘으면 모바일에서 읽기 어렵습니다.`,
     );
-  }
-
-  if (kind === "story") {
-    const readSec = Number((payload as { readSec?: unknown }).readSec ?? 0);
-    if (!Number.isFinite(readSec) || readSec <= 0) {
-      errors.push("읽기 시간(readSec)을 1초 이상으로 지정해주세요.");
-    } else if (body.length > 0) {
-      const perMinute = body.length / (readSec / 60);
-      if (perMinute > MAX_CHARS_PER_MINUTE) {
-        const needed = Math.ceil((body.length / MAX_CHARS_PER_MINUTE) * 60);
-        errors.push(
-          `읽기 시간이 부족합니다. 본문 ${body.length}자에는 ${needed}초 이상이 필요합니다(현재 ${readSec}초).`,
-        );
-      }
-    }
   }
 
   if (kind === "email") {

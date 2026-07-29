@@ -5,7 +5,14 @@
 // 렌더링 표면 종류. DB의 scenarios.kind 와 같은 값.
 // 공지와 신문은 화면이 같지만 유형은 나눈다 — 유형별 튜토리얼·안내가 갈라진다(#92).
 export type ScenarioKind =
-  "notice" | "news" | "community" | "chat" | "email" | "story";
+  | "notice"
+  | "news"
+  | "community"
+  | "chat"
+  | "email"
+  | "story"
+  | "contract"
+  | "manual";
 
 export const SCENARIO_KINDS: ScenarioKind[] = [
   "notice",
@@ -14,6 +21,8 @@ export const SCENARIO_KINDS: ScenarioKind[] = [
   "chat",
   "email",
   "story",
+  "contract",
+  "manual",
 ];
 
 export const SCENARIO_KIND_LABELS: Record<ScenarioKind, string> = {
@@ -23,6 +32,21 @@ export const SCENARIO_KIND_LABELS: Record<ScenarioKind, string> = {
   chat: "메신저",
   email: "이메일",
   story: "서사",
+  contract: "계약서",
+  manual: "사용설명서",
+};
+
+// 유형 이름 그대로 화면에 다는 제목(#99). 튜토리얼 제목과 푸는 화면 상단바가 같은 값을 쓴다 —
+// 게시판 이름·방 제목을 문제마다 따로 지정하지 않아도 무슨 유형인지 늘 보인다.
+export const SCENARIO_KIND_TITLES: Record<ScenarioKind, string> = {
+  notice: "공지사항",
+  news: "신문",
+  community: "커뮤니티",
+  chat: "메신저",
+  email: "이메일",
+  story: "서사",
+  contract: "계약서",
+  manual: "사용설명서",
 };
 
 // 유형이 무엇을 재는지. 목록에서 어떤 유형에 문제를 더 채울지 판단하는 데 쓴다(#92).
@@ -33,6 +57,8 @@ export const SCENARIO_KIND_DESCRIPTIONS: Record<ScenarioKind, string> = {
   chat: "대화 맥락을 읽고 보낼 답장을 고른다",
   email: "회신 스레드를 훑거나 원문과 답장을 대조한다",
   story: "긴 이야기를 읽고 세부·생략·서술자를 따진다",
+  contract: "조항에 묶이는 의무와 돈을 조문에서 짚어낸다",
+  manual: "절차의 순서와 경고가 미치는 범위를 가려낸다",
 };
 
 export type ScenarioStatus = "draft" | "published" | "held";
@@ -57,6 +83,7 @@ export interface AdminScenarioStep {
   choices: string[];
   answerIndex: number;
   difficulty: number;
+  points: number; // 문항 배점(#99). 하루 만점 100점을 이 값들로 맞춘다.
   timeLimitSec: number;
   showUpTo: number | null; // 이메일 전용(순차 공개)
   // 유형별 추가 필드(#80). 메신저는 여기에 context·reactCorrect·reactWrong·reactTimeout을 담는다.

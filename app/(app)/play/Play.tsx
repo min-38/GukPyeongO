@@ -1,6 +1,7 @@
 "use client";
 
 import { type ChatScenario } from "@/app/lib/chat-scenario";
+import { SCENARIO_KIND_TITLES } from "@/app/lib/scenario-admin";
 
 import ChatScenarioView from "./ChatScenario";
 import PlayShell from "./PlayShell";
@@ -10,11 +11,9 @@ export default function ChatPlay({ scenario }: { scenario: ChatScenario }) {
   return (
     <PlayShell
       doneTitle="대화 종료!"
-      tutorial={(start) => (
-        <Tutorial roomTitle={scenario.roomTitle} onStart={start} />
-      )}
+      tutorial={(start) => <Tutorial onStart={start} />}
       renderScenario={(onFinish) => (
-        <ChatScenarioView scenario={scenario} onFinish={onFinish} slug="chat" />
+        <ChatScenarioView label={SCENARIO_KIND_TITLES.chat} scenario={scenario} onFinish={onFinish} slug="chat" />
       )}
     />
   );

@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 
-import { type ScenarioStep, useScenario } from "@/app/lib/useScenario";
+import { type ScenarioStep, useScenario, type PlanRead } from "@/app/lib/useScenario";
 
 import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
 
@@ -33,14 +33,24 @@ export default function ReadingScenario<S extends ReadingStep>({
   onFinish: (score: number) => void;
   slug?: string;
   onAnswered?: (stepId: string, choiceIndex: number | null) => void;
-  revealOnce: (open: () => void) => () => void;
+  revealOnce: (open: () => void, plan: PlanRead) => () => void;
   // 2번째 스텝부터 콘텐츠를 더 여는 유형(이메일)만 넘긴다. 없으면 문제만 바뀐다.
-  revealNext?: (step: S, index: number, open: () => void) => () => void;
+  revealNext?: (
+    step: S,
+    index: number,
+    open: () => void,
+    plan: PlanRead,
+  ) => () => void;
   children: ReactNode;
 }) {
-  const reveal = (step: S, index: number, open: () => void) => {
-    if (index === 0) return revealOnce(open);
-    if (revealNext) return revealNext(step, index, open);
+  const reveal = (
+    step: S,
+    index: number,
+    open: () => void,
+    plan: PlanRead,
+  ) => {
+    if (index === 0) return revealOnce(open, plan);
+    if (revealNext) return revealNext(step, index, open, plan);
     // 콘텐츠는 이미 다 떠 있다 — 문제만 바뀐다.
     const t = window.setTimeout(open, NEXT_STEP_OPEN_MS);
     return () => clearTimeout(t);
@@ -70,11 +80,14 @@ export default function ReadingScenario<S extends ReadingStep>({
         total={s.total}
         stage={s.stage}
         remaining={s.remaining}
+        readLeft={s.readLeft}
+        onSkipRead={s.skipRead}
       />
 
       {/* 콘텐츠 영역 — 넘칠 때만 여기서 스크롤(스크롤바 감춤). 위에서부터 읽으므로 자동스크롤 없음.
-          늘리지는 않는다(flex-1 없음) — 지문이 짧으면 선택지가 바로 밑에 붙는다. */}
-      <div className="mt-6 flex min-h-0 flex-col gap-3 overflow-y-auto [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          남는 높이를 다 먹어(flex-1) 선택지를 화면 아래에 고정한다 — 문항이 바뀌어도
+          누를 자리가 움직이지 않게. 메신저 표면과 같은 규칙이다. */}
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
 

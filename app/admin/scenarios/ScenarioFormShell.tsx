@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
 
-// 편집 페이지 공통 껍데기 (#66). 목록으로 돌아갈 길을 항상 남겨둔다.
+// 편집 페이지 머리 (#66, #99).
+// 왼쪽 판과 오늘 스트립은 어드민 레이아웃이 그린다 — 여기서는 제목과 나가는 길만.
 export default function ScenarioFormShell({
   title,
   children,
@@ -10,14 +11,17 @@ export default function ScenarioFormShell({
   children: ReactNode;
 }) {
   return (
-    <main className="flex-1 px-5 py-6 lg:px-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{title}</h1>
-        <Link href="/admin?tab=scenarios" className="text-sm text-muted">
-          ← 목록
+    <>
+      <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
+        <h1 className="font-display text-2xl leading-none">{title}</h1>
+        <Link
+          href="/admin/scenarios"
+          className="text-sm font-medium text-muted hover:text-foreground"
+        >
+          목록으로
         </Link>
       </div>
-      <div className="mt-4">{children}</div>
-    </main>
+      {children}
+    </>
   );
 }

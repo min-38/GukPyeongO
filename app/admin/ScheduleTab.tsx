@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-import { POINTS_BY_DIFFICULTY } from "@/app/lib/scenario-points";
+import { stepPoints } from "@/app/lib/scenario-points";
 import {
   type AdminScenario,
   SCENARIO_KIND_LABELS,
 } from "@/app/lib/scenario-admin";
 
 import { moved, RowButtons } from "./ListRow";
+import PageHeader from "./PageHeader";
 import { INPUT } from "./ui";
 
 // 날짜별 편성 (#87).
@@ -23,7 +24,7 @@ const DAILY_MAX_SCORE = 100;
 function scenarioPoints(s: AdminScenario): number {
   return s.steps.reduce(
     (sum, step) =>
-      sum + (POINTS_BY_DIFFICULTY[step.difficulty as 1 | 2 | 3] ?? 0),
+      sum + stepPoints(step),
     0,
   );
 }
@@ -129,12 +130,12 @@ export default function ScheduleTab({
 
   return (
     <section>
-      <h2 className="text-xl font-bold">편성</h2>
-      <p className="mt-1 text-sm text-muted">
-        그날 낼 문제와 순서를 정합니다. 게시 상태인 문제만 편성할 수 있습니다.
-      </p>
+      <PageHeader
+        title="편성"
+        desc="그날 낼 문제와 순서를 정합니다. 게시 상태인 문제만 편성할 수 있습니다."
+      />
 
-      <div className="mt-4 flex gap-6">
+      <div className="flex gap-6">
         {/* 편성된 날짜들 — 어느 날이 비어 있는지 한눈에 */}
         <aside className="w-52 shrink-0">
           <label className="text-xs font-medium text-muted">

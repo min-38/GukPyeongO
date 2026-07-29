@@ -6,7 +6,7 @@ import { useState } from "react";
 import { type ContextMessage, showsTime } from "@/app/lib/chat-scenario";
 import { type EmailMessage } from "@/app/lib/email-scenario";
 import {
-  SCENARIO_KIND_LABELS,
+  SCENARIO_KIND_TITLES,
   type ScenarioKind,
 } from "@/app/lib/scenario-admin";
 
@@ -17,6 +17,7 @@ import {
   CommentRow,
   DocCard,
   EmailThread,
+  HtmlBlock,
   PostCard,
 } from "../../play/SurfaceCards";
 import useStoredResult from "../useStoredResult";
@@ -63,37 +64,27 @@ function verdict(item: Item) {
   };
 }
 
-// 상단바 이름. 풀 때 각 표면이 쓰던 라벨을 그대로 쓴다(공지사항·메일·회사 메신저 …).
-function surfaceLabel(scenario: ReviewScenario): string {
-  const p = scenario.content as {
-    sourceLabel?: string;
-    boardName?: string;
-    roomTitle?: string;
-  };
-  return (
-    p.sourceLabel ??
-    p.boardName ??
-    p.roomTitle ??
-    SCENARIO_KIND_LABELS[scenario.kind]
-  );
-}
-
 // 유형별 지문. 풀 때 쓰는 카드를 그대로 불러 쓴다.
 function ScenarioBody({ item }: { item: Item }) {
   const c = item.content as {
     doc?: { source: string; title: string; body: string[] };
     post?: { author: string; title: string; body: string[] };
     comments?: { nick: string; text: string; reply?: boolean }[];
+    postHtml?: string;
+    commentsHtml?: string;
     messages?: EmailMessage[];
     subject?: string;
     source?: string;
     title?: string;
     body?: string[];
+    html?: string;
   };
 
   switch (item.kind) {
     case "notice":
     case "news":
+    case "contract":
+    case "manual":
       return c.doc ? <DocCard {...c.doc} /> : null;
     case "story":
       return (
@@ -101,9 +92,18 @@ function ScenarioBody({ item }: { item: Item }) {
           source={c.source ?? ""}
           title={c.title ?? ""}
           body={c.body ?? []}
+          html={c.html}
         />
       );
     case "community":
+      // HTML로 쓴 지문은 원글·댓글 두 덩어리로 그린다(#99). 옛 데이터는 예전 카드로.
+      if (c.postHtml?.trim() || c.commentsHtml?.trim())
+        return (
+          <>
+            {c.postHtml?.trim() && <HtmlBlock html={c.postHtml} card />}
+            {c.commentsHtml?.trim() && <HtmlBlock html={c.commentsHtml} />}
+          </>
+        );
       return (
         <>
           {c.post && <PostCard {...c.post} />}
@@ -143,7 +143,6 @@ function EmailBody({ item }: { item: Item }) {
   const c = item.content as {
     subject?: string;
     messages?: EmailMessage[];
-    layout?: "thread" | "toggle";
   };
   const messages = c.messages ?? [];
   const visible = item.showUpTo ?? messages.length;
@@ -151,9 +150,7 @@ function EmailBody({ item }: { item: Item }) {
 
   return (
     <EmailThread
-      subject={c.subject ?? ""}
       messages={messages}
-      layout={c.layout}
       visible={visible}
       tab={Math.min(tab, visible - 1)}
       onTab={setTab}
@@ -165,28 +162,27 @@ function EmailBody({ item }: { item: Item }) {
 // 내가 보낸 답장·상대 반응까지 이어 붙여야 풀 때 보던 화면이 된다.
 function makeChatStacker() {
   const sofar = new Map<string, Bubble[]>();
+  // 시나리오마다 화면에 마지막으로 찍은 날. 이것과 다른 날이면 구분선을 넣는다.
+  const lastDate = new Map<string, string>();
 
   return (
     scenario: ReviewScenario,
     step: Record<string, unknown>,
     r: { slug: string; choiceIndex: number | null; answerIndex: number },
   ): Bubble[] => {
-    const shown = [
-      ...(sofar.get(r.slug) ?? []),
-      ...((step.context ?? []) as ContextMessage[]).map((m) => ({
-        side: "them" as const,
-        speaker: m.speaker,
+    // 이 문항에서 오간 대사 — 맥락 대사, 내 답장, 상대 반응. 다시 보는 사람은 이미 다 본 대화다.
+    const added: Bubble[] = ((step.context ?? []) as ContextMessage[]).map(
+      (m) => ({
+        side: m.mine ? ("me" as const) : ("them" as const),
+        speaker: m.mine ? "나" : m.speaker,
         text: m.text,
         at: m.at,
-      })),
-    ];
-
-    // 이 문항에서 오간 답장과 반응까지 붙인다 — 다시 보는 사람은 이미 다 본 대화다.
-    const next = [...shown];
+      }),
+    );
     const at = step.at as string | undefined;
     const correct = r.choiceIndex === r.answerIndex;
     if (r.choiceIndex !== null) {
-      next.push({
+      added.push({
         side: "me",
         speaker: "나",
         text: (step.choices as string[])[r.choiceIndex],
@@ -199,15 +195,32 @@ function makeChatStacker() {
       : correct
         ? step.reactCorrect
         : step.reactWrong) as string | undefined;
+    // 반응 화자를 따로 적은 문항이면 그 사람 이름으로 (풀 때와 같은 규칙).
+    const reactSpeaker = ((r.choiceIndex === null
+      ? step.reactTimeoutSpeaker
+      : correct
+        ? step.reactCorrectSpeaker
+        : step.reactWrongSpeaker) ||
+      scenario.content.speaker ||
+      "") as string;
     if (reactText) {
-      next.push({
+      added.push({
         side: "them",
-        speaker: (scenario.content.speaker as string) ?? "",
+        speaker: reactSpeaker,
         text: reactText,
         at,
         tone: correct ? "correct" : "wrong",
       });
     }
+
+    // 날이 바뀌었으면 이 문항의 첫 말풍선에 날짜를 달아 구분선을 세운다.
+    const date = step.date as string | undefined;
+    if (date && added[0] && date !== lastDate.get(r.slug)) {
+      added[0] = { ...added[0], date };
+    }
+    if (date) lastDate.set(r.slug, date);
+
+    const next = [...(sofar.get(r.slug) ?? []), ...added];
     sofar.set(r.slug, next);
     return next;
   };
@@ -238,7 +251,7 @@ export default function Review({
         slug: r.slug,
         stepKey: r.stepKey,
         kind: scenario.kind,
-        label: surfaceLabel(scenario),
+        label: SCENARIO_KIND_TITLES[scenario.kind],
         content: scenario.content,
         bubbles: chatBubbles(scenario, step, r),
         showUpTo: (step.showUpTo as number | undefined) ?? null,
@@ -249,6 +262,11 @@ export default function Review({
       },
     ];
   });
+
+  // 저장소를 아직 못 읽었다 — 결과 없음 안내를 먼저 띄우지 않는다.
+  if (result === undefined) {
+    return <main className="flex flex-1" aria-busy />;
+  }
 
   if (items.length === 0) {
     return (
@@ -330,7 +348,7 @@ export default function Review({
 
       {/* 지문. 풀 때와 같은 카드로 그린다 — 이메일은 이메일처럼, 메신저는 말풍선으로.
           다른 건 등장 연출과 타이머가 없다는 것뿐이다. */}
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="no-rise mt-6 flex flex-col gap-3">
         <ScenarioBody key={index} item={item} />
       </div>
 
@@ -343,6 +361,7 @@ export default function Review({
         correct={item.picked === item.answerIndex}
         scorePop={null}
         onAnswer={() => {}}
+        collapsible={false}
       />
 
       <div className="mt-6 flex gap-2">
@@ -364,15 +383,13 @@ export default function Review({
         </button>
       </div>
 
-      {/* 다 본 사람에게만 나가는 길을 연다 — 중간에 두면 넘기다 잘못 눌러 빠져나간다. */}
-      {last && (
-        <Link
-          href="/result"
-          className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-brand text-base font-bold text-brand"
-        >
-          결과로 돌아가기
-        </Link>
-      )}
+      {/* 어느 문항에서든 나갈 수 있어야 한다. 이전·다음 아래에 두어 넘기다 잘못 누르지 않게. */}
+      <Link
+        href="/result"
+        className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-brand text-base font-bold text-brand"
+      >
+        결과로 돌아가기
+      </Link>
     </main>
   );
 }

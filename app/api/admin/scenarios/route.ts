@@ -41,6 +41,7 @@ interface ParsedStep {
   choices: string[];
   answer_index: number;
   difficulty: number;
+  points: number;
   time_limit_sec: number;
   show_up_to: number | null;
   extra: Record<string, unknown>;
@@ -91,19 +92,35 @@ function parseChatExtra(raw: unknown, at: string) {
   // 보낸 시각(#94)은 선택. 빈 값이면 아예 넣지 않아 화면이 자리를 비운다.
   const time = (v: unknown) =>
     typeof v === "string" && v.trim().length > 0 ? { at: v.trim() } : {};
+  // 빈 값이면 키 자체를 넣지 않는다 — 화면이 기본값으로 되돌아간다.
+  const text = (v: unknown, key: string) =>
+    typeof v === "string" && v.trim().length > 0 ? { [key]: v.trim() } : {};
 
   return {
-    context: (context as { speaker: string; text: string; at?: unknown }[]).map(
-      (m) => ({
-        speaker: m.speaker.trim(),
-        text: m.text.trim(),
-        ...time(m.at),
-      }),
-    ),
+    context: (
+      context as {
+        speaker: string;
+        text: string;
+        at?: unknown;
+        mine?: unknown;
+      }[]
+    ).map((m) => ({
+      speaker: m.speaker.trim(),
+      text: m.text.trim(),
+      ...time(m.at),
+      // 내가 이미 한 말이면 오른쪽 말풍선으로 나간다(#99).
+      ...(m.mine === true ? { mine: true } : {}),
+    })),
     reactCorrect: (s.reactCorrect as string).trim(),
     reactWrong: (s.reactWrong as string).trim(),
     reactTimeout: (s.reactTimeout as string).trim(),
+    // 반응 화자는 선택. 비우면 지문의 상대 화자가 말한다.
+    ...text(s.reactCorrectSpeaker, "reactCorrectSpeaker"),
+    ...text(s.reactWrongSpeaker, "reactWrongSpeaker"),
+    ...text(s.reactTimeoutSpeaker, "reactTimeoutSpeaker"),
     ...time(s.at),
+    // 대화가 며칠에 걸칠 때 날이 바뀌는 문항에만 적는다(#99).
+    ...text(s.date, "date"),
   };
 }
 
@@ -189,6 +206,16 @@ function parseInput(body: unknown): ParsedInput | string {
     )
       return `${at}: 난이도는 1~3 사이여야 합니다.`;
 
+    // 배점은 문항이 직접 갖는다(#99). 하루 만점 100점을 이 값들로 맞춘다.
+    const points = s.points;
+    if (
+      typeof points !== "number" ||
+      !Number.isInteger(points) ||
+      points < 1 ||
+      points > 100
+    )
+      return `${at}: 배점은 1~100 사이의 정수여야 합니다.`;
+
     const timeLimitSec = s.timeLimitSec;
     if (
       typeof timeLimitSec !== "number" ||
@@ -221,6 +248,7 @@ function parseInput(body: unknown): ParsedInput | string {
       choices: (s.choices as string[]).map((c) => c.trim()),
       answer_index: answerIndex,
       difficulty,
+      points,
       time_limit_sec: timeLimitSec,
       show_up_to: typeof showUpTo === "number" ? showUpTo : null,
       extra,
@@ -322,7 +350,7 @@ export async function POST(request: Request) {
   if (error || !data) {
     const msg =
       error?.code === "23505"
-        ? "이미 같은 slug의 시나리오가 있습니다."
+        ? `식별자 '${parsed.slug}'는 이미 다른 문제가 쓰고 있습니다.`
         : "저장에 실패했습니다.";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
@@ -375,7 +403,7 @@ export async function PATCH(request: Request) {
   if (error) {
     const msg =
       error.code === "23505"
-        ? "이미 같은 slug의 시나리오가 있습니다."
+        ? `식별자 '${parsed.slug}'는 이미 다른 문제가 쓰고 있습니다.`
         : "수정에 실패했습니다.";
     return NextResponse.json({ error: msg }, { status: 400 });
   }

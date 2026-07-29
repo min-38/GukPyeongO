@@ -41,6 +41,16 @@ export default function PlayShell({
   // 이번 회차 점수가 없으면 지난 기록을 보여준다. "다시"를 누른 뒤에는 기록을 무시한다.
   const shownScore = finalScore ?? (restarted ? null : (initialScore ?? null));
 
+  // 푸는 도중에 새로고침하면 회차가 통째로 날아간다 — 오늘 문제는 다시 못 푼다.
+  // 브라우저 기본 확인창을 띄워 한 번 더 묻는다(문구는 브라우저가 정한다).
+  const playing = started && shownScore === null;
+  useEffect(() => {
+    if (!playing) return;
+    const confirmLeave = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", confirmLeave);
+    return () => window.removeEventListener("beforeunload", confirmLeave);
+  }, [playing]);
+
   // 이 화면에서는 페이지 자체가 스크롤되지 않는다(머무는 동안만 문서 스크롤 잠금).
   useEffect(() => {
     const { documentElement: html, body } = document;

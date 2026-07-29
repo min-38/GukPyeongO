@@ -162,3 +162,24 @@ body {
     opacity: 0.15;
   }
 }
+
+/* 지문 HTML에서 쓸 수 있는 클래스(#99).
+   Tailwind는 소스 파일에 적힌 클래스만 CSS로 만든다. 지문은 DB에 있어 훑지 않으므로
+   여기에 적어 미리 굽는다. 여기 없는 클래스를 지문에 쓰면 스타일이 안 먹는다. */
+@source inline("mt-{1,2,3,4,5,6,8} mb-{1,2,3,4,5,6,8} ml-{2,4,6,8} px-{1,2,3,4} py-{1,2,3,4} p-{2,3,4}");
+@source inline("text-{xs,sm,base,lg,xl,2xl} font-{normal,medium,semibold,bold,extrabold} leading-{snug,normal,relaxed}");
+@source inline("text-{muted,brand,foreground} text-{left,center,right} italic underline line-through whitespace-pre-line");
+@source inline("list-{disc,decimal,inside,none} flex flex-col grid gap-{1,2,3,4} grid-cols-{2,3}");
+@source inline("rounded{,-lg,-xl,-2xl,-full} border border-{border,brand} bg-{surface,surface-muted} bg-brand/{10,20}");
+/* 프로필 동그라미처럼 표면 컴포넌트가 쓰던 모양을 지문에서도 그대로 쓰기 위한 것들 */
+@source inline("grid place-items-center shrink-0 min-w-0 items-{start,center,end} justify-between");
+@source inline("h-{6,7,8} w-{6,7,8} text-[11px] text-[13px] text-[15px] text-[17px]");
+@source inline("border-{b,t,l} pb-{1,2,3,4} pt-{1,2,3,4} pl-{2,3,4} tabular-nums flex-1 truncate gap-{5,6}");
+
+
+/* 문제 다시 보기(#96)에서는 지문이 올라오는 연출을 끈다.
+   이미 본 화면을 넘겨 보는 자리라, 문항을 넘길 때마다 지문이 다시 떠오르면 산만하다.
+   표면 컴포넌트가 animate-rise를 안에 박고 있어 클래스 대신 여기서 덮는다. */
+.no-rise * {
+  animation: none;
+}
