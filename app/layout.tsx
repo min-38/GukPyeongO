@@ -23,6 +23,15 @@ export const metadata: Metadata = {
   description,
   // www 와 비-www 가 따로 색인돼 점수가 갈리지 않게 정본 주소를 밝힌다.
   alternates: { canonical: "/" },
+  // 네이버 서치어드바이저 소유확인.
+  // 국내 검색은 네이버 몫이 절반이라 구글만 등록하면 그만큼을 통째로 놓친다.
+  // 이 값은 페이지 소스에 그대로 나가는 공개 문자열이라 환경변수로 감출 이유가 없다 —
+  // 코드에 두면 배포 설정을 빠뜨려 확인이 풀릴 일도 없다.
+  verification: {
+    other: {
+      "naver-site-verification": "8f0926d9d4613448b2efccf9c827ebe031ab98c0",
+    },
+  },
   openGraph: {
     title,
     description,

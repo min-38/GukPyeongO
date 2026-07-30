@@ -7,8 +7,6 @@ import {
   gradeBlurb,
   gradeTheme,
   GRADE_TITLES,
-  type QuizMode,
-  QUIZ_MODES,
   type StoredResult,
 } from "@/app/lib/quiz";
 
@@ -86,12 +84,6 @@ function blurbSeed(r: StoredResult): number {
   return r.finishedAt ? Date.parse(r.finishedAt) / 60000 : r.correctCount;
 }
 
-// 응시 모드 해석. 저장된 mode가 없으면(구버전 데이터) 문항 수로 추정한다.
-function resultMode(r: StoredResult): QuizMode {
-  if (r.mode === "quick" || r.mode === "deep") return r.mode;
-  return r.totalCount >= QUIZ_MODES.deep.size ? "deep" : "quick";
-}
-
 export default function ResultPage() {
   const result = useStoredResult();
   const [copied, setCopied] = useState(false);
@@ -103,9 +95,10 @@ export default function ResultPage() {
   // 개인정보는 담지 않고 사이트 진입 경로(랜딩)만 공유한다.
   async function handleShare() {
     if (!result) return;
-    const url = window.location.origin;
-    const modeCfg = QUIZ_MODES[resultMode(result)];
-    const text = `국평오 ${result.modeLabel ?? modeCfg.label}(${result.totalCount}문제): 내 문해력 캐릭터는 "${result.title}" (${result.grade}등급)! 당신은?`;
+    // 결과 화면은 브라우저 저장소를 읽어 그리므로 남에게 주소를 줘도 빈 화면이다.
+    // 등급을 실은 공유 전용 주소를 준다 — 받은 사람은 내 등급을 보고 바로 풀러 갈 수 있다.
+    const url = `${window.location.origin}/share/${result.grade}`;
+    const text = `국평오 문해력 테스트: 내 등급은 ${result.grade}등급 "${result.title}"! 당신은?`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {

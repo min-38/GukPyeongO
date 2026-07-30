@@ -9,11 +9,21 @@ export const alt = "국평오 테스트 — 이 주의 문해력 문제";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// 1등급 마스코트(범고래)를 그대로 올린다(#106).
+// 등급 캐릭터 9종을 한 줄로 늘어놓는다(#106).
+// 1등급 하나만 쓰면 "이미 1등급"처럼 읽히는 데다, 등급이 아홉 칸이라는 게 안 보인다.
+// 아홉 마리가 늘어서 있으면 그림만으로 "몇 등급인지 재는 테스트"가 전달된다.
 // Satori는 외부 URL을 못 읽으므로 파일을 읽어 data URI로 넘긴다.
-async function loadOrca(): Promise<string> {
-  const file = await readFile(join(process.cwd(), "public/animals/1.png"));
+const OG_CHARACTER: "all" | number = "all"; // 하나만 쓰려면 등급 숫자를 넣는다(5 = 양)
+
+async function loadAnimal(grade: number): Promise<string> {
+  const file = await readFile(join(process.cwd(), `public/animals/${grade}.png`));
   return `data:image/png;base64,${file.toString("base64")}`;
+}
+
+async function loadAnimals(): Promise<string[]> {
+  const grades =
+    OG_CHARACTER === "all" ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [OG_CHARACTER];
+  return Promise.all(grades.map(loadAnimal));
 }
 
 // 한글 렌더링용 폰트. 구형 User-Agent로 요청해 Satori가 읽는 TTF를 받는다.
@@ -43,7 +53,7 @@ async function loadKoreanFont(): Promise<ArrayBuffer | null> {
 }
 
 export default async function Image() {
-  const [font, orca] = await Promise.all([loadKoreanFont(), loadOrca()]);
+  const [font, animals] = await Promise.all([loadKoreanFont(), loadAnimals()]);
 
   // 한글 폰트를 못 받았다. 한글을 그대로 그리면 네모로 깨져 나가므로 로마자만 남긴다.
   if (!font) {
@@ -63,12 +73,18 @@ export default async function Image() {
           <div style={{ display: "flex", color: "#ffffff", fontSize: 84 }}>
             gukpyeongo.site
           </div>
-          <img src={orca} width={320} height={320} alt="" />
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {animals.slice(0, 3).map((src, i) => (
+              <img key={i} src={src} width={150} height={150} alt="" />
+            ))}
+          </div>
         </div>
       ),
       size,
     );
   }
+
+  const many = animals.length > 1;
 
   return new ImageResponse(
     (
@@ -77,14 +93,14 @@ export default async function Image() {
           width: "100%",
           height: "100%",
           display: "flex",
-          alignItems: "center",
+          flexDirection: "column",
           justifyContent: "space-between",
-          padding: "80px 96px",
+          padding: "68px 84px 56px",
           background: "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)",
           fontFamily: "Black Han Sans",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", maxWidth: 620 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
               display: "flex",
@@ -93,23 +109,42 @@ export default async function Image() {
               borderRadius: 999,
               background: "rgba(255,255,255,0.16)",
               color: "#e9d5ff",
-              fontSize: 34,
-              marginBottom: 36,
+              fontSize: 32,
+              marginBottom: 28,
             }}
           >
             국어 문해력 테스트
           </div>
-          <div style={{ display: "flex", color: "#ffffff", fontSize: 92, lineHeight: 1.1 }}>
+          <div style={{ display: "flex", color: "#ffffff", fontSize: 86, lineHeight: 1.1 }}>
             당신의 문해력은 몇 등급?
           </div>
-          <div style={{ display: "flex", color: "#e9d5ff", fontSize: 46, marginTop: 28 }}>
-            빠르게 문제 풀고 등급 확인하기
-          </div>
-          <div style={{ display: "flex", color: "#c4b5fd", fontSize: 32, marginTop: 56 }}>
-            www.gukpyeongo.site
+          <div style={{ display: "flex", color: "#e9d5ff", fontSize: 40, marginTop: 22 }}>
+            일주일마다 새 문제 · 회원가입 없이
           </div>
         </div>
-        <img src={orca} width={320} height={320} alt="" />
+
+        {/* 등급 1에서 9까지, 왼쪽이 높은 등급이다. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: many ? "space-between" : "flex-end",
+          }}
+        >
+          {animals.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              width={many ? 116 : 260}
+              height={many ? 116 : 260}
+              alt=""
+            />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", color: "#c4b5fd", fontSize: 30 }}>
+          www.gukpyeongo.site
+        </div>
       </div>
     ),
     {
