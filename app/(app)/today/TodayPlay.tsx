@@ -34,9 +34,6 @@ import SurfaceByKind from "../play/SurfaceByKind";
 import TutorialByKind from "../play/TutorialByKind";
 import TutorialShell from "../play/TutorialShell";
 
-// 공통 튜토리얼은 한 번 익히면 끝이라 끌 수 있다(#93).
-const TODAY_TUTORIAL_KEY = "gukpyeongo:today-tutorial-seen";
-
 // 오늘 편성된 문제를 이어서 푸는 한 회차 (#87).
 // 유형이 섞여 나온다 — 하나가 끝나면 다음 시나리오로 넘어가고, 점수는 회차 전체로 합산한다.
 export default function TodayPlay({
@@ -203,7 +200,6 @@ export default function TodayPlay({
         <TutorialShell
           framed
           countdown
-          dismissKey={TODAY_TUTORIAL_KEY}
           pages={[
             {
               title: "테스트 방식",

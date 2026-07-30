@@ -1,11 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 2 100 100">
-  <!-- 대현자 마법사 (GradeCharacter grade 1) -->
-  <path d="M48 58 C31 58 26 76 24 95 C23 101 28 102 34 102 L62 102 C68 102 73 101 72 95 C70 76 65 58 48 58 Z" fill="#f59e0b"/>
-  <circle cx="48" cy="50" r="15" fill="#ffd9b0"/>
-  <circle cx="43" cy="49" r="2.6" fill="#2a2440"/>
-  <circle cx="53" cy="49" r="2.6" fill="#2a2440"/>
-  <path d="M36 54 C39 80 57 80 60 54 C55 69 41 69 36 54 Z" fill="#f4f2ff"/>
-  <ellipse cx="48" cy="38" rx="26" ry="6" fill="#d4920f"/>
-  <polygon points="48,4 33,38 63,38" fill="#f5b342"/>
-  <circle cx="48" cy="5" r="4" fill="#f4f2ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 파비콘: '국' — 홈 제목과 같은 Black Han Sans 글자꼴.
+       파비콘은 웹폰트를 못 불러오는 자리라 <text>로 쓰면 시스템 폰트로 대체된다.
+       그래서 그 글자의 외곽선만 떠서 path로 박아 둔다(폰트 파일은 싣지 않는다).
+       배경은 투명 — 밝은 탭에서도 어두운 탭에서도 글자만 남는다. -->
+  <path fill="#7c3aed" transform="translate(2.876 58.000) scale(0.06943 -0.06943)" d="M572 599V507H749L759 749H80V599ZM779 459H60V310H325V245H80V95H572V0H759V245H513V310H779Z"/>
 </svg>

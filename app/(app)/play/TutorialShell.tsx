@@ -14,9 +14,8 @@ import { playCountGo, playCountTick, unlockAudio } from "@/app/lib/sfx";
 // 한 장에 몰아 넣지 않고 이전/다음으로 한 장씩 넘긴다(v1 튜토리얼과 같은 방식).
 // 마지막 장의 버튼이 시작 버튼이고, 그게 오디오 잠금 해제 지점이다.
 //
-// 건너뛰는 방식이 두 가지다.
-//   dismissKey 있음(공통) — "다시 보지 않기". 끄면 다음부터 튜토리얼을 건너뛴다.
-//   dismissKey 없음(유형별) — "바로 시작". 유형마다 읽는 법이 달라 끄지는 않는다.
+// 건너뛰기는 이번 한 번만이다 — "다시 보지 않기"로 아예 꺼두면 오랜만에 들어온 사람이
+// 규칙을 모른 채로 시작하게 된다. 회차마다 새로 읽는 편이 낫다고 보고 저장을 걷어냈다.
 
 export interface TutorialPage {
   // 이모지 한 글자가 보통이지만 배지 같은 작은 그림을 넣기도 한다.
@@ -28,20 +27,11 @@ export interface TutorialPage {
   visual?: ReactNode;
 }
 
-function seen(key: string): boolean {
-  try {
-    return localStorage.getItem(key) === "1";
-  } catch {
-    return false; // localStorage 접근 불가 — 그냥 보여준다.
-  }
-}
-
 export default function TutorialShell({
   label,
   pages,
   startLabel,
   onStart,
-  dismissKey,
   framed,
   countdown,
 }: {
@@ -50,8 +40,6 @@ export default function TutorialShell({
   pages: TutorialPage[];
   startLabel: string;
   onStart: () => void;
-  // 주면 "다시 보지 않기"가 생긴다. 없으면 "바로 시작".
-  dismissKey?: string;
   // 화면을 채우지 않고 가운데 카드 하나로 띄운다.
   //   true      — 공통 튜토리얼. 글과 작은 그림만 들어간다.
   //   "example" — 유형별 튜토리얼. 예시 표면이 들어가 자리가 더 필요하고,
@@ -69,7 +57,6 @@ export default function TutorialShell({
   // 오디오 잠금은 sfx가 첫 입력에서 알아서 푼다(sfx.ts의 bindUnlock).
   // localStorage는 서버에 없어 마운트 뒤에야 껐는지 알 수 있다.
   // 그때까지 아무것도 그리지 않는다 — 먼저 그리면 껐던 사람 화면에 튜토리얼이 깜빡인다.
-  const [ready, setReady] = useState(dismissKey === undefined);
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     if (count === null) return;
@@ -119,19 +106,6 @@ export default function TutorialShell({
     return () => clearTimeout(t);
   }, [intro]);
 
-  useEffect(() => {
-    if (dismissKey === undefined) return;
-    if (seen(dismissKey)) onStart();
-    // 껐는지 확인한 뒤에야 그린다. 렌더 중에 읽으면 서버와 어긋나고,
-    // 그리고 나서 지우면 껐던 사람 화면에 튜토리얼이 한 프레임 깜빡인다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    else setReady(true);
-    // 마운트 시 한 번만 — onStart가 렌더마다 새로 와도 다시 부르지 않는다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (!ready) return null;
-
   const page = pages[index];
   const isLast = index === last;
   // 유형 소개에서는 제목만 먼저 뜬다. 제목이 제자리로 내려앉을 때 카드와 나머지가 함께 나타난다(#99).
@@ -148,14 +122,8 @@ export default function TutorialShell({
     setCount(3);
   }
 
+  // 이번 회차만 건너뛴다. 다음에 들어오면 튜토리얼을 다시 보여준다.
   function skip() {
-    if (dismissKey) {
-      try {
-        localStorage.setItem(dismissKey, "1");
-      } catch {
-        /* localStorage 접근 불가 시 무시 */
-      }
-    }
     onStart();
   }
 
@@ -249,7 +217,7 @@ export default function TutorialShell({
       </div>
 
       {pages.length > 1 && (
-        <div className={`mt-4 flex shrink-0 justify-center gap-2 ${veil}`}>
+        <div className={`flex shrink-0 justify-center gap-2 ${veil}`}>
           {pages.map((_, i) => (
             <span
               key={i}
@@ -289,7 +257,7 @@ export default function TutorialShell({
             isLast ? "invisible" : ""
           }`}
         >
-          {dismissKey ? "다시 보지 않기" : "바로 시작"}
+          스킵하기
         </button>
       </div>
     </>

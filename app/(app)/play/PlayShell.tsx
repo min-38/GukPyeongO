@@ -57,6 +57,29 @@ export default function PlayShell({
     return () => window.removeEventListener("beforeunload", confirmLeave);
   }, [playing]);
 
+  // 뒤로 가기도 한 번 잡는다. beforeunload는 새로고침·창 닫기만 막고,
+  // 앱 안에서의 뒤로 가기(popstate)에는 뜨지 않는다 — 손가락이 미끄러져 회차가 날아간다.
+  //
+  // 히스토리에 자리 하나를 미리 넣어 두고, 뒤로 가기가 그 자리를 먹으면 그때 묻는다.
+  // 남겠다고 하면 자리를 다시 채워 다음 뒤로 가기도 또 잡는다.
+  useEffect(() => {
+    if (!playing) return;
+    const here = window.location.href;
+    window.history.pushState(null, "", here);
+
+    const onPop = () => {
+      if (window.confirm("지금 나가면 풀던 문제를 이어서 볼 수 없어요. 나갈까요?")) {
+        window.removeEventListener("popstate", onPop);
+        window.history.back();
+      } else {
+        window.history.pushState(null, "", here);
+      }
+    };
+
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [playing]);
+
   // 이 화면에서는 페이지 자체가 스크롤되지 않는다(머무는 동안만 문서 스크롤 잠금).
   useEffect(() => {
     const { documentElement: html, body } = document;
