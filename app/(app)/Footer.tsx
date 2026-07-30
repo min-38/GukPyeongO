@@ -1,6 +1,8 @@
 import Link from "next/link";
 
-// 공개 페이지(메인·결과) 하단 푸터. 운영자 문의처와 개인정보처리방침 링크.
+import InquiryDialog from "./InquiryDialog";
+
+// 공개 페이지(메인·결과) 하단 푸터. 문의·후원·개인정보처리방침 링크.
 // className으로 모바일 고정 CTA가 있는 메인에서 하단 여백을 보정한다.
 export default function Footer({ className = "" }: { className?: string }) {
   return (
@@ -24,11 +26,16 @@ export default function Footer({ className = "" }: { className?: string }) {
             개인정보처리방침
           </Link>
           <span className="text-border">·</span>
+          {/* 메일 주소 대신 어드민 문의함으로 바로 받는다. */}
+          <InquiryDialog />
+          <span className="text-border">·</span>
           <a
-            href="mailto:contact@gukpyeongo.site"
+            href="https://ko-fi.com/minbape"
+            target="_blank"
+            rel="noreferrer noopener"
             className="font-medium transition-colors hover:text-foreground"
           >
-            문의 contact@gukpyeongo.site
+            후원하기
           </a>
         </nav>
         <p className="text-muted">

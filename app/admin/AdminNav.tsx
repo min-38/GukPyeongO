@@ -14,6 +14,7 @@ export type AdminTab =
   | "kinds"
   | "schedule"
   | "reports"
+  | "inquiries"
   | "feedback"
   | "comments"
   | "audit"
@@ -22,6 +23,7 @@ export type AdminTab =
 export interface NavCounts {
   scenarios?: number;
   reports?: number;
+  inquiries?: number;
   feedback?: number;
   comments?: number;
   audit?: number;
@@ -48,6 +50,7 @@ const GROUPS: {
     items: [
       { id: "feedback", label: "항의·평가", alert: true },
       { id: "reports", label: "신고", alert: true },
+      { id: "inquiries", label: "문의함", alert: true },
       { id: "comments", label: "댓글" },
     ],
   },

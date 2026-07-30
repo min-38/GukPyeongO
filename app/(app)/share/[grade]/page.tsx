@@ -66,7 +66,7 @@ export default async function SharePage({
       </p>
 
       <Link
-        href="/today"
+        href="/"
         className="mt-2 flex h-14 w-full max-w-xs items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 active:scale-[0.98]"
       >
         나도 해보기

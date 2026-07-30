@@ -362,6 +362,32 @@ export const REPORT_REASONS = [
 export type ReportReason = (typeof REPORT_REASONS)[number];
 export const MAX_REPORT_DETAIL_LENGTH = 200;
 
+// 문의함. 푸터의 mailto 대신 어드민으로 직접 받는다.
+export const INQUIRY_KINDS = ["bug", "question", "suggestion", "etc"] as const;
+export type InquiryKind = (typeof INQUIRY_KINDS)[number];
+
+export const INQUIRY_KIND_LABELS: Record<InquiryKind, string> = {
+  bug: "오류 신고",
+  question: "문의",
+  suggestion: "제안",
+  etc: "기타",
+};
+
+export const MAX_INQUIRY_LENGTH = 1000;
+export const MAX_INQUIRY_CONTACT_LENGTH = 120;
+
+// 어드민 문의함 한 줄.
+export interface AdminInquiry {
+  id: string;
+  kind: InquiryKind;
+  message: string;
+  contact: string | null;
+  status: "open" | "resolved";
+  path: string | null;
+  ipMasked: string;
+  createdAt: string;
+}
+
 export interface Report {
   id: string;
   questionId: string;
