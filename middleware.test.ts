@@ -30,6 +30,41 @@ afterEach(() => {
   else process.env.ADMIN_ENABLED = ADMIN_ENABLED;
 });
 
+describe("개발용 경로 차단", () => {
+  // 유형 맛보기 경로를 열어두면 회차 밖에서 답이 확정돼 버린다.
+  const SLUGS = [
+    "/play", "/news", "/notice", "/community",
+    "/story", "/email", "/contract", "/manual",
+  ];
+
+  it("모든 유형 경로가 미들웨어가 보는 목록에 있다", () => {
+    for (const s of SLUGS) expect(matched(s)).toBe(true);
+  });
+
+  it("프로덕션에서는 전부 404", () => {
+    for (const s of SLUGS) expect(blocked(s)).toBe(true);
+  });
+
+  it("실제 입구는 막지 않는다", () => {
+    expect(blocked("/today")).toBe(false);
+    expect(blocked("/result")).toBe(false);
+    expect(blocked("/share/1")).toBe(false);
+  });
+});
+
+describe("내려간 v1 경로", () => {
+  it("/test 는 404가 아니라 /today 로 넘긴다", () => {
+    // 구글이 색인해 둔 주소라 지우면 검색 유입이 끊긴다.
+    const res = get("/test");
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/today`);
+  });
+
+  it("matcher 에 들어 있다", () => {
+    expect(matched("/test")).toBe(true);
+  });
+});
+
 describe("어드민 차단", () => {
   it("어드민 API도 미들웨어가 보는 경로에 들어 있다", () => {
     // 화면만 막고 API를 두면 어드민 보안이 비밀번호 하나에만 걸린다.

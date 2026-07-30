@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// 개발 중에만 열어두는 경로 (#87).
-//  · slug 경로 — 유형을 하나씩 확인하려고 낸 길이다. 실제 입구는 /today(그날 편성).
-//  · /test — v1 문해력 테스트. v2로 넘어가면서 서비스에서 내린다(거취는 #84).
-// 주의: 홈의 시작 버튼이 아직 /test 를 가리킨다. 배포 전에 #90(진입 동선)을 끝내야
-//       프로덕션에서 문제로 들어갈 길이 남는다.
+// 개발 중에만 열어두는 slug 경로 (#87).
+// 유형을 하나씩 확인하려고 낸 길이라 실제 입구가 아니다 — 입구는 /today(이 주의 편성)다.
+// 여기를 열어두면 회차 밖에서 문항에 답할 수 있고, 그 답이 서버에 확정돼
+// (scenario_step_answers) 나중에 그 시나리오가 편성됐을 때 다시 답할 수 없게 된다.
 const DEV_ONLY_ROUTES = [
   "/play",
   "/news",
@@ -12,8 +11,15 @@ const DEV_ONLY_ROUTES = [
   "/community",
   "/story",
   "/email",
-  "/test",
+  "/contract",
+  "/manual",
 ];
+
+// v1 테스트. 구글이 이미 색인해 둔 주소라 404로 지우면 그동안 쌓인 검색 유입이 통째로 끊긴다.
+// 없애는 대신 이 주의 문제로 넘겨 색인 가치와 방문자를 그대로 옮긴다.
+const RETIRED_ROUTES: Record<string, string> = {
+  "/test": "/today",
+};
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -31,6 +37,12 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/api/admin/")
   ) {
     return process.env.ADMIN_ENABLED ? NextResponse.next() : notFound();
+  }
+
+  // 내려간 v1 경로는 프로덕션에서만 새 주소로 넘긴다(개발 중에는 그대로 열어 둔다).
+  const movedTo = RETIRED_ROUTES[pathname];
+  if (movedTo && process.env.NODE_ENV !== "development") {
+    return NextResponse.redirect(new URL(movedTo, request.url), 301);
   }
 
   // slug 경로는 개발 중에만 열어둔다. 배포에서는 /admin 과 마찬가지로 404.
@@ -60,6 +72,8 @@ export const config = {
     "/story",
     "/email",
     "/email/:path*",
+    "/contract",
+    "/manual",
     "/test",
   ],
 };
