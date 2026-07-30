@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { stepPoints } from "@/app/lib/scenario-points";
+import { isoToKstLocal, kstLocalToIso, plusDaysKstLocal } from "@/app/lib/kst";
+import { ROUND_MAX_SCORE, stepPoints } from "@/app/lib/scenario-points";
 import {
   type AdminScenario,
   SCENARIO_KIND_LABELS,
@@ -12,58 +13,63 @@ import { moved, RowButtons } from "./ListRow";
 import PageHeader from "./PageHeader";
 import { INPUT } from "./ui";
 
-// 날짜별 편성 (#87).
-// 유저는 slug로 시나리오에 직접 가지 않는다 — 그날 편성된 문제들을 순서대로 푼다.
-// 여기서 날짜를 고르고, 그날 낼 시나리오와 순서를 정한다.
+// 회차 편성 (#87, #100).
+// 유저는 slug로 시나리오에 직접 가지 않는다 — 회차에 편성된 문제들을 순서대로 푼다.
+// 여기서 회차의 시작·마감 일시를 정하고, 그 회차에 낼 시나리오와 순서를 정한다.
 
-// 하루치 만점. 서버도 이 값으로 막는다(app/api/admin/schedule/route.ts).
-// 등급이 획득 점수 ÷ 만점이라(#89) 날마다 만점이 다르면 같은 등급이 다른 실력을 뜻하게 된다.
-const DAILY_MAX_SCORE = 100;
-
-// 시나리오 하나의 배점 합 — 문항 난이도로 정해진다.
-function scenarioPoints(s: AdminScenario): number {
-  return s.steps.reduce(
-    (sum, step) =>
-      sum + stepPoints(step),
-    0,
-  );
-}
-
-interface ScheduleDay {
-  date: string;
+interface AdminRound {
+  id: string;
+  startsAt: string; // ISO
+  endsAt: string; // ISO
   scenarioIds: string[];
 }
 
-// 오늘 날짜(KST). 서버 시간대가 UTC여도 하루가 어긋나지 않게 오프셋을 더해 계산한다.
-function todayKst(): string {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().slice(0, 10);
+// 시나리오 하나의 배점 합 — 문항 난이도로 정해진다.
+function scenarioPoints(s: AdminScenario): number {
+  return s.steps.reduce((sum, step) => sum + stepPoints(step), 0);
 }
+
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 export default function ScheduleTab({
   scenarios,
 }: {
   scenarios: AdminScenario[];
 }) {
-  const [date, setDate] = useState(todayKst());
-  const [schedule, setSchedule] = useState<ScheduleDay[]>([]);
+  const [rounds, setRounds] = useState<AdminRound[]>([]);
+  // 고른 회차. null이면 아직 저장되지 않은 새 회차다.
+  const [selected, setSelected] = useState<string | null>(null);
+  // datetime-local 값(KST 벽시계). 저장할 때 kstLocalToIso로 못 박는다.
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
   // 편집 중인 목록. null이면 아직 손대지 않았다는 뜻이라 서버에서 읽은 편성을 그대로 쓴다.
-  // effect로 서버 상태를 복사해두면 날짜를 바꿀 때마다 렌더가 두 번 돈다.
   const [draft, setDraft] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // 편성된 날짜 전체를 한 번 읽어둔다. 날짜를 옮겨 다닐 때마다 서버를 다시 부르지 않아도 된다.
   useEffect(() => {
     let active = true;
     fetch("/api/admin/schedule")
-      .then((r) => r.json() as Promise<{ schedule?: ScheduleDay[] }>)
+      .then((r) => r.json() as Promise<{ rounds?: AdminRound[] }>)
       .then((d) => {
         if (!active) return;
-        setSchedule(d.schedule ?? []);
+        const list = d.rounds ?? [];
+        setRounds(list);
+        // 처음 열면 가장 최근 회차를 보여준다.
+        if (list[0]) {
+          setSelected(list[0].id);
+          setStartsAt(isoToKstLocal(list[0].startsAt));
+          setEndsAt(isoToKstLocal(list[0].endsAt));
+        }
         setLoading(false);
       })
       .catch(() => active && setLoading(false));
@@ -72,32 +78,44 @@ export default function ScheduleTab({
     };
   }, []);
 
-  const saved0 = schedule.find((s) => s.date === date)?.scenarioIds ?? [];
-  const picked = draft ?? saved0;
+  const current = rounds.find((r) => r.id === selected) ?? null;
+  const picked = draft ?? current?.scenarioIds ?? [];
   const setPicked = (next: string[]) => {
     setDraft(next);
     setSaved(false);
   };
 
-  // 날짜를 옮기면 편집분을 버리고 그날 편성을 보여준다.
-  const changeDate = (next: string) => {
-    setDate(next);
+  function open(round: AdminRound) {
+    setSelected(round.id);
+    setStartsAt(isoToKstLocal(round.startsAt));
+    setEndsAt(isoToKstLocal(round.endsAt));
     setDraft(null);
     setSaved(false);
     setError(null);
-  };
+  }
+
+  function startNew() {
+    setSelected(null);
+    setStartsAt(isoToKstLocal(new Date().toISOString()));
+    setEndsAt("");
+    setDraft([]);
+    setSaved(false);
+    setError(null);
+  }
 
   const published = scenarios.filter((s) => s.status === "published");
   const byId = new Map(scenarios.map((s) => [s.id, s]));
   const byIdPoints = new Map(scenarios.map((s) => [s.id, scenarioPoints(s)]));
   const addable = published.filter((s) => !picked.includes(s.id));
 
-  // 그날 만점. 100이 아니면 게시하지 않는다(서버도 같은 값으로 막는다).
+  // 회차 만점. 100이 아니면 게시하지 않는다(서버도 같은 값으로 막는다).
   const totalPoints = picked.reduce(
     (sum, id) => sum + (byIdPoints.get(id) ?? 0),
     0,
   );
-  const canSave = picked.length === 0 || totalPoints === DAILY_MAX_SCORE;
+  const pointsOk = picked.length === 0 || totalPoints === ROUND_MAX_SCORE;
+  const windowOk = startsAt !== "" && endsAt !== "" && startsAt < endsAt;
+  const canSave = pointsOk && windowOk;
 
   async function save() {
     setSaving(true);
@@ -105,23 +123,42 @@ export default function ScheduleTab({
     const res = await fetch("/api/admin/schedule", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, scenarioIds: picked }),
+      body: JSON.stringify({
+        ...(selected ? { id: selected } : {}),
+        startsAt: kstLocalToIso(startsAt),
+        endsAt: kstLocalToIso(endsAt),
+        scenarioIds: picked,
+      }),
     });
     setSaving(false);
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) return setError(data.error ?? "저장에 실패했습니다.");
+    const data = (await res.json()) as { error?: string; round?: AdminRound };
+    if (!res.ok || !data.round)
+      return setError(data.error ?? "저장에 실패했습니다.");
 
-    // 목록 쪽 상태도 맞춰둔다 — 다시 불러오지 않아도 날짜 목록이 최신이 된다.
-    setSchedule((prev) => {
-      const rest = prev.filter((s) => s.date !== date);
-      return picked.length === 0
-        ? rest
-        : [...rest, { date, scenarioIds: picked }].sort((a, b) =>
-            a.date.localeCompare(b.date),
-          );
-    });
+    const round = data.round;
+    setRounds((prev) =>
+      [...prev.filter((r) => r.id !== round.id), round].sort((a, b) =>
+        b.startsAt.localeCompare(a.startsAt),
+      ),
+    );
+    setSelected(round.id);
     setDraft(null);
     setSaved(true);
+  }
+
+  async function remove() {
+    if (!selected) return;
+    setError(null);
+    const res = await fetch(`/api/admin/schedule?id=${selected}`, {
+      method: "DELETE",
+    });
+    const data = (await res.json()) as { error?: string };
+    if (!res.ok) return setError(data.error ?? "삭제에 실패했습니다.");
+
+    const rest = rounds.filter((r) => r.id !== selected);
+    setRounds(rest);
+    if (rest[0]) open(rest[0]);
+    else startNew();
   }
 
   if (loading) {
@@ -132,72 +169,121 @@ export default function ScheduleTab({
     <section>
       <PageHeader
         title="편성"
-        desc="그날 낼 문제와 순서를 정합니다. 게시 상태인 문제만 편성할 수 있습니다."
+        desc="회차의 시작·마감 일시와 그 회차에 낼 문제를 정합니다. 게시 상태인 문제만 편성할 수 있습니다."
       />
 
       <div className="flex gap-6">
-        {/* 편성된 날짜들 — 어느 날이 비어 있는지 한눈에 */}
-        <aside className="w-52 shrink-0">
-          <label className="text-xs font-medium text-muted">
-            날짜
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => changeDate(e.target.value)}
-              className={`mt-1 w-full ${INPUT}`}
-            />
-          </label>
+        <aside className="w-56 shrink-0">
+          <button
+            type="button"
+            onClick={startNew}
+            className="w-full rounded-xl border border-border px-3 py-2 text-sm font-bold hover:bg-surface-muted"
+          >
+            + 새 회차
+          </button>
 
           <p className="mt-4 text-xs font-medium text-muted">
-            편성된 날짜 ({schedule.length})
+            회차 ({rounds.length})
           </p>
           <ul className="mt-1 flex flex-col">
-            {schedule.map((s) => (
-              <li key={s.date}>
+            {rounds.map((r) => (
+              <li key={r.id}>
                 <button
                   type="button"
-                  onClick={() => changeDate(s.date)}
-                  className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm ${
-                    s.date === date
+                  onClick={() => open(r)}
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
+                    r.id === selected
                       ? "bg-brand/10 font-bold text-brand"
                       : "text-muted hover:bg-surface-muted"
                   }`}
                 >
-                  <span>{s.date}</span>
-                  <span className="text-xs">{s.scenarioIds.length}개</span>
+                  <span className="min-w-0 truncate">
+                    {fmt(r.startsAt)} ~ {fmt(r.endsAt)}
+                  </span>
+                  <span className="shrink-0 text-xs">
+                    {r.scenarioIds.length}개
+                  </span>
                 </button>
               </li>
             ))}
-            {schedule.length === 0 && (
-              <li className="py-3 text-xs text-muted">
-                편성된 날짜가 없습니다.
-              </li>
+            {rounds.length === 0 && (
+              <li className="py-3 text-xs text-muted">회차가 없습니다.</li>
             )}
           </ul>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between">
+          <div className="flex items-end gap-3">
+            <label className="text-xs font-medium text-muted">
+              시작
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => {
+                  setStartsAt(e.target.value);
+                  setSaved(false);
+                }}
+                className={`mt-1 w-full ${INPUT}`}
+              />
+            </label>
+            <label className="text-xs font-medium text-muted">
+              마감
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => {
+                  setEndsAt(e.target.value);
+                  setSaved(false);
+                }}
+                className={`mt-1 w-full ${INPUT}`}
+              />
+            </label>
+            {/* 대부분 일주일짜리라 한 번에 채운다. */}
+            <button
+              type="button"
+              disabled={startsAt === ""}
+              onClick={() => {
+                setEndsAt(plusDaysKstLocal(startsAt, 7));
+                setSaved(false);
+              }}
+              className="rounded-xl border border-border px-3 py-2 text-sm font-bold hover:bg-surface-muted disabled:opacity-50"
+            >
+              일주일
+            </button>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
             <h3 className="font-bold">
-              {date} <span className="text-muted">· {picked.length}개</span>
+              문제 <span className="text-muted">{picked.length}개</span>
               <span
                 className={`ml-2 text-sm ${
-                  canSave
+                  pointsOk
                     ? "text-muted"
                     : "font-bold text-amber-600 dark:text-amber-400"
                 }`}
               >
-                {totalPoints} / {DAILY_MAX_SCORE}점
+                {totalPoints} / {ROUND_MAX_SCORE}점
               </span>
             </h3>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving || !canSave}
-              className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-brand-foreground disabled:opacity-50"
-            >
-              {saving ? "저장 중…" : "편성 저장"}
-            </button>
+            <div className="flex gap-2">
+              {selected && (
+                <button
+                  type="button"
+                  onClick={remove}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-bold text-muted hover:bg-surface-muted"
+                >
+                  회차 삭제
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || !canSave}
+                className="rounded-xl bg-brand px-4 py-2 text-sm font-bold text-brand-foreground disabled:opacity-50"
+              >
+                {saving ? "저장 중…" : "편성 저장"}
+              </button>
+            </div>
           </div>
 
           <ol className="mt-3 flex flex-col gap-2">
@@ -233,7 +319,7 @@ export default function ScheduleTab({
             })}
             {picked.length === 0 && (
               <li className="rounded-2xl border border-dashed border-border py-8 text-center text-sm text-muted">
-                이 날짜에 편성된 문제가 없습니다.
+                이 회차에 편성된 문제가 없습니다.
               </li>
             )}
           </ol>
@@ -261,11 +347,16 @@ export default function ScheduleTab({
             </ul>
           </div>
 
-          {!canSave && (
+          {!windowOk && (
             <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-              하루 만점은 {DAILY_MAX_SCORE}점이어야 게시할 수 있습니다. 지금{" "}
-              {totalPoints}점 ({totalPoints > DAILY_MAX_SCORE ? "초과" : "부족"}{" "}
-              {Math.abs(DAILY_MAX_SCORE - totalPoints)}점).
+              시작과 마감 일시를 정해주세요. 마감은 시작보다 뒤여야 합니다.
+            </p>
+          )}
+          {!pointsOk && (
+            <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
+              회차 만점은 {ROUND_MAX_SCORE}점이어야 게시할 수 있습니다. 지금{" "}
+              {totalPoints}점 ({totalPoints > ROUND_MAX_SCORE ? "초과" : "부족"}{" "}
+              {Math.abs(ROUND_MAX_SCORE - totalPoints)}점).
             </p>
           )}
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}

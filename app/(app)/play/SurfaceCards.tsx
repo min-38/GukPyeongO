@@ -312,6 +312,31 @@ export function EmailThread({
   );
 }
 
+// 어휘 유형이 묻는 낱말 (#101).
+// 지문이 없는 대신 낱말 하나가 지문 자리를 차지한다 — 크게, 가운데.
+//
+// 유형 안내 화면의 제목(font-display text-3xl)과 헷갈리지 않게 두 가지를 달리한다:
+// 글자를 더 키우고, 지문 카드 안에 앉혀 "읽을 것"으로 보이게 한다.
+export function WordFace({ word }: { word: string }) {
+  // 속담처럼 긴 말은 그대로 키우면 넘친다 — 길이에 따라 한 단계씩 줄인다.
+  const size =
+    word.length <= 8
+      ? "text-6xl sm:text-7xl"
+      : word.length <= 16
+        ? "text-5xl sm:text-6xl"
+        : "text-4xl sm:text-5xl";
+
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <div className="animate-rise w-full rounded-3xl bg-surface-muted px-6 py-10 text-center">
+        <p className={`font-display leading-tight tracking-tight ${size}`}>
+          {word}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // 어드민이 쓴 HTML 조각 한 덩어리(#99).
 // card=true면 다른 유형의 첫 카드와 같은 표면을 두르고, false면 배경 없이 그대로 흐른다.
 // 조각 안에서 쓸 수 있는 클래스는 globals.css의 지문용 @source 목록에 있다.

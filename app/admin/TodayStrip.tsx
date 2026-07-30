@@ -4,25 +4,29 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { type AdminScenario } from "@/app/lib/scenario-admin";
-import { stepPoints } from "@/app/lib/scenario-points";
+import { ROUND_MAX_SCORE, stepPoints } from "@/app/lib/scenario-points";
 
 import { LABEL } from "./ui";
 
-// 오늘 편성 상태 (#99).
-// 이 제품의 하루는 "100점짜리 회차 하나"다. 그 하나가 준비됐는지가 운영의 전부라
+// 진행 중인 회차 상태 (#99, #100).
+// 이 제품의 한 회차는 "100점짜리 문제 묶음"이다. 그 하나가 준비됐는지가 운영의 전부라
 // 어느 탭에 있든 화면 맨 위에 붙여 둔다. 눌러 볼 필요 없이 늘 보이게.
 
-const DAILY_MAX_SCORE = 100;
-
-interface ScheduleDay {
-  date: string;
+interface AdminRound {
+  id: string;
+  startsAt: string;
+  endsAt: string;
   scenarioIds: string[];
 }
 
-// 오늘 날짜(KST). 서버 시간대가 UTC여도 하루가 어긋나지 않게 오프셋을 더해 계산한다.
-function todayKst(): string {
-  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 function scenarioPoints(s: AdminScenario): number {
   return s.steps.reduce((sum, step) => sum + stepPoints(step), 0);
@@ -33,16 +37,23 @@ export default function TodayStrip({
 }: {
   scenarios: AdminScenario[];
 }) {
-  const [today, setToday] = useState<ScheduleDay | null>(null);
+  const [current, setCurrent] = useState<AdminRound | null>(null);
+  const [next, setNext] = useState<AdminRound | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let alive = true;
     fetch("/api/admin/schedule")
-      .then((r) => r.json() as Promise<{ schedule?: ScheduleDay[] }>)
+      .then((r) => r.json() as Promise<{ rounds?: AdminRound[] }>)
       .then((d) => {
         if (!alive) return;
-        setToday(d.schedule?.find((s) => s.date === todayKst()) ?? null);
+        const now = new Date().toISOString();
+        const list = d.rounds ?? [];
+        setCurrent(
+          list.find((r) => r.startsAt <= now && now < r.endsAt) ?? null,
+        );
+        // 목록은 시작 내림차순이라 아직 시작 안 한 것 중 마지막이 가장 가까운 다음 회차다.
+        setNext(list.filter((r) => r.startsAt > now).at(-1) ?? null);
         setLoaded(true);
       })
       .catch(() => alive && setLoaded(true));
@@ -52,7 +63,7 @@ export default function TodayStrip({
   }, []);
 
   const byId = new Map(scenarios.map((s) => [s.id, s]));
-  const picked = (today?.scenarioIds ?? []).map((id) => byId.get(id));
+  const picked = (current?.scenarioIds ?? []).map((id) => byId.get(id));
   const points = picked.reduce(
     (sum, s) => sum + (s ? scenarioPoints(s) : 0),
     0,
@@ -63,13 +74,18 @@ export default function TodayStrip({
   // 세 가지만 구분한다: 못 나감 / 나가는데 손볼 곳 있음 / 나갈 준비 끝.
   const state = !loaded
     ? { tone: "wait", text: "확인 중" }
-    : picked.length === 0
-      ? { tone: "bad", text: "편성 없음" }
-      : points !== DAILY_MAX_SCORE
-        ? { tone: "bad", text: `${DAILY_MAX_SCORE - points > 0 ? "부족" : "초과"} ${Math.abs(DAILY_MAX_SCORE - points)}점` }
-        : held
-          ? { tone: "warn", text: "게시 안 된 문제 있음" }
-          : { tone: "good", text: "내보낼 준비 끝" };
+    : !current
+      ? { tone: "bad", text: "진행 중인 회차 없음" }
+      : picked.length === 0
+        ? { tone: "bad", text: "편성 없음" }
+        : points !== ROUND_MAX_SCORE
+          ? {
+              tone: "bad",
+              text: `${ROUND_MAX_SCORE - points > 0 ? "부족" : "초과"} ${Math.abs(ROUND_MAX_SCORE - points)}점`,
+            }
+          : held
+            ? { tone: "warn", text: "게시 안 된 문제 있음" }
+            : { tone: "good", text: "내보낼 준비 끝" };
 
   const toneClass =
     state.tone === "good"
@@ -86,9 +102,13 @@ export default function TodayStrip({
       className="flex w-full items-center gap-5 border-b border-border px-6 py-3 text-left transition-colors hover:bg-surface-muted/60"
     >
       <span className="shrink-0">
-        <span className={LABEL}>오늘 회차</span>
+        <span className={LABEL}>진행 중인 회차</span>
         <span className="mt-0.5 block text-sm font-bold tabular-nums">
-          {todayKst()}
+          {current
+            ? `${fmt(current.startsAt)} ~ ${fmt(current.endsAt)}`
+            : next
+              ? `다음 회차 ${fmt(next.startsAt)}`
+              : "—"}
         </span>
       </span>
 
@@ -99,20 +119,20 @@ export default function TodayStrip({
             문제 {picked.length}편 · 문항 {steps}개
           </span>
           <span className="text-xs font-bold tabular-nums">
-            {points} / {DAILY_MAX_SCORE}점
+            {points} / {ROUND_MAX_SCORE}점
           </span>
         </span>
         <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
           <span
             className={`block h-full rounded-full transition-all ${
-              points === DAILY_MAX_SCORE
+              points === ROUND_MAX_SCORE
                 ? "bg-emerald-500"
-                : points > DAILY_MAX_SCORE
+                : points > ROUND_MAX_SCORE
                   ? "bg-red-500"
                   : "bg-brand"
             }`}
             style={{
-              width: `${Math.min(100, (points / DAILY_MAX_SCORE) * 100)}%`,
+              width: `${Math.min(100, (points / ROUND_MAX_SCORE) * 100)}%`,
             }}
           />
         </span>

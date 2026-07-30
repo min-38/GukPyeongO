@@ -1,35 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-// 운영 대시보드 (#91). 오늘 지표와 최근 추이를 본다.
+import { type DashboardData } from "@/app/lib/dashboard.server";
+import { gradeTheme } from "@/app/lib/quiz";
 
 import PageHeader from "./PageHeader";
 import { CARD, FIGURE, LABEL } from "./ui";
 
-interface DayMetrics {
-  date: string;
-  started: number;
-  finished: number;
-  avgScore: number | null;
-}
+// 운영 대시보드 (#91, #103). 이번 회차 지표와 회차별 추이, 문항 품질, 내보낼 준비 상태를 본다.
+// 집계는 서버(dashboard.server.ts)가 끝내 놓는다 — 여기서는 그리기만 한다.
 
-interface HardStep {
-  title: string;
-  prompt: string;
-  attempts: number;
-  correctRate: number;
-}
+const AXIS = { fontSize: 11, fill: "var(--muted)" };
 
-interface DashboardData {
-  today: DayMetrics & { gradeDist: { grade: number; count: number }[] };
-  recent: DayMetrics[];
-  hardSteps: HardStep[];
-}
+// 툴팁은 recharts 기본 스타일이 앱과 겉돈다 — 카드 모양만 맞춰준다.
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "0.75rem",
+    fontSize: "12px",
+  },
+  labelStyle: { color: "var(--muted)" },
+} as const;
 
 function rate(finished: number, started: number): string {
   if (started === 0) return "—";
   return `${Math.round((finished / started) * 100)}%`;
+}
+
+function duration(seconds: number | null): string {
+  if (seconds === null) return "—";
+  const m = Math.round(seconds / 60);
+  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
 }
 
 function Stat({
@@ -50,28 +66,25 @@ function Stat({
   );
 }
 
-export default function DashboardTab() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+function Panel({
+  title,
+  desc,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`${CARD} p-5`}>
+      <h3 className="font-bold">{title}</h3>
+      {desc && <p className="mt-0.5 text-xs text-muted">{desc}</p>}
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/admin/dashboard")
-      .then((r) => r.json() as Promise<DashboardData>)
-      .then((d) => {
-        if (!active) return;
-        setData(d);
-        setLoading(false);
-      })
-      .catch(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (loading) {
-    return <p className="py-10 text-center text-sm text-muted">불러오는 중…</p>;
-  }
+export default function DashboardTab({ data }: { data: DashboardData | null }) {
   if (!data) {
     return (
       <p className="py-10 text-center text-sm text-muted">
@@ -80,109 +93,321 @@ export default function DashboardTab() {
     );
   }
 
-  const { today, recent, hardSteps } = data;
+  const {
+    rounds,
+    current,
+    hours,
+    visitors,
+    types,
+    typesTotal,
+    difficulty,
+    hardSteps,
+    readiness,
+  } = data;
+
+  const trend = rounds.map((r) => ({
+    label: r.label,
+    시작: r.started,
+    완주: r.finished,
+    완주율: r.started > 0 ? Math.round((r.finished / r.started) * 100) : 0,
+    평균점수: r.avgScore ?? 0,
+  }));
+
+  const gradeData = (current?.gradeDist ?? []).map((count, i) => ({
+    grade: `${i + 1}`,
+    count,
+    color: gradeTheme(i + 1).color,
+  }));
 
   return (
     <section>
       <PageHeader
         title="대시보드"
-        desc={`${today.date} 기준. 시작만 하고 나간 사람도 함께 셉니다.`}
+        desc={
+          current
+            ? `${current.label} 회차 기준. 시작만 하고 나간 사람도 함께 셉니다.`
+            : "아직 회차 기록이 없습니다."
+        }
       />
 
       <div className="grid grid-cols-4 gap-3">
-        <Stat label="시작" value={`${today.started}명`} />
-        <Stat label="완주" value={`${today.finished}명`} />
+        <Stat label="시작" value={`${current?.started ?? 0}명`} />
+        <Stat label="완주" value={`${current?.finished ?? 0}명`} />
         <Stat
           label="완주율"
-          value={rate(today.finished, today.started)}
+          value={rate(current?.finished ?? 0, current?.started ?? 0)}
           hint="완주 ÷ 시작"
         />
         <Stat
           label="평균 점수"
-          value={today.avgScore === null ? "—" : `${today.avgScore}점`}
+          value={current?.avgScore == null ? "—" : `${current.avgScore}점`}
           hint="완주한 사람만"
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-6">
-        <div>
-          <h3 className="font-bold">오늘 등급 분포</h3>
-          {today.gradeDist.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">
+      <div className="mt-3 grid grid-cols-4 gap-3">
+        <Stat
+          label="평균 완주 소요"
+          value={duration(current?.avgSeconds ?? null)}
+          hint="시작부터 채점까지"
+        />
+        <Stat label="누적 응시자" value={`${visitors.visitors}명`} />
+        <Stat
+          label="다시 온 사람"
+          value={
+            visitors.visitors === 0
+              ? "—"
+              : `${Math.round((visitors.repeatVisitors / visitors.visitors) * 100)}%`
+          }
+          hint={`${visitors.repeatVisitors}명 · 두 회차 이상`}
+        />
+        <Stat
+          label="편성 남은 회차"
+          value={`${readiness.upcomingRounds}개`}
+          hint={
+            readiness.lastEndsAt
+              ? `${new Date(readiness.lastEndsAt).toLocaleDateString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                })}까지`
+              : "편성 없음"
+          }
+        />
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <Panel title="회차별 시작·완주" desc="최근 12회차">
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={trend}>
+              <CartesianGrid stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="label" tick={AXIS} tickLine={false} />
+              <YAxis tick={AXIS} tickLine={false} axisLine={false} width={28} />
+              <Tooltip {...TOOLTIP_STYLE} />
+              <Area
+                type="monotone"
+                dataKey="시작"
+                stroke="var(--brand)"
+                fill="var(--brand)"
+                fillOpacity={0.15}
+              />
+              <Area
+                type="monotone"
+                dataKey="완주"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        <Panel title="완주율·평균 점수" desc="회차 만점은 늘 100점이라 나란히 볼 수 있다">
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={trend}>
+              <CartesianGrid stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="label" tick={AXIS} tickLine={false} />
+              <YAxis
+                tick={AXIS}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+                domain={[0, 100]}
+              />
+              <Tooltip {...TOOLTIP_STYLE} />
+              <Line
+                type="monotone"
+                dataKey="완주율"
+                stroke="#10b981"
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="평균점수"
+                stroke="var(--brand)"
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        <Panel title="이번 회차 등급 분포">
+          {current && current.finished > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={gradeData}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="grade" tick={AXIS} tickLine={false} />
+                <YAxis
+                  tick={AXIS}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip {...TOOLTIP_STYLE} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {gradeData.map((d) => (
+                    <Cell key={d.grade} fill={d.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="py-10 text-center text-sm text-muted">
               아직 완주한 사람이 없습니다.
             </p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-1">
-              {today.gradeDist.map(({ grade, count }) => (
-                <li key={grade} className="flex items-center gap-2 text-sm">
-                  <span className="w-12 shrink-0 font-bold">{grade}등급</span>
-                  <span
-                    className="h-4 rounded bg-brand/70"
-                    style={{
-                      width: `${(count / today.finished) * 100}%`,
-                      minWidth: "0.5rem",
-                    }}
-                  />
-                  <span className="text-muted">{count}명</span>
-                </li>
-              ))}
-            </ul>
           )}
-        </div>
+        </Panel>
 
-        <div>
-          <h3 className="font-bold">최근 추이</h3>
-          {recent.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">기록이 없습니다.</p>
+        <Panel title="시간대별 시작" desc="KST 기준 누적">
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={hours}>
+              <CartesianGrid stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="hour" tick={AXIS} tickLine={false} interval={2} />
+              <YAxis tick={AXIS} tickLine={false} axisLine={false} width={28} />
+              <Tooltip {...TOOLTIP_STYLE} />
+              <Bar dataKey="started" fill="var(--brand)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        <Panel
+          title="분류별 정답률"
+          desc={`낮은 순 ${types.length}개${typesTotal > types.length ? ` · 전체 ${typesTotal}개 분류 중` : ""}`}
+        >
+          {types.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted">
+              아직 표본이 모자랍니다.
+            </p>
           ) : (
-            <table className="mt-2 w-full whitespace-nowrap text-sm">
-              <thead className="text-xs text-muted">
-                <tr className="text-left">
-                  <th className="py-1 font-medium">날짜</th>
-                  <th className="py-1 font-medium">시작</th>
-                  <th className="py-1 font-medium">완주</th>
-                  <th className="py-1 font-medium">완주율</th>
-                  <th className="py-1 font-medium">평균</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((d) => (
-                  <tr key={d.date} className="border-t border-border">
-                    <td className="py-1.5">{d.date}</td>
-                    <td>{d.started}</td>
-                    <td>{d.finished}</td>
-                    <td>{rate(d.finished, d.started)}</td>
-                    <td>{d.avgScore === null ? "—" : `${d.avgScore}점`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ResponsiveContainer
+              width="100%"
+              height={Math.max(180, types.length * 26)}
+            >
+              <BarChart data={types} layout="vertical">
+                <CartesianGrid stroke="var(--border)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  tick={AXIS}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="key"
+                  tick={AXIS}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                />
+                <Tooltip {...TOOLTIP_STYLE} />
+                <Bar dataKey="rate" fill="var(--brand)" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
-        </div>
+        </Panel>
+
+        <Panel
+          title="난이도 눈금 점검"
+          desc="난이도가 올라갈수록 정답률이 떨어져야 맞다"
+        >
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={difficulty}>
+              <CartesianGrid stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="key" tick={AXIS} tickLine={false} />
+              <YAxis
+                tick={AXIS}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+                domain={[0, 100]}
+              />
+              <Tooltip {...TOOLTIP_STYLE} />
+              <Bar dataKey="rate" fill="var(--brand)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
       </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <Stat
+          label="미처리 항의"
+          value={`${readiness.openReports}건`}
+          hint="항의·평가 탭에서 처리"
+        />
+        <Stat
+          label="아직 안 쓴 게시 문제"
+          value={`${readiness.unscheduledPublished}편`}
+          hint="어느 회차에도 편성되지 않음"
+        />
+        <Stat
+          label="문항 표본"
+          value={`${types.reduce((n, t) => n + t.attempts, 0)}회`}
+          hint="누적 시도 수"
+        />
+      </div>
+
       <div className="mt-6">
-        <h3 className="font-bold">많이 틀린 문항</h3>
+        <h3 className="font-bold">손볼 문항</h3>
         <p className="mt-0.5 text-xs text-muted">
-          누적 기준입니다. 5회 이상 풀린 문항만 봅니다.
+          정답률 낮은 순. 5회 이상 풀린 문항만 봅니다. 별점과 항의를 나란히 두면
+          어려운 문항과 잘못된 문항을 가를 수 있습니다.
         </p>
         {hardSteps.length === 0 ? (
           <p className="mt-2 text-sm text-muted">아직 표본이 모자랍니다.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-1">
-            {hardSteps.map((s, i) => (
-              <li key={i} className="flex items-baseline gap-2 text-sm">
-                <span className="w-12 shrink-0 font-bold">
-                  {s.correctRate}%
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="text-muted">{s.title}</span> {s.prompt}
-                </span>
-                <span className="shrink-0 text-xs text-muted">
-                  {s.attempts}회
-                </span>
-              </li>
-            ))}
-          </ul>
+          <table className="mt-3 w-full text-sm">
+            <thead className="text-xs text-muted">
+              <tr className="text-left">
+                <th className="py-1 font-medium">문항</th>
+                <th className="py-1 font-medium">분류</th>
+                <th className="py-1 font-medium">난이도</th>
+                <th className="py-1 font-medium">정답률</th>
+                <th className="py-1 font-medium">시도</th>
+                <th className="py-1 font-medium">별점</th>
+                <th className="py-1 font-medium">항의</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hardSteps.map((s) => (
+                <tr key={s.stepId} className="border-t border-border align-top">
+                  <td className="max-w-xs py-2">
+                    <span className="block truncate font-medium">
+                      {s.prompt}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {s.scenarioTitle}
+                    </span>
+                  </td>
+                  <td className="py-2 text-xs">{s.type}</td>
+                  <td className="py-2 tabular-nums">{s.difficulty}</td>
+                  <td className="py-2 font-bold tabular-nums">
+                    {s.correctRate}%
+                  </td>
+                  <td className="py-2 tabular-nums text-muted">{s.attempts}</td>
+                  <td className="py-2 tabular-nums">
+                    {s.avgStars === null ? (
+                      <span className="text-muted">—</span>
+                    ) : (
+                      <>
+                        ★ {s.avgStars}
+                        <span className="text-xs text-muted">
+                          {" "}
+                          ({s.ratingCount})
+                        </span>
+                      </>
+                    )}
+                  </td>
+                  <td className="py-2 tabular-nums">
+                    {s.openReports > 0 ? (
+                      <span className="font-bold text-red-500">
+                        {s.openReports}
+                      </span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </section>

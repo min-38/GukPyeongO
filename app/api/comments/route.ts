@@ -7,6 +7,7 @@ import {
   maskIp,
   randomNickname,
 } from "@/app/lib/quiz";
+import { getCurrentRound } from "@/app/lib/schedule.server";
 import { getSigningSecret, verifyGradeToken } from "@/app/lib/score-token";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
@@ -46,14 +47,20 @@ function toComment(row: {
 const COLS = "id, content, grade, nickname, ip_masked, created_at";
 
 // 댓글 조회: ?grade=all (전체) | 1~9 (같은 등급 댓글방)
+// 진행 중인 회차에 달린 것만 보여준다(#100) — 마감이 지나면 목록이 빈다. 행은 DB에 남는다.
+// 회차를 주소로 받지는 않는다. 받으면 지난 회차 댓글을 들여다볼 수 있게 된다.
 export async function GET(request: Request) {
   const gradeParam = new URL(request.url).searchParams.get("grade") ?? "all";
+
+  const round = await getCurrentRound();
+  if (!round) return NextResponse.json({ comments: [] });
 
   // ip_masked는 이미 마스킹된 값이라 공개 안전. service-role로 조회.
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("comments")
     .select(COLS)
+    .eq("round_id", round.id)
     .order("created_at", { ascending: false })
     .limit(LIST_LIMIT);
 
@@ -94,13 +101,16 @@ export async function POST(request: Request) {
   if (typeof gradeToken !== "string") {
     return NextResponse.json({ error: "등급 정보가 없습니다." }, { status: 400 });
   }
-  const grade = verifyGradeToken(gradeToken, getSigningSecret());
-  if (grade === null) {
+  const verified = verifyGradeToken(gradeToken, getSigningSecret());
+  if (verified === null) {
     return NextResponse.json(
       { error: "등급 정보가 유효하지 않습니다. 테스트를 다시 진행해주세요." },
       { status: 401 }
     );
   }
+  // 댓글은 그 사람이 푼 회차에 달린다(#100). 토큰이 최대 1시간짜리라
+  // 마감 직후에 쓴 글도 자기 회차로 들어간다 — 풀던 중 마감된 사람의 한마디가 살아남는 자리다.
+  const { grade, roundId } = verified;
 
   if (typeof content !== "string") {
     return NextResponse.json({ error: "내용을 입력해주세요." }, { status: 400 });
@@ -144,6 +154,7 @@ export async function POST(request: Request) {
     .insert({
       content: trimmed,
       grade,
+      round_id: roundId,
       nickname: nick,
       ip_masked: maskIp(ip),
     })

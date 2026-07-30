@@ -10,6 +10,7 @@ import CommunityScenarioView from "./CommunityScenario";
 import DocScenarioView from "./DocScenario";
 import EmailScenarioView from "./EmailScenario";
 import StoryScenarioView from "./StoryScenario";
+import WordScenarioView from "./WordScenario";
 
 // 유형에 맞는 표면을 고른다 (#87).
 // 편성된 문제는 유형이 섞여 나오고, 어드민 미리보기도 같은 분기가 필요해 한 곳에 모았다.
@@ -52,6 +53,9 @@ export default function SurfaceByKind({
       return <StoryScenarioView {...common} />;
     case "chat":
       return <ChatScenarioView {...common} />;
+    // 어휘는 지문이 없다 — 문항만 이어서 푼다(#101).
+    case "word":
+      return <WordScenarioView {...common} />;
     default:
       return (
         <p className="py-10 text-center text-sm text-muted">

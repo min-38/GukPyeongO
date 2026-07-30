@@ -41,7 +41,8 @@ export default function ReadingScenario<S extends ReadingStep>({
     open: () => void,
     plan: PlanRead,
   ) => () => void;
-  children: ReactNode;
+  // 지문. 문항마다 바뀌는 유형(어휘)은 함수로 넘겨 지금 문항을 받는다.
+  children: ReactNode | ((step: S) => ReactNode);
 }) {
   const reveal = (
     step: S,
@@ -71,6 +72,7 @@ export default function ReadingScenario<S extends ReadingStep>({
     respond,
   });
   const { step } = s;
+  const body = typeof children === "function" ? children(step) : children;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col lg:mx-auto lg:max-w-xl">
@@ -87,9 +89,14 @@ export default function ReadingScenario<S extends ReadingStep>({
       {/* 콘텐츠 영역 — 넘칠 때만 여기서 스크롤(스크롤바 감춤). 위에서부터 읽으므로 자동스크롤 없음.
           남는 높이를 다 먹어(flex-1) 선택지를 화면 아래에 고정한다 — 문항이 바뀌어도
           누를 자리가 움직이지 않게. 메신저 표면과 같은 규칙이다. */}
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {children}
-      </div>
+      {body ? (
+        <div className="mt-6 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {body}
+        </div>
+      ) : (
+        // 지문이 없는 유형(어휘)은 빈 자리를 남기는 대신 문항을 화면 가운데에 세운다.
+        <div className="flex-1" />
+      )}
 
       <AnswerPanel
         prompt={step.prompt}
@@ -101,6 +108,7 @@ export default function ReadingScenario<S extends ReadingStep>({
         scorePop={s.scorePop}
         onAnswer={s.answer}
       />
+      {!body && <div className="flex-1" />}
     </div>
   );
 }

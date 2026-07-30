@@ -9,27 +9,31 @@ function sign(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
+// 어느 회차를 풀고 받은 등급인지도 함께 서명한다(#100) — 댓글이 그 회차에 달린다.
+// uuid는 '.'을 포함하지 않으므로 구분자와 충돌하지 않는다. v1 경로(/api/score)는 회차가 없어 빈 칸이다.
 export function createGradeToken(
   grade: number,
+  roundId: string | null,
   secret: string,
   now = Date.now()
 ): string {
   const exp = now + TOKEN_TTL_MS;
-  const payload = `${grade}.${exp}`;
+  const payload = `${grade}.${roundId ?? ""}.${exp}`;
   return `${payload}.${sign(payload, secret)}`;
 }
 
-// 유효하면 등급(1~9)을 반환, 아니면 null.
+// 유효하면 등급(1~9)과 회차를 반환, 아니면 null.
+// 회차 칸이 없던 옛 토큰(3조각)은 여기서 걸러진다 — 유효기간이 1시간이라 곧 사라진다.
 export function verifyGradeToken(
   token: string,
   secret: string,
   now = Date.now()
-): number | null {
+): { grade: number; roundId: string | null } | null {
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [gradeStr, expStr, sig] = parts;
+  if (parts.length !== 4) return null;
+  const [gradeStr, roundId, expStr, sig] = parts;
 
-  const expected = sign(`${gradeStr}.${expStr}`, secret);
+  const expected = sign(`${gradeStr}.${roundId}.${expStr}`, secret);
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
@@ -39,7 +43,7 @@ export function verifyGradeToken(
 
   const grade = Number(gradeStr);
   if (!Number.isInteger(grade) || grade < 1 || grade > 9) return null;
-  return grade;
+  return { grade, roundId: roundId === "" ? null : roundId };
 }
 
 // 출제 세트 토큰: 무작위 출제된 문제 id 목록을 서명한다.

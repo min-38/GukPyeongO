@@ -1,23 +1,20 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 // 공유 미리보기(카카오톡·트위터·구글) 썸네일. opengraph-image 규약 파일이라
 // 트위터 카드에도 동일 이미지가 자동 적용된다.
-export const alt = "국평오 테스트 — 오늘의 문해력 문제";
+export const alt = "국평오 테스트 — 이 주의 문해력 문제";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// 대현자 마스코트 (GradeCharacter grade 1)를 data URI SVG로 삽입해 Satori가 렌더링하게 한다.
-const SAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 104">
-<path d="M48 58 C31 58 26 76 24 95 C23 101 28 102 34 102 L62 102 C68 102 73 101 72 95 C70 76 65 58 48 58 Z" fill="#f59e0b"/>
-<circle cx="48" cy="50" r="15" fill="#ffd9b0"/>
-<circle cx="43" cy="49" r="2.6" fill="#2a2440"/>
-<circle cx="53" cy="49" r="2.6" fill="#2a2440"/>
-<path d="M36 54 C39 80 57 80 60 54 C55 69 41 69 36 54 Z" fill="#f4f2ff"/>
-<ellipse cx="48" cy="38" rx="26" ry="6" fill="#d4920f"/>
-<polygon points="48,4 33,38 63,38" fill="#f5b342"/>
-<circle cx="48" cy="5" r="4" fill="#f4f2ff"/>
-</svg>`;
-const SAGE_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(SAGE_SVG)}`;
+// 1등급 마스코트(범고래)를 그대로 올린다(#106).
+// Satori는 외부 URL을 못 읽으므로 파일을 읽어 data URI로 넘긴다.
+async function loadOrca(): Promise<string> {
+  const file = await readFile(join(process.cwd(), "public/animals/1.png"));
+  return `data:image/png;base64,${file.toString("base64")}`;
+}
 
 // 한글 렌더링용 폰트. 구형 User-Agent로 요청해 Satori가 읽는 TTF를 받는다.
 async function loadKoreanFont(): Promise<ArrayBuffer> {
@@ -35,7 +32,7 @@ async function loadKoreanFont(): Promise<ArrayBuffer> {
 }
 
 export default async function Image() {
-  const font = await loadKoreanFont();
+  const [font, orca] = await Promise.all([loadKoreanFont(), loadOrca()]);
   return new ImageResponse(
     (
       <div
@@ -75,8 +72,7 @@ export default async function Image() {
             www.gukpyeongo.site
           </div>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={SAGE_DATA_URI} width={300} height={325} alt="" />
+        <img src={orca} width={320} height={320} alt="" />
       </div>
     ),
     {

@@ -3,43 +3,138 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
-import { useTodayScore } from "@/app/lib/today-result";
+import {
+  AI_READABILITY,
+  CASES,
+  PIAAC,
+  PISA_READING,
+  type Source,
+  sourceText,
+} from "@/app/lib/literacy-facts";
+import { useRoundScore } from "@/app/lib/today-result";
 
 import Footer from "./Footer";
-import GradeCharacter from "./GradeCharacter";
-
-// 실제 문해력 논란 사례 (온라인에서 우리 또래 사이에 벌어진 일)
-const CASES = [
-  {
-    word: "사흘",
-    prompt: '"사흘 안에 제출해주세요."',
-    reaction: '"사(4)+흘이니까 4일이죠?"',
-    fact: "사흘은 3일입니다.",
-  },
-  {
-    word: "금일",
-    prompt: '"금일 마감입니다."',
-    reaction: '"금요일 마감이면 미리 말해줬어야죠."',
-    fact: "금일(今日)은 오늘을 뜻합니다.",
-  },
-  {
-    word: "심심한 사과",
-    prompt: '"심심한 사과의 말씀을 드립니다."',
-    reaction: '"사과가 심심하다고? 성의가 없네요."',
-    fact: "심심(甚深)은 '매우 깊다'는 뜻입니다.",
-  },
-  {
-    word: "모집 0명",
-    prompt: '"배우 모집 인원: 0명"',
-    reaction: '"0명 뽑는다고 공고는 왜 냈어요?"',
-    fact: "한 자릿수 채용의 관행적 표기입니다.",
-  },
-];
 
 // 색 섹션을 데스크톱에서 화면 전체 폭으로 확장 (좌우 그라데이션 노출 방지).
 // 모바일/태블릿은 컨테이너(카드) 폭을 그대로 채운다.
 const FULL_BLEED = "lg:relative lg:left-1/2 lg:w-screen lg:-translate-x-1/2";
+
+// 수치 옆에 붙는 출처. 링크가 있으면 눌러서 원문으로 갈 수 있게 한다(#102).
+function SourceLine({
+  source,
+  className = "",
+}: {
+  source: Source;
+  className?: string;
+}) {
+  const text = sourceText(source);
+  return (
+    <p className={`text-xs text-muted/70 ${className}`}>
+      {source.url ? (
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noreferrer"
+          className="underline decoration-dotted hover:text-muted"
+        >
+          {text}
+        </a>
+      ) : (
+        text
+      )}
+    </p>
+  );
+}
+
+// PISA 읽기 점수 꺾은선 (#102). 좌표를 데이터에서 계산한다 —
+// 수치가 갱신되면 literacy-facts.ts만 고치면 그래프가 따라 움직인다.
+// 차트 라이브러리는 들이지 않는다. 랜딩은 SEO 진입점이라 번들을 늘리지 않는다.
+function PisaChart() {
+  const { series } = PISA_READING;
+  const scores = series.map((p) => p.score);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  // 위아래 여백을 주고 점수 폭을 그래프 높이에 맞춘다.
+  const x = (i: number) => 36 + (i * 264) / (series.length - 1);
+  const y = (score: number) =>
+    150 - ((score - min) / (max - min || 1)) * 113 - 4;
+
+  const first = series[0];
+  const last = series[series.length - 1];
+
+  return (
+    <svg
+      viewBox="0 0 320 180"
+      className="w-full"
+      shapeRendering="crispEdges"
+      role="img"
+      aria-label={`한국 PISA 읽기 점수: ${first.year}년 ${first.score}점에서 ${last.year}년 ${last.score}점으로 하락`}
+    >
+      <line
+        x1="36"
+        y1="150"
+        x2="300"
+        y2="150"
+        stroke="var(--border)"
+        strokeWidth="2"
+      />
+      <polyline
+        points={series.map((p, i) => `${x(i)},${y(p.score)}`).join(" ")}
+        fill="none"
+        stroke="var(--brand)"
+        strokeWidth="4"
+        strokeLinejoin="miter"
+        strokeLinecap="square"
+      />
+      {series.map((p, i) => (
+        <rect
+          key={p.year}
+          x={x(i) - 4}
+          y={y(p.score) - 4}
+          width="8"
+          height="8"
+          fill={i === series.length - 1 ? "#dc2626" : "var(--brand)"}
+        />
+      ))}
+      <text
+        x="36"
+        y={y(first.score) - 11}
+        fill="var(--foreground)"
+        fontSize="15"
+        fontWeight="700"
+        textAnchor="start"
+      >
+        {first.score}
+      </text>
+      <text
+        x="300"
+        y={y(last.score) - 11}
+        fill="#dc2626"
+        fontSize="15"
+        fontWeight="700"
+        textAnchor="end"
+      >
+        {last.score}
+      </text>
+      <text
+        x="168"
+        y="95"
+        fill="#dc2626"
+        fontSize="15"
+        fontWeight="700"
+        textAnchor="middle"
+      >
+        ▼ {first.score - last.score}점
+      </text>
+      <text x="36" y="170" fill="var(--muted)" fontSize="11" textAnchor="start">
+        &apos;{String(first.year).slice(2)} 최고점
+      </text>
+      <text x="300" y="170" fill="var(--muted)" fontSize="11" textAnchor="end">
+        &apos;{String(last.year).slice(2)}
+      </text>
+    </svg>
+  );
+}
 
 // 스크롤 진입 시 한 번 트리거되는 훅
 function useScrollReveal(threshold = 0.2) {
@@ -86,27 +181,124 @@ function Reveal({
   );
 }
 
+// 국평오 시험이 어떻게 굴러가는지 세 장 (#105).
+// 캐릭터 미리보기가 있던 자리다 — 캐릭터는 예쁘지만 무슨 시험인지는 알려주지 않았다.
+const SYSTEM_SLIDES = [
+  {
+    step: "출제",
+    title: "8가지 유형",
+    desc: "공지사항 · 신문 · 커뮤니티 · 메신저 · 이메일 · 서사 · 계약서 · 사용설명서. 실제로 읽는 글을 그대로 옮겼습니다.",
+    foot: "문제는 일주일마다 새로 올라옵니다",
+  },
+  {
+    step: "채점",
+    title: "100점 만점",
+    desc: "한 회차가 100점입니다. 문항마다 배점이 달라 어려운 문항의 무게가 점수에 반영됩니다.",
+    foot: "지문을 읽을 시간은 따로 드립니다",
+  },
+  {
+    step: "등급",
+    title: "1~9등급",
+    desc: "맞힌 개수가 아니라 득점률로 등급을 냅니다. 수능 국어 영역 등급 기준을 참고했습니다.",
+    foot: "등급마다 문해력 캐릭터가 따라옵니다",
+  },
+];
+
+const SLIDE_MS = 4500;
+
+function SystemSlides() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const t = window.setInterval(
+      () => setIndex((i) => (i + 1) % SYSTEM_SLIDES.length),
+      SLIDE_MS,
+    );
+    return () => window.clearInterval(t);
+  }, []);
+
+  return (
+    <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+      {/* 넘기는 자리. 카드 폭만큼 잘라내고 트랙을 옆으로 민다. */}
+      <div className="overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${index * 100}%)` }}
+        >
+          {SYSTEM_SLIDES.map((s) => (
+            <div key={s.step} className="w-full shrink-0 px-0.5">
+              <p className="text-xs font-bold tracking-[0.2em] text-brand">
+                {s.step}
+              </p>
+              <p className="mt-2 font-display text-4xl leading-tight tracking-tight">
+                {s.title}
+              </p>
+              {/* 장마다 글 길이가 달라 높이가 튄다 — 가장 긴 장에 맞춰 자리를 잡아둔다. */}
+              <p className="mt-4 min-h-[6rem] text-sm leading-relaxed text-muted">
+                {s.desc}
+              </p>
+              <p className="mt-4 border-t border-border pt-4 text-xs text-muted/70">
+                {s.foot}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 눌러서 바로 넘길 수도 있게 — 자동으로 넘어가기를 기다리지 않아도 된다. */}
+      <div className="mt-6 flex justify-center gap-2">
+        {SYSTEM_SLIDES.map((s, i) => (
+          <button
+            key={s.step}
+            type="button"
+            onClick={() => setIndex(i)}
+            aria-label={`${s.step} 보기`}
+            aria-current={i === index}
+            className={`h-1.5 rounded-full transition-all ${
+              i === index ? "w-6 bg-brand" : "w-1.5 bg-border"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// 회차 마감을 날짜로 읽는다. 몇 시까지인지는 홈에서 알 필요 없다 — 언제까지인지만 알면 된다.
+const endLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+  });
+
 export default function HomeView({
   todayCount,
-  date,
+  roundId,
+  roundEndsAt,
+  finished,
 }: {
   todayCount: number;
-  date: string;
+  // 진행 중인 회차. 회차 사이 빈 기간이면 null이다(#100).
+  roundId: string | null;
+  roundEndsAt: string | null;
+  // 이번 회차를 끝낸 사람 수(#105).
+  finished: number;
 }) {
-  // 오늘 편성이 비어 있으면 문제로 보낼 게 없다 — 버튼 문구로 알린다(#90).
+  // 편성이 비어 있으면 문제로 보낼 게 없다 — 버튼 문구로 알린다(#90).
   const ready = todayCount > 0;
   // 이미 푼 사람에게는 결과를 보여준다. 기록은 브라우저에만 있다.
-  const solved = useTodayScore(date) !== null;
+  const solved = useRoundScore(roundId) !== null;
 
   const ctaLabel = !ready
-    ? "오늘 문제 준비 중"
+    ? "다음 회차 준비 중"
     : solved
-      ? "오늘 결과 보기"
-      : "오늘 문제 풀기";
-  // 이미 푼 사람을 문제 화면으로 보내면 "오늘 문제 끝!"만 다시 본다(#97).
+      ? "이번 주 결과 보기"
+      : "이 주의 문제 풀기";
+  // 이미 푼 사람을 문제 화면으로 보내면 "이 주의 문제 끝!"만 다시 본다(#97).
   const ctaHref = solved ? "/result" : "/today";
-  const [activeGrade, setActiveGrade] = useState(5);
-  const theme = gradeTheme(activeGrade);
+  // 회차는 일주일씩 열린다 — 마감일은 버튼 바로 위에 크게, 주기는 아래에 작게(#104).
+  const deadline = ready && roundEndsAt ? endLabel(roundEndsAt) : null;
 
   // 히어로 아래로 스크롤하면 하단 고정 CTA 표시
   const heroRef = useRef<HTMLElement>(null);
@@ -148,42 +340,36 @@ export default function HomeView({
                   <span className="text-brand">내 문해력은 몇 등급?</span>
                 </p>
               </div>
-
+{/* 
               <p className="max-w-xs text-base leading-relaxed text-muted lg:max-w-md lg:text-lg">
                 회원가입 없이 바로 시작.
                 <br /> 1~9등급으로 결과가 딱 나와요.
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onMouseEnter={() => setActiveGrade(g)}
-                    onClick={() => setActiveGrade(g)}
-                    className={`grid h-8 w-8 place-items-center rounded-lg text-sm font-bold transition-colors lg:h-10 lg:w-10 lg:text-base ${
-                      g === activeGrade
-                        ? "bg-brand text-brand-foreground"
-                        : "bg-surface-muted text-muted"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
-
-              <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-muted lg:hidden">
-                {activeGrade}등급 ·
-                <GradeCharacter grade={activeGrade} className="h-6 w-6" />
-                <span style={{ color: theme.color }}>
-                  {GRADE_TITLES[activeGrade]}
-                </span>
-              </p>
+              </p> */}
             </div>
 
+            {/* 이번 회차 응시자 수(#105). 먼저 푼 사람이 있다는 것만 알려준다. */}
+            <p className="mt-4 text-center text-sm text-muted lg:text-left">
+              {finished === 0 ? (
+                <>이번 회차는 아직 완주한 사람이 없어요. 첫 번째가 되어보세요</>
+              ) : (
+                <>
+                  이번 회차는 지금까지{" "}
+                  <b className="text-foreground">{finished}명</b>이 응시했어요
+                </>
+              )}
+            </p>
+
+            {/* 마감일은 누르기 직전에 봐야 한다 — 버튼 바로 위, 크게. */}
+            {deadline && (
+              <p className="mt-8 text-center text-xl font-extrabold lg:mt-10 lg:text-left lg:text-2xl">
+                이번 회차는 <span className="text-brand">{deadline}</span>까지
+              </p>
+            )}
             <Link
               href={ctaHref}
-              className="group mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] lg:mt-10 lg:h-16 lg:w-auto lg:self-start lg:px-12 lg:text-xl"
+              className={`group flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] lg:h-16 lg:w-auto lg:self-start lg:px-12 lg:text-xl ${
+                deadline ? "mt-3" : "mt-8 lg:mt-10"
+              }`}
             >
               {ctaLabel}
               <span className="transition-transform group-hover:translate-x-1">
@@ -191,7 +377,7 @@ export default function HomeView({
               </span>
             </Link>
             <p className="mt-3 text-center text-xs text-muted lg:text-left lg:text-sm">
-              당신의 문해력 캐릭터는 무엇일까?
+              문제는 일주일마다 바뀝니다
             </p>
 
             {/* 모바일 스크롤 유도 (정상 흐름 — 캡션과 겹치지 않음) */}
@@ -201,32 +387,9 @@ export default function HomeView({
             </div>
           </div>
 
-          {/* 데스크톱 우측 등급 미리보기 카드 */}
+          {/* 데스크톱 우측 — 시험이 어떻게 굴러가는지 세 장으로 넘겨 보여준다(#105). */}
           <div className="hidden lg:flex lg:items-center lg:justify-center">
-            <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 text-center shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-              <GradeCharacter
-                grade={activeGrade}
-                className="mx-auto h-32 w-32"
-              />
-              <p className="mt-3 text-sm font-bold tracking-widest text-muted">
-                나의 문해력 캐릭터
-              </p>
-              <p
-                className="mt-1 font-display text-5xl leading-tight tracking-tight transition-colors"
-                style={{ color: theme.color }}
-              >
-                {GRADE_TITLES[activeGrade]}
-              </p>
-              <p
-                className="mt-3 inline-block rounded-full px-4 py-1.5 text-sm font-extrabold text-white transition-colors"
-                style={{ backgroundColor: theme.color }}
-              >
-                {activeGrade}등급
-              </p>
-              <p className="mt-4 text-sm text-muted">
-                등급 배지에 마우스를 올려보세요. 당신은?
-              </p>
-            </div>
+            <SystemSlides />
           </div>
 
           {/* 데스크톱 스크롤 유도 (절대배치 — CTA가 좌측이라 하단 중앙 비어 있음) */}
@@ -275,10 +438,15 @@ export default function HomeView({
             ))}
           </div>
 
+          {/* 사례마다 보도 출처가 다르다 — 같은 기사는 한 번만 적는다. */}
           <Reveal delay={500}>
-            <p className="mt-8 text-center text-xs text-muted">
-              출처: 한국일보(2024.8), 아주경제(2024.4)
-            </p>
+            <div className="mt-8 flex flex-col items-center gap-1">
+              {[...new Map(CASES.map((c) => [c.source.label, c.source])).values()].map(
+                (s) => (
+                  <SourceLine key={s.label} source={s} />
+                ),
+              )}
+            </div>
           </Reveal>
         </section>
 
@@ -288,7 +456,7 @@ export default function HomeView({
         <section className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-24 text-center">
           <Reveal>
             <p className="text-xs font-bold tracking-[0.2em] text-brand">
-              OECD PIAAC 2023 · 성인역량조사
+              OECD 성인역량조사(PIAAC) 2주기
             </p>
           </Reveal>
           <Reveal delay={120}>
@@ -298,48 +466,47 @@ export default function HomeView({
           </Reveal>
           <Reveal delay={260}>
             <p className="mt-1 font-display leading-none text-brand">
-              <span className="text-[7rem] lg:text-[10rem]">249</span>
+              <span className="text-[7rem] lg:text-[10rem]">{PIAAC.score}</span>
               <span className="text-4xl lg:text-5xl">점</span>
             </p>
           </Reveal>
           <Reveal delay={400}>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-4 py-1.5 text-sm font-bold text-red-500">
-              ▼ OECD 평균 260점 아래
+              ▼ OECD 평균 {PIAAC.oecdScore}점 아래
             </span>
             <p className="mt-3 text-sm text-muted">
-              31개국 중 10년 새 20점 이상 떨어진 4개국에 한국 포함
+              10여 년 전 첫 조사에서는 {PIAAC.prevScore}점이었습니다
             </p>
           </Reveal>
+          {/* 점수 하나만으로는 분포가 안 보인다 — 아래쪽이 얼마나 두꺼운지 같이 놓는다. */}
           <Reveal delay={540}>
             <div className="mt-12 flex items-center gap-6 sm:gap-10">
               <div className="text-center">
-                <p className="font-display text-4xl text-muted sm:text-5xl">
-                  13%
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  2012년
-                  <br />
-                  기초 문해력 미달
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-2xl text-brand">→</span>
-                <span className="text-xs text-muted">10년 뒤</span>
-              </div>
-              <div className="text-center">
                 <p className="font-display text-4xl text-brand sm:text-5xl">
-                  31%
+                  {PIAAC.lowLevelPercent}%
                 </p>
                 <p className="mt-1 text-xs text-muted">
-                  2023년
+                  1수준 이하
                   <br />
-                  기초 문해력 미달
+                  (OECD {PIAAC.oecdLowLevelPercent}%)
+                </p>
+              </div>
+              <div className="h-12 w-px bg-border" />
+              <div className="text-center">
+                <p className="font-display text-4xl text-muted sm:text-5xl">
+                  {PIAAC.topLevelPercent}%
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  4~5수준
+                  <br />
+                  (OECD {PIAAC.oecdTopLevelPercent}%)
                 </p>
               </div>
             </div>
             <p className="mt-3 text-xs text-muted/70">
-              기초 문해력 미달 성인 10년 사이 2.4배 증가
+              1수준 이하는 아주 단순한 과제만 풀 수 있는 수준입니다
             </p>
+            <SourceLine className="mt-2" source={PIAAC.source} />
           </Reveal>
         </section>
 
@@ -367,102 +534,11 @@ export default function HomeView({
 
           <Reveal delay={160}>
             <figure className="mt-10 w-full max-w-md rounded-2xl bg-surface p-5 shadow-sm">
-              <svg
-                viewBox="0 0 320 180"
-                className="w-full"
-                shapeRendering="crispEdges"
-                role="img"
-                aria-label="한국 PISA 읽기 점수: 2006년 556점에서 2022년 515점으로 하락"
-              >
-                {/* 기준선 */}
-                <line
-                  x1="36"
-                  y1="150"
-                  x2="300"
-                  y2="150"
-                  stroke="var(--border)"
-                  strokeWidth="2"
-                />
-                {/* 하락 라인 (각진 픽셀 톤) */}
-                <polyline
-                  points="36,37 89,75 142,81 194,123 247,130 300,128"
-                  fill="none"
-                  stroke="var(--brand)"
-                  strokeWidth="4"
-                  strokeLinejoin="miter"
-                  strokeLinecap="square"
-                />
-                {/* 픽셀 마커 (정사각형 점) */}
-                <rect x="32" y="33" width="8" height="8" fill="var(--brand)" />
-                <rect x="85" y="71" width="8" height="8" fill="var(--brand)" />
-                <rect x="138" y="77" width="8" height="8" fill="var(--brand)" />
-                <rect
-                  x="190"
-                  y="119"
-                  width="8"
-                  height="8"
-                  fill="var(--brand)"
-                />
-                <rect
-                  x="243"
-                  y="126"
-                  width="8"
-                  height="8"
-                  fill="var(--brand)"
-                />
-                <rect x="296" y="124" width="8" height="8" fill="#dc2626" />
-                {/* 점수·연도 라벨 */}
-                <text
-                  x="36"
-                  y="26"
-                  fill="var(--foreground)"
-                  fontSize="15"
-                  fontWeight="700"
-                  textAnchor="start"
-                >
-                  556
-                </text>
-                <text
-                  x="300"
-                  y="116"
-                  fill="#dc2626"
-                  fontSize="15"
-                  fontWeight="700"
-                  textAnchor="end"
-                >
-                  515
-                </text>
-                <text
-                  x="168"
-                  y="95"
-                  fill="#dc2626"
-                  fontSize="15"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  ▼ 41점
-                </text>
-                <text
-                  x="36"
-                  y="170"
-                  fill="var(--muted)"
-                  fontSize="11"
-                  textAnchor="start"
-                >
-                  &apos;06 세계 1위
-                </text>
-                <text
-                  x="300"
-                  y="170"
-                  fill="var(--muted)"
-                  fontSize="11"
-                  textAnchor="end"
-                >
-                  &apos;22
-                </text>
-              </svg>
+              <PisaChart />
               <figcaption className="mt-2 text-center text-xs text-muted/80">
-                한국 PISA 읽기 평균 (500점 만점) · 2006 → 2022
+                한국 PISA 읽기 평균 (500점 만점) ·{" "}
+                {PISA_READING.series[0].year} →{" "}
+                {PISA_READING.series[PISA_READING.series.length - 1].year}
               </figcaption>
             </figure>
           </Reveal>
@@ -487,20 +563,22 @@ export default function HomeView({
             <Reveal delay={120}>
               <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
                 <p className="font-display text-5xl text-brand sm:text-6xl">
-                  14<span className="text-2xl">학년</span>
+                  {AI_READABILITY.chatbotGrade}
+                  <span className="text-2xl">학년</span>
                 </p>
                 <p className="text-sm font-bold">
                   AI 답변이 요구하는 독해 수준
                 </p>
                 <p className="text-xs leading-relaxed text-muted">
-                  미국 학년 기준 ≈ 대학 2~3년차 (Flesch–Kincaid 14.8)
+                  {AI_READABILITY.note} ≈ 대학 2~3년차
                 </p>
               </div>
             </Reveal>
             <Reveal delay={240}>
               <div className="flex h-full flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center shadow-sm">
                 <p className="font-display text-5xl sm:text-6xl">
-                  6<span className="text-2xl">학년</span>
+                  {AI_READABILITY.recommendedGrade}
+                  <span className="text-2xl">학년</span>
                 </p>
                 <p className="text-sm font-bold">전문가 권장 눈높이</p>
                 <p className="text-xs leading-relaxed text-muted">
@@ -514,10 +592,10 @@ export default function HomeView({
             <p className="mt-8 max-w-sm text-center text-sm font-bold leading-relaxed text-foreground">
               AI는 점점 똑똑해지는데, 그 답을 읽어낼 사람은 준비됐을까요?
             </p>
-            <p className="mt-6 text-center text-xs text-muted">
-              출처: OECD PISA 2022 · 챗봇 응답 가독성 연구(ScienceDirect 2023,
-              Nature 2024)
-            </p>
+            <div className="mt-6 flex flex-col items-center gap-1">
+              <SourceLine source={PISA_READING.source} />
+              <SourceLine source={AI_READABILITY.source} />
+            </div>
           </Reveal>
         </section>
 
@@ -534,16 +612,26 @@ export default function HomeView({
             </h2>
             <p className="mt-3 text-sm text-muted">
               {!ready
-                ? "오늘 문제는 준비 중입니다 · 즉시 채점 · 무료"
+                ? "다음 회차를 준비 중입니다 · 즉시 채점 · 무료"
                 : solved
-                  ? "오늘 문제를 이미 푸셨어요 · 결과 다시 보기"
-                  : `오늘 ${todayCount}문제 · 즉시 채점 · 무료`}
+                  ? "이번 회차를 이미 푸셨어요 · 결과 다시 보기"
+                  : `이번 회차 ${todayCount}문제 · 즉시 채점 · 무료`}
+            </p>
+            <p className="mt-1 text-xs text-muted/70">
+              문제는 일주일마다 바뀝니다
             </p>
           </Reveal>
           <Reveal delay={200}>
+            {deadline && (
+              <p className="mt-8 text-xl font-extrabold lg:text-2xl">
+                이번 회차는 <span className="text-brand">{deadline}</span>까지
+              </p>
+            )}
             <Link
               href={ctaHref}
-              className="group mt-8 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-brand px-10 text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+              className={`group inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-brand px-10 text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98] ${
+                deadline ? "mt-3" : "mt-8"
+              }`}
             >
               {ctaLabel}
               <span className="transition-transform group-hover:translate-x-1">

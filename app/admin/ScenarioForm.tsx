@@ -8,6 +8,7 @@ import {
   type AdminScenario,
   type AdminScenarioStep,
   correctRate,
+  isBodylessKind,
   SCENARIO_KIND_LABELS,
   SCENARIO_KINDS,
   SCENARIO_STATUS_LABELS,
@@ -53,12 +54,14 @@ const PAYLOAD_EDITORS: Partial<
 };
 
 // 만드는 순서. 번호는 순서를 뜻한다 — 기본을 정해야 지문을, 지문이 있어야 문항을 쓴다.
-// 메신저는 지문이 없다 — 대화가 문항마다 흩어져 있어 지문 단계를 건너뛴다.
+// 지문이 없는 유형(메신저·어휘)은 지문 단계를 건너뛴다.
 type PaneId = "basic" | "payload" | "steps";
 function panes(kind: ScenarioKind): { id: PaneId; label: string }[] {
   return [
     { id: "basic" as const, label: "기본" },
-    ...(kind === "chat" ? [] : [{ id: "payload" as const, label: "지문" }]),
+    ...(isBodylessKind(kind)
+      ? []
+      : [{ id: "payload" as const, label: "지문" }]),
     { id: "steps" as const, label: "문항" },
   ];
 }
@@ -331,6 +334,19 @@ function StepEditor({
           onChange={(next) => set("extra", next)}
         />
       )}
+
+      {/* 어휘는 묻는 낱말이 지문 자리에 크게 뜬다 — 질문과 따로 받는다(#101). */}
+      {kind === "word" && (
+        <label className="mt-3 block text-xs font-medium text-muted">
+          낱말 — 화면 가운데 크게 나옵니다
+          <input
+            value={(step.extra.word as string) ?? ""}
+            onChange={(e) => set("extra", { ...step.extra, word: e.target.value })}
+            placeholder="사사오입(四捨五入)"
+            className={`mt-1 w-full ${INPUT}`}
+          />
+        </label>
+      )}
     </li>
   );
 }
@@ -358,7 +374,8 @@ export default function ScenarioForm({
   // 만드는 순서 — 기본 → 지문 → 문항. 미리보기는 늘 오른쪽에 있다(#99).
   const [paneState, setPane] = useState<PaneId>("basic");
   // 지문 단계를 보던 중 메신저로 바꾸면 없는 탭에 남는다 — 기본으로 되돌린다.
-  const pane = kind === "chat" && paneState === "payload" ? "basic" : paneState;
+  const pane =
+    isBodylessKind(kind) && paneState === "payload" ? "basic" : paneState;
   // 이미 쓰이는 식별자인지 저장 전에 알려준다(#99). 서버도 막지만 눌러본 뒤에야 알면 늦다.
   const [taken, setTaken] = useState<{ slug: string; title: string }[]>([]);
 

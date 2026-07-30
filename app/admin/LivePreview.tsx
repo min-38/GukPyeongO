@@ -241,6 +241,12 @@ export default function LivePreview({
                 {stepPoints(step)}점 · {step.timeLimitSec}초
               </p>
             </div>
+            {/* 어휘는 낱말이 지문 자리에 크게 뜬다 — 미리보기에서도 질문 위에 세운다(#101). */}
+            {typeof step.extra.word === "string" && step.extra.word && (
+              <p className="mt-1 font-display text-2xl leading-tight">
+                {step.extra.word}
+              </p>
+            )}
             <p className="mt-1 text-sm font-medium">
               {step.prompt || "(질문 없음)"}
             </p>

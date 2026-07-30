@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import CommunityTutorial from "../community/CommunityTutorial";
 import ContractTutorial from "../contract/ContractTutorial";
 import EmailTutorial from "../email/EmailTutorial";
@@ -10,6 +12,7 @@ import StoryTutorial from "../story/StoryTutorial";
 import { type ScenarioKind } from "@/app/lib/scenario-admin";
 
 import ChatTutorial from "./Tutorial";
+import WordTutorial from "./WordTutorial";
 
 // 유형에 맞는 시작 화면을 고른다 (#93).
 // 오늘의 문제는 유형이 섞여 나오므로(#87) 문제마다 그 유형의 읽는 법을 먼저 보여준다.
@@ -46,9 +49,16 @@ export default function TutorialByKind({
       return <ContractTutorial onStart={onStart} />;
     case "manual":
       return <ManualTutorial onStart={onStart} />;
+    case "word":
+      return <WordTutorial onStart={onStart} />;
     default:
-      // 튜토리얼이 없는 유형은 그냥 문제로 넘어간다.
-      onStart();
-      return null;
+      return <SkipTutorial onStart={onStart} />;
   }
+}
+
+// 튜토리얼이 없는 유형은 그냥 문제로 넘어간다.
+// 렌더 중에 onStart()를 부르면 부모 상태를 렌더 도중 바꾸게 되어 React가 경고한다.
+function SkipTutorial({ onStart }: { onStart: () => void }) {
+  useEffect(onStart, [onStart]);
+  return null;
 }

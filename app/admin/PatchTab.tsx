@@ -13,18 +13,22 @@ import PageHeader from "./PageHeader";
 
 // 패치노트 (#59). 유저에게 보이는 변경 안내를 여기서 쓴다.
 
+// 작성과 수정이 같은 폼을 쓴다 — 규칙도 서버에서 한 벌이다.
+// note가 있으면 수정, 없으면 새로 쓴다.
 function PatchForm({
+  note,
   onSaved,
   onCancel,
 }: {
+  note?: PatchNote;
   onSaved: (n: PatchNote) => void;
   onCancel: () => void;
 }) {
-  const [version, setVersion] = useState("");
-  const [type, setType] = useState<PatchType>("new");
-  const [content, setContent] = useState("");
+  const [version, setVersion] = useState(note?.version ?? "");
+  const [type, setType] = useState<PatchType>(note?.type ?? "new");
+  const [content, setContent] = useState(note?.content ?? "");
   const [patchedAt, setPatchedAt] = useState(
-    new Date().toISOString().slice(0, 10),
+    (note?.patchedAt ?? new Date().toISOString()).slice(0, 10),
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -36,9 +40,15 @@ function PatchForm({
     setError(null);
     try {
       const res = await fetch("/api/admin/patch-notes", {
-        method: "POST",
+        method: note ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version, type, content, patchedAt }),
+        body: JSON.stringify({
+          ...(note ? { id: note.id } : {}),
+          version,
+          type,
+          content,
+          patchedAt,
+        }),
       });
       const data = (await res.json()) as {
         patchNote?: PatchNote;
@@ -133,7 +143,8 @@ function PatchForm({
 
 export default function PatchTab() {
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([]);
-  const [editingPatch, setEditingPatch] = useState<"new" | null>(null);
+  // "new" = 새로 쓰기, 그 외 문자열 = 그 id의 패치노트를 고치는 중.
+  const [editingPatch, setEditingPatch] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -150,7 +161,9 @@ export default function PatchTab() {
 
   function handlePatchSaved(n: PatchNote) {
     setPatchNotes((prev) =>
-      [n, ...prev].sort((a, b) => b.patchedAt.localeCompare(a.patchedAt)),
+      [n, ...prev.filter((p) => p.id !== n.id)].sort((a, b) =>
+        b.patchedAt.localeCompare(a.patchedAt),
+      ),
     );
     setEditingPatch(null);
   }
@@ -215,15 +228,31 @@ export default function PatchTab() {
                     })}
                   </span>
                   <button
+                    onClick={() => setEditingPatch(p.id)}
+                    className="ml-auto font-medium text-brand"
+                  >
+                    수정
+                  </button>
+                  <button
                     onClick={() => deletePatchNote(p.id)}
-                    className="ml-auto font-medium text-red-500"
+                    className="font-medium text-red-500"
                   >
                     삭제
                   </button>
                 </div>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm">
-                  {p.content}
-                </p>
+                {editingPatch === p.id ? (
+                  <div className="mt-3">
+                    <PatchForm
+                      note={p}
+                      onSaved={handlePatchSaved}
+                      onCancel={() => setEditingPatch(null)}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm">
+                    {p.content}
+                  </p>
+                )}
               </li>
             ))
           )}

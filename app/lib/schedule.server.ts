@@ -3,9 +3,18 @@ import "server-only";
 import { type ScenarioKind } from "./scenario-admin";
 import { getSupabaseAdmin } from "./supabase-admin.server";
 
-// 그날 편성된 문제 불러오기 (#87).
+// 회차에 편성된 문제 불러오기 (#87, #100).
 // 유저는 slug로 시나리오에 직접 가지 않는다 — 편성된 순서대로 이어서 푼다.
 // 정답(answer_index)은 여기서도 조회하지 않는다. 채점은 서버가 한다(#83).
+//
+// 편성 단위는 하루가 아니라 회차다(#100). 회차는 시작 시각부터 마감 시각까지 열려 있다.
+
+// 문제를 풀 수 있는 기간 한 구간.
+export interface Round {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+}
 
 // 한 회차에서 유저가 푸는 시나리오 하나.
 export interface ScheduledScenario {
@@ -52,21 +61,80 @@ function toStep(row: StepRow) {
   };
 }
 
-// 오늘 날짜(KST). 서버가 UTC로 돌아도 하루가 어긋나지 않게 오프셋을 더해 계산한다.
-export function todayKst(): string {
-  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+interface RoundRow {
+  id: string;
+  starts_at: string;
+  ends_at: string;
 }
 
-export async function getScheduledScenarios(
-  date: string
+const toRound = (r: RoundRow): Round => ({
+  id: r.id,
+  startsAt: r.starts_at,
+  endsAt: r.ends_at,
+});
+
+// 지금 진행 중인 회차. 회차 사이 빈 기간이면 null.
+// ponytail: DB를 못 읽어도 null이라 "회차 없음"과 구별되지 않는다 — 화면은 둘 다 "준비 중"으로 같다.
+// 구별이 필요해지면 오류 채널을 따로 낸다.
+export async function getCurrentRound(): Promise<Round | null> {
+  try {
+    const now = new Date().toISOString();
+    const { data } = await getSupabaseAdmin()
+      .from("rounds")
+      .select("id, starts_at, ends_at")
+      // 반개구간 [시작, 마감) — DB의 겹침 방지 제약과 같은 규칙.
+      .lte("starts_at", now)
+      .gt("ends_at", now)
+      .order("starts_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ? toRound(data as RoundRow) : null;
+  } catch {
+    return null;
+  }
+}
+
+// 이미 시작한 회차만 id로 찾는다. 다시 보기(#96)가 주소로 회차를 받기 때문에,
+// 아직 시작하지 않은 회차의 지문이 새 나가지 않게 여기서 막는다.
+export async function getStartedRound(id: string): Promise<Round | null> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("rounds")
+      .select("id, starts_at, ends_at")
+      .eq("id", id)
+      .lte("starts_at", new Date().toISOString())
+      .maybeSingle();
+    return data ? toRound(data as RoundRow) : null;
+  } catch {
+    return null;
+  }
+}
+
+// 이번 회차를 끝낸 사람 수 (#105). 홈에서 "몇 명이 응시했는지"만 보여준다.
+// 기록을 못 읽으면 0명으로 둔다 — 홈이 숫자 없이도 성립해야 한다.
+export async function getRoundFinishedCount(roundId: string): Promise<number> {
+  try {
+    const { count } = await getSupabaseAdmin()
+      .from("scenario_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("round_id", roundId)
+      .not("finished_at", "is", null);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function getRoundScenarios(
+  roundId: string
 ): Promise<ScheduledScenario[]> {
   try {
     const { data, error } = await getSupabaseAdmin()
-      .from("scenario_schedule")
+      .from("round_scenarios")
       .select(
         "sort_order, scenarios(slug, kind, payload, status, scenario_steps(step_key, type, prompt, choices, difficulty, points, time_limit_sec, show_up_to, extra))"
       )
-      .eq("publish_date", date)
+      .eq("round_id", roundId)
       .order("sort_order", { ascending: true })
       // 문항 순서까지 정해줘야 한다. 안 정하면 DB가 돌려주는 대로라 출제 순서가 뒤섞인다 —
       // 메신저는 대화가 이어지는 유형이라 날짜가 거꾸로 가버린다.
@@ -79,7 +147,7 @@ export async function getScheduledScenarios(
 
     return (data as unknown as Row[])
       .map((row) => row.scenarios)
-      // 편성해둔 뒤 게시가 내려갔을 수 있다 — 그런 건 오늘 내보내지 않는다.
+      // 편성해둔 뒤 게시가 내려갔을 수 있다 — 그런 건 내보내지 않는다.
       .filter((s) => s !== null && s.status === "published")
       .map((s) => ({
         slug: s!.slug,

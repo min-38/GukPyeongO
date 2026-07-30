@@ -19,6 +19,7 @@ import {
   EmailThread,
   HtmlBlock,
   PostCard,
+  WordFace,
 } from "../../play/SurfaceCards";
 import useStoredResult from "../useStoredResult";
 
@@ -43,6 +44,7 @@ interface Item {
   content: Record<string, unknown>;
   bubbles: Bubble[]; // 메신저 전용 — 이 문항 시점까지 쌓인 대화
   showUpTo: number | null; // 이메일 전용 — 이 문항 시점에 열려 있던 메일 수
+  word: string | null; // 어휘 전용 — 이 문항이 묻는 낱말
   prompt: string;
   choices: string[];
   answerIndex: number;
@@ -131,6 +133,9 @@ function ScenarioBody({ item }: { item: Item }) {
           })}
         </div>
       );
+    // 어휘는 지문 자리에 낱말 하나가 있었다 — 다시 볼 때도 같은 자리에 세운다(#101).
+    case "word":
+      return item.word ? <WordFace word={item.word} /> : null;
     default:
       return null;
   }
@@ -254,6 +259,7 @@ export default function Review({
         label: SCENARIO_KIND_TITLES[scenario.kind],
         content: scenario.content,
         bubbles: chatBubbles(scenario, step, r),
+        word: (step.word as string | undefined) ?? null,
         showUpTo: (step.showUpTo as number | undefined) ?? null,
         prompt: step.prompt as string,
         choices: step.choices as string[],

@@ -12,7 +12,8 @@ export type ScenarioKind =
   | "email"
   | "story"
   | "contract"
-  | "manual";
+  | "manual"
+  | "word";
 
 export const SCENARIO_KINDS: ScenarioKind[] = [
   "notice",
@@ -23,6 +24,7 @@ export const SCENARIO_KINDS: ScenarioKind[] = [
   "story",
   "contract",
   "manual",
+  "word",
 ];
 
 export const SCENARIO_KIND_LABELS: Record<ScenarioKind, string> = {
@@ -34,6 +36,7 @@ export const SCENARIO_KIND_LABELS: Record<ScenarioKind, string> = {
   story: "서사",
   contract: "계약서",
   manual: "사용설명서",
+  word: "어휘",
 };
 
 // 유형 이름 그대로 화면에 다는 제목(#99). 튜토리얼 제목과 푸는 화면 상단바가 같은 값을 쓴다 —
@@ -47,6 +50,7 @@ export const SCENARIO_KIND_TITLES: Record<ScenarioKind, string> = {
   story: "서사",
   contract: "계약서",
   manual: "사용설명서",
+  word: "어휘",
 };
 
 // 유형이 무엇을 재는지. 목록에서 어떤 유형에 문제를 더 채울지 판단하는 데 쓴다(#92).
@@ -59,7 +63,15 @@ export const SCENARIO_KIND_DESCRIPTIONS: Record<ScenarioKind, string> = {
   story: "긴 이야기를 읽고 세부·생략·서술자를 따진다",
   contract: "조항에 묶이는 의무와 돈을 조문에서 짚어낸다",
   manual: "절차의 순서와 경고가 미치는 범위를 가려낸다",
+  word: "한자어·사자성어·속담 같은 낱말의 뜻을 짚는다",
 };
+
+// 지문이 없는 유형 — 문항만으로 성립한다.
+// 메신저는 대화가 문항마다 흩어져 있고, 어휘는 낱말 하나를 묻는다.
+// 지문 필수 검사(scenario-rules)와 어드민의 지문 단계(ScenarioForm)가 이 판정을 쓴다.
+export function isBodylessKind(kind: ScenarioKind): boolean {
+  return kind === "chat" || kind === "word";
+}
 
 export type ScenarioStatus = "draft" | "published" | "held";
 

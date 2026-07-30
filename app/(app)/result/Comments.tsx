@@ -107,6 +107,11 @@ export default function Comments({
     <section className="mt-10">
       <h3 className="text-xl font-extrabold">💬 댓글</h3>
 
+      {/* 댓글은 회차에 묶인다(#100). 마감이 지나면 목록이 비므로 미리 알려 준다. */}
+      <p className="mt-1 text-xs text-muted">
+        이번 회차 마감 전까지만 쓰고 볼 수 있어요.
+      </p>
+
       <div className="mt-3 flex gap-2 rounded-full bg-surface-muted p-1">
         <button
           type="button"

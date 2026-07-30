@@ -240,6 +240,13 @@ function parseInput(body: unknown): ParsedInput | string {
       if (typeof parsedExtra === "string") return parsedExtra;
       extra = parsedExtra;
     }
+    if (b.kind === "word") {
+      // 어휘는 묻는 낱말이 지문 자리에 크게 뜬다(#101) — 질문(prompt)과 따로 받는다.
+      const word = (s.extra as { word?: unknown } | undefined)?.word;
+      if (typeof word !== "string" || word.trim().length === 0)
+        return `${at}: 낱말을 입력해주세요.`;
+      extra = { word: word.trim() };
+    }
 
     steps.push({
       step_key: s.stepKey,

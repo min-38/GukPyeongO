@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   gradeBlurb,
   gradeTheme,
+  GRADE_TITLES,
   type QuizMode,
   QUIZ_MODES,
   type StoredResult,
@@ -172,9 +173,16 @@ export default function ResultPage() {
           <h1 className="mb-3 font-display text-2xl">테스트 결과</h1>
           <div className="animate-pop flex flex-col items-center rounded-2xl border border-border p-6 text-center">
             <GradeCharacter grade={result.grade} className="h-32 w-32" />
+            {/* 그림만으로는 무슨 동물인지 갈리는 게 있다 — 이름을 붙여준다(#106). */}
             <p
-              className="mt-3 font-display text-4xl leading-tight tracking-tight"
+              className="mt-3 font-display text-3xl leading-tight tracking-tight sm:text-4xl"
               style={{ color: theme.color }}
+            >
+              {GRADE_TITLES[result.grade] ?? result.title}
+            </p>
+            <p
+              className="mt-2 inline-block rounded-full px-4 py-1.5 text-sm font-extrabold text-white"
+              style={{ backgroundColor: theme.color }}
             >
               {result.grade}등급
             </p>
@@ -224,12 +232,16 @@ export default function ResultPage() {
             </div>
           )}
 
-          <Link
-            href="/result/review"
-            className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
-          >
-            문제 다시 보기
-          </Link>
+          {/* 회차를 알아야 그 회차 지문을 다시 읽어올 수 있다(#100).
+              회차가 없던 시절에 저장된 기록에는 보여줄 게 없어 버튼을 감춘다. */}
+          {result.roundId && (
+            <Link
+              href={`/result/review?round=${result.roundId}`}
+              className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-brand text-lg font-bold text-brand-foreground shadow-lg shadow-brand/30 transition-all hover:bg-brand-strong active:scale-[0.98]"
+            >
+              문제 다시 보기
+            </Link>
+          )}
 
           <div className="mt-3 flex gap-2">
             <Link

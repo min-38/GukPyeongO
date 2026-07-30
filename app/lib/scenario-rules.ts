@@ -7,7 +7,7 @@
 //   경고 — 품질 판단이라 운영자가 사정을 알 수도 있는 것(길이 상한, 감상 어휘)
 // 구조 정합성(보기 2개 이상, 정답 범위, 난이도 등)은 라우트의 parseInput이 이미 거부한다.
 
-import { type ScenarioKind } from "./scenario-admin";
+import { isBodylessKind, type ScenarioKind } from "./scenario-admin";
 
 // 본문 길이 상한(자). 모바일에서 읽히는 한계 — mock 테스트의 값과 같은 기준.
 const BODY_LIMITS: Partial<Record<ScenarioKind, number>> = {
@@ -44,7 +44,7 @@ export interface RuleResult {
   warnings: string[];
 }
 
-// 유형별로 본문이 어디 있는지 다르다. 없는 유형(chat)은 빈 문자열.
+// 유형별로 본문이 어디 있는지 다르다. 지문이 없는 유형(메신저·어휘)은 빈 문자열.
 function bodyText(
   kind: ScenarioKind,
   payload: Record<string, unknown>,
@@ -96,7 +96,7 @@ export function checkScenarioRules(
   const warnings: string[] = [];
 
   const body = bodyText(kind, payload);
-  if (kind !== "chat" && body.trim().length === 0) {
+  if (!isBodylessKind(kind) && body.trim().length === 0) {
     errors.push("지문 본문이 비어 있습니다.");
   }
 

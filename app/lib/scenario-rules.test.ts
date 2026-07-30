@@ -81,6 +81,14 @@ describe("scenario-rules", () => {
     expect(errors.join()).toContain("본문이 비어");
   });
 
+  // 어휘는 낱말 하나를 묻는 유형이라 지문이 없다(#101). 메신저와 같은 예외.
+  it("어휘는 지문이 없어도 통과한다", () => {
+    const { errors } = checkScenarioRules("word", {}, [
+      { prompt: "사흘은 며칠?", choices: ["3일", "4일"] },
+    ]);
+    expect(errors).toEqual([]);
+  });
+
   it("본문 길이 초과는 경고로 남기고 저장은 막지 않는다", () => {
     const long = "가".repeat(700);
     const { errors, warnings } = checkScenarioRules(

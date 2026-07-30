@@ -13,7 +13,7 @@ import {
   type ReviewStep,
   type StoredResult,
 } from "@/app/lib/quiz";
-import { saveTodayResult, useTodayScore } from "@/app/lib/today-result";
+import { saveRoundResult, useRoundScore } from "@/app/lib/today-result";
 
 // 회차 채점 응답 (#89). 정답·배점·만점은 서버가 DB에서 읽어 계산한다.
 // 라우트가 server-only 모듈을 끌고 오므로 타입을 여기서 다시 적는다.
@@ -24,6 +24,7 @@ interface GradeResponse {
   correctCount: number;
   totalCount: number;
   gradeToken: string;
+  roundId: string;
   typeStats: { type: string; correct: number; total: number }[];
   finishedAt: string;
   rank?: GradeRank;
@@ -42,11 +43,11 @@ const TODAY_TUTORIAL_KEY = "gukpyeongo:today-tutorial-seen";
 // 유형이 섞여 나온다 — 하나가 끝나면 다음 시나리오로 넘어가고, 점수는 회차 전체로 합산한다.
 export default function TodayPlay({
   scenarios,
-  date,
+  roundId,
 }: {
   scenarios: ScheduledScenario[];
-  // 서버가 계산한 오늘(KST). 클라이언트가 따로 계산하면 자정 언저리에 어긋난다.
-  date: string;
+  // 지금 진행 중인 회차. 채점 요청과 기록 저장이 이 값으로 묶인다(#100).
+  roundId: string;
 }) {
   // 지금 푸는 시나리오와 여기까지 쌓인 점수. 마지막이 끝나면 합계를 셸에 넘긴다.
   const router = useRouter();
@@ -58,8 +59,8 @@ export default function TodayPlay({
   const answersRef = useRef<
     { slug: string; stepKey: string; choiceIndex: number | null }[]
   >([]);
-  // 오늘 이미 푼 기록. 있으면 문제 대신 그날 결과부터 보여준다(#90).
-  const seenScore = useTodayScore(date);
+  // 이번 회차에 이미 푼 기록. 있으면 문제 대신 결과부터 보여준다(#90).
+  const seenScore = useRoundScore(roundId);
   // 채점 중 화면. 결과 페이지로 넘어갈 때까지 이 화면을 붙잡는다.
   const [grading, setGrading] = useState(false);
 
@@ -79,7 +80,7 @@ export default function TodayPlay({
       const res = await fetch("/api/today-grade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersRef.current }),
+        body: JSON.stringify({ answers: answersRef.current, roundId }),
       });
       if (!res.ok) return;
       const g = (await res.json()) as GradeResponse;
@@ -87,7 +88,7 @@ export default function TodayPlay({
       // 결과 화면은 v1 채점 응답 모양을 그대로 읽는다. 없는 값(반응 속도 등)은 비워 둔다.
       const stored: StoredResult = {
         mode: "quick",
-        modeLabel: "오늘의 문제",
+        modeLabel: "이 주의 문제",
         score: g.score,
         maxScore: g.maxScore,
         grade: g.grade,
@@ -100,6 +101,7 @@ export default function TodayPlay({
           .map((t) => t.type),
         typeStats: g.typeStats as StoredResult["typeStats"],
         gradeToken: g.gradeToken,
+        roundId: g.roundId,
         finishedAt: g.finishedAt,
         review: g.review,
         ...(g.rank ? { rank: g.rank } : {}),
@@ -110,7 +112,7 @@ export default function TodayPlay({
       };
       sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(stored));
       // 다시 들어온 사람에게도 결과를 보여주려면 탭이 닫혀도 남아야 한다(#97).
-      saveTodayResult({ date, score: g.score, result: stored });
+      saveRoundResult({ roundId, score: g.score, result: stored });
       // 채점이 더 오래 걸렸으면 기다린 만큼만, 빨리 끝났으면 최소 시간까지.
       await shown;
       router.push("/result");
@@ -134,7 +136,7 @@ export default function TodayPlay({
   return (
     <PlayShell
       initialScore={seenScore}
-      doneTitle="오늘 문제 끝!"
+      doneTitle="이 주의 문제 끝!"
       doneLink={
         <Link
           href="/result"
@@ -181,8 +183,8 @@ export default function TodayPlay({
             {
               title: "문제 갱신",
               desc: [
-                "문제는 매일 자정에 새로 올라옵니다.",
-                "하루 한 번만 응시할 수 있어요."
+                "문제는 일주일마다 새로 올라옵니다.",
+                "한 회차는 한 번만 응시할 수 있어요."
               ],
             },
             {
@@ -238,7 +240,7 @@ export default function TodayPlay({
             onFinish={(score) => {
               const sum = scoreSoFar + score;
               if (index + 1 >= total) {
-                saveTodayResult({ date, score: sum });
+                saveRoundResult({ roundId, score: sum });
                 void gradeAndGo();
                 return onFinish(sum);
               }

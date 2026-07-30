@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import { RESULT_STORAGE_KEY, type StoredResult } from "@/app/lib/quiz";
-import { readTodayResult, todayKstClient } from "@/app/lib/today-result";
+import { readLastResult } from "@/app/lib/today-result";
 
 // sessionStorage의 채점 결과를 읽는다. 결과 화면과 문제 다시 보기가 같은 값을 본다(#95).
 // 탭을 닫았다 다시 들어온 사람은 sessionStorage가 비어 있어 오늘 기록에서 꺼내 쓴다(#97).
@@ -23,9 +23,10 @@ function readResult(): StoredResult | null {
   } catch {
     raw = null;
   }
-  // 이 탭에서 방금 푼 게 아니면 오늘 기록을 본다. 어제 것이면 readTodayResult가 걸러낸다.
+  // 이 탭에서 방금 푼 게 아니면 마지막 기록을 본다. 회차로 거르지 않는다 —
+  // 회차가 끝난 뒤에도 자기 결과는 계속 볼 수 있어야 한다(#100).
   if (raw === null) {
-    const saved = readTodayResult(todayKstClient())?.result ?? null;
+    const saved = readLastResult()?.result ?? null;
     // 여기서도 캐시를 태워야 렌더마다 새 객체가 나오지 않는다.
     raw = saved ? JSON.stringify(saved) : null;
   }

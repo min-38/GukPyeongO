@@ -63,7 +63,8 @@ export async function POST(request: Request) {
     // 통계 갱신 실패는 무시
   }
 
-  const gradeToken = createGradeToken(result.grade, getSigningSecret());
+  // v1 경로는 회차와 무관하다 — 회차 없는 토큰이라 댓글은 어느 회차에도 안 걸린다(#100).
+  const gradeToken = createGradeToken(result.grade, null, getSigningSecret());
   const perQuestion = perQ.map((p) => ({
     questionId: p.questionId,
     correct: p.correct,
