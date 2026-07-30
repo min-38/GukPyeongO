@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { type DbTarget } from "@/app/lib/db-target";
 import { type AdminScenario } from "@/app/lib/scenario-admin";
 
 import AdminNav, { type AdminTab } from "./AdminNav";
@@ -18,7 +19,13 @@ function activeTab(pathname: string): AdminTab {
   return (seg || "dashboard") as AdminTab;
 }
 
-export default function AdminShell({ children }: { children: ReactNode }) {
+export default function AdminShell({
+  children,
+  db,
+}: {
+  children: ReactNode;
+  db: DbTarget;
+}) {
   const pathname = usePathname();
   // 로그인 화면에는 판을 두르지 않는다 — 아직 들어오지 않은 사람이다.
   const bare = pathname === "/admin/login";
@@ -45,7 +52,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-1">
-      <AdminNav active={activeTab(pathname)} onLogout={logout} />
+      <AdminNav active={activeTab(pathname)} db={db} onLogout={logout} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TodayStrip scenarios={scenarios} />
         <main className="min-w-0 flex-1 overflow-x-auto px-6 py-6">

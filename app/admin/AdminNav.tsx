@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { type DbTarget } from "@/app/lib/db-target";
+
 // 편성실 왼쪽 판 (#99).
 // 화면마다 주소가 따로 있고, 지금 어디에 있는지는 주소로 정해진다(#99).
 // 문제를 고치는 중에도 어디에 있는지가 같은 자리에 보여야 한다.
@@ -61,10 +63,13 @@ const GROUPS: {
 export default function AdminNav({
   active,
   counts = {},
+  db,
   onLogout,
 }: {
   active: AdminTab;
   counts?: NavCounts;
+  // 지금 붙어 있는 DB(#107). 로컬인 줄 알고 클라우드를 고치는 사고를 막는다.
+  db?: DbTarget;
   onLogout?: () => void;
 }) {
   return (
@@ -118,10 +123,31 @@ export default function AdminNav({
         ))}
       </nav>
 
+      {db && (
+        <div
+          className={`mt-auto rounded-xl px-3 py-2 ${
+            db.local ? "bg-surface/10" : "bg-red-500/25"
+          }`}
+          title={db.host}
+        >
+          <p className="flex items-center gap-1.5 text-xs font-bold">
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                db.local ? "bg-emerald-400" : "bg-red-400"
+              }`}
+            />
+            {db.label}
+          </p>
+          <p className="mt-0.5 truncate text-[11px] text-surface/50">
+            {db.host}
+          </p>
+        </div>
+      )}
+
       {onLogout && (
         <button
           onClick={onLogout}
-          className="mt-auto rounded-xl px-3 py-2 text-left text-sm font-medium text-surface/60 hover:bg-surface/10"
+          className={`rounded-xl px-3 py-2 text-left text-sm font-medium text-surface/60 hover:bg-surface/10 ${db ? "" : "mt-auto"}`}
         >
           로그아웃
         </button>
