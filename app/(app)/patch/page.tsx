@@ -9,7 +9,7 @@ import {
 } from "@/app/lib/quiz";
 
 export const metadata: Metadata = {
-  title: "패치노트 — 국평오 테스트",
+  title: "패치노트",
   description: "국평오 테스트 업데이트 내역.",
 };
 
