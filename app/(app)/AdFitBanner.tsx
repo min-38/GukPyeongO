@@ -29,14 +29,18 @@ export default function AdFitBanner({
     };
   }, []);
 
+  // 광고가 붙는 순간 자리를 차지하면서 아래 내용이 밀린다 — 지문을 읽는 중에 밀리면
+  // 읽던 줄을 놓친다. 들어올 높이를 미리 비워 둬서 실을 때 화면이 움직이지 않게 한다.
   return (
-    <ins
-      ref={ref}
-      className={`kakao_ad_area ${className}`}
-      style={{ display: "none" }}
-      data-ad-unit={unit}
-      data-ad-width={String(width)}
-      data-ad-height={String(height)}
-    />
+    <div style={{ minHeight: height }}>
+      <ins
+        ref={ref}
+        className={`kakao_ad_area ${className}`}
+        style={{ display: "none" }}
+        data-ad-unit={unit}
+        data-ad-width={String(width)}
+        data-ad-height={String(height)}
+      />
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   type EmailStep,
 } from "@/app/lib/email-scenario";
 import { readMs } from "@/app/lib/scenario-pacing";
-import { type PlanRead } from "@/app/lib/useScenario";
+import { type OnAnswered, type PlanRead } from "@/app/lib/useScenario";
 import { playMessagePop } from "@/app/lib/sfx";
 
 import ReadingScenario, { NEXT_STEP_OPEN_MS } from "./ReadingScenario";
@@ -28,7 +28,7 @@ export default function EmailScenarioView({
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   // 지금까지 열린 메일 수. 이미 열린 메일은 다시 닫히지 않으므로 원문을 계속 대조할 수 있다.
   const [visible, setVisible] = useState(0);

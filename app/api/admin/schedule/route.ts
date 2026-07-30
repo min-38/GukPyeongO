@@ -148,33 +148,19 @@ export async function PUT(request: Request) {
   }
   const roundId = saved.data.id as string;
 
-  // 편성은 통째로 교체한다. 순서만 바꾸는 경우도 있어 지우고 다시 넣는 편이 단순하다.
-  const { error: deleteError } = await supabase
-    .from("round_scenarios")
-    .delete()
-    .eq("round_id", roundId);
-  if (deleteError) {
-    return NextResponse.json(
-      { error: "편성 저장에 실패했습니다." },
-      { status: 500 },
-    );
-  }
-
-  if (ids.length > 0) {
-    const { error } = await supabase.from("round_scenarios").insert(
-      ids.map((scenario_id, i) => ({
-        round_id: roundId,
-        scenario_id,
-        sort_order: i + 1,
-      })),
-    );
-    if (error) {
-      const msg =
-        error.code === "23503"
-          ? "없는 시나리오가 포함돼 있습니다."
-          : "편성 저장에 실패했습니다.";
-      return NextResponse.json({ error: msg }, { status: 400 });
-    }
+  // 편성은 통째로 교체한다. 지우기와 넣기를 따로 던지면 넣기가 실패했을 때
+  // 지운 것만 남아 회차가 빈 채로 살아 있게 된다 — 진행 중이었다면 그 자리에서 "준비 중"이 된다.
+  // DB 함수 하나가 곧 트랜잭션 하나라, 중간에 틀어지면 지운 것까지 되돌아간다.
+  const { error: replaceError } = await supabase.rpc("set_round_scenarios", {
+    p_round: roundId,
+    p_ids: ids,
+  });
+  if (replaceError) {
+    const msg =
+      replaceError.code === "23503"
+        ? "없는 시나리오가 포함돼 있습니다."
+        : "편성 저장에 실패했습니다.";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   const round: AdminRound = {

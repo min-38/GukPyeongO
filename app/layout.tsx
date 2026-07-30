@@ -18,8 +18,11 @@ const description =
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.gukpyeongo.site"),
-  title,
+  // 페이지마다 제목을 붙일 수 있게 틀을 둔다. 제목이 없는 페이지는 default 를 쓴다.
+  title: { default: title, template: "%s — 국평오 테스트" },
   description,
+  // www 와 비-www 가 따로 색인돼 점수가 갈리지 않게 정본 주소를 밝힌다.
+  alternates: { canonical: "/" },
   openGraph: {
     title,
     description,

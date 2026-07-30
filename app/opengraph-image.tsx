@@ -17,22 +17,59 @@ async function loadOrca(): Promise<string> {
 }
 
 // 한글 렌더링용 폰트. 구형 User-Agent로 요청해 Satori가 읽는 TTF를 받는다.
-async function loadKoreanFont(): Promise<ArrayBuffer> {
-  const css = await (
-    await fetch("https://fonts.googleapis.com/css2?family=Black+Han+Sans", {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.45 Safari/535.19",
-      },
-    })
-  ).text();
-  const fontUrl = css.match(/src: url\((.+?)\) format/)?.[1];
-  if (!fontUrl) throw new Error("Black Han Sans 폰트 URL을 찾지 못했습니다");
-  return fetch(fontUrl).then((r) => r.arrayBuffer());
+// 폰트를 구글에서 받아오므로 이 요청이 실패하면 썸네일이 통째로 500이 된다.
+// 카카오톡 공유가 주 유입 경로라 그 자리에서 미리보기가 사라진다 —
+// 실패하면 한글 없이라도 그림은 내보낸다(아래 Image 참고).
+// 한 달 캐시를 걸어 크롤러가 올 때마다 구글을 두드리지 않게 한다.
+const FONT_CACHE = { next: { revalidate: 60 * 60 * 24 * 30 } };
+
+async function loadKoreanFont(): Promise<ArrayBuffer | null> {
+  try {
+    const css = await (
+      await fetch("https://fonts.googleapis.com/css2?family=Black+Han+Sans", {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.45 Safari/535.19",
+        },
+        ...FONT_CACHE,
+      })
+    ).text();
+    const fontUrl = css.match(/src: url\((.+?)\) format/)?.[1];
+    if (!fontUrl) return null;
+    return await fetch(fontUrl, FONT_CACHE).then((r) => r.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 export default async function Image() {
   const [font, orca] = await Promise.all([loadKoreanFont(), loadOrca()]);
+
+  // 한글 폰트를 못 받았다. 한글을 그대로 그리면 네모로 깨져 나가므로 로마자만 남긴다.
+  if (!font) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "80px 96px",
+            background: "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)",
+          }}
+        >
+          <div style={{ display: "flex", color: "#ffffff", fontSize: 84 }}>
+            gukpyeongo.site
+          </div>
+          <img src={orca} width={320} height={320} alt="" />
+        </div>
+      ),
+      size,
+    );
+  }
+
   return new ImageResponse(
     (
       <div

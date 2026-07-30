@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
+
 import { type ScenarioKind } from "./scenario-admin";
 import { getSupabaseAdmin } from "./supabase-admin.server";
 
@@ -76,7 +78,12 @@ const toRound = (r: RoundRow): Round => ({
 // 지금 진행 중인 회차. 회차 사이 빈 기간이면 null.
 // ponytail: DB를 못 읽어도 null이라 "회차 없음"과 구별되지 않는다 — 화면은 둘 다 "준비 중"으로 같다.
 // 구별이 필요해지면 오류 채널을 따로 낸다.
-export async function getCurrentRound(): Promise<Round | null> {
+// 회차는 일주일에 한 번 바뀐다. 홈과 /today 가 요청마다 이걸 다시 묻고 있어서
+// 출시 첫날 유입이 몰리면 여기가 먼저 막힌다. 1분이면 회차 경계가 그만큼 늦게 보일 뿐이고,
+// 시작·마감 시각은 분 단위로 잡으므로 사용자가 알아채지 못한다.
+const ROUND_CACHE_SEC = 60;
+
+async function readCurrentRound(): Promise<Round | null> {
   try {
     const now = new Date().toISOString();
     const { data } = await getSupabaseAdmin()
@@ -92,6 +99,15 @@ export async function getCurrentRound(): Promise<Round | null> {
   } catch {
     return null;
   }
+}
+
+// 캐시 키에 지금 시각(분 단위)을 넣는다 — 회차가 넘어가는 순간을 캐시가 붙들고 있으면
+// 다음 회차가 열려도 한동안 "준비 중"으로 보인다.
+export async function getCurrentRound(): Promise<Round | null> {
+  const minute = Math.floor(Date.now() / (ROUND_CACHE_SEC * 1000));
+  return unstable_cache(readCurrentRound, ["current-round", String(minute)], {
+    revalidate: ROUND_CACHE_SEC,
+  })();
 }
 
 // 이미 시작한 회차만 id로 찾는다. 다시 보기(#96)가 주소로 회차를 받기 때문에,
@@ -125,7 +141,19 @@ export async function getRoundFinishedCount(roundId: string): Promise<number> {
   }
 }
 
+// 편성된 지문은 회차가 열린 뒤 거의 바뀌지 않는데 응시자마다 통째로 다시 읽고 있었다.
+// 회차별로 캐시한다. 어드민이 편성을 고쳐도 최대 1분 뒤에는 반영된다.
 export async function getRoundScenarios(
+  roundId: string
+): Promise<ScheduledScenario[]> {
+  return unstable_cache(
+    () => readRoundScenarios(roundId),
+    ["round-scenarios", roundId],
+    { revalidate: ROUND_CACHE_SEC },
+  )();
+}
+
+async function readRoundScenarios(
   roundId: string
 ): Promise<ScheduledScenario[]> {
   try {

@@ -1,6 +1,5 @@
 "use client";
 
-import TutorialExample from "./TutorialExample";
 import TutorialShell from "./TutorialShell";
 
 // 회사 메신저 모드 시작 화면.

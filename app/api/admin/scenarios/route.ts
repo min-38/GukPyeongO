@@ -10,6 +10,7 @@ import {
   type ScenarioStatus,
 } from "@/app/lib/scenario-admin";
 import { checkScenarioRules } from "@/app/lib/scenario-rules";
+import { ROUND_MAX_SCORE, stepPoints } from "@/app/lib/scenario-points";
 import {
   fetchScenario,
   fetchScenarios,
@@ -374,6 +375,78 @@ export async function POST(request: Request) {
   return NextResponse.json({ scenario: created, warnings }, { status: 201 });
 }
 
+// 회차 만점 100점은 편성 저장(/api/admin/schedule)에서만 검사해 왔다.
+// 그래서 이미 편성된 시나리오의 배점을 여기서 고치면 검사를 지나쳐, 회차 만점이
+// 조용히 100이 아니게 된다 — 등급컷(GRADE_CUTS)이 100점 만점을 전제하므로 등급의 뜻이 달라진다.
+//
+// 이미 시작한 회차는 지금 이 순간 누군가 그 배점으로 채점받고 있으므로 막는다.
+// 아직 시작하지 않은 회차는 열리기 전에 고치면 되니 경고만 남긴다 —
+// 배점을 여러 시나리오에 나눠 옮기는 중이라면 중간에 100이 아닌 때가 있을 수밖에 없다.
+async function checkRoundTotals(
+  supabase: Db,
+  scenarioId: string,
+  steps: { difficulty: number; points: number }[],
+): Promise<{ blocked: string | null; warnings: string[] }> {
+  const warnings: string[] = [];
+
+  const { data: memberships } = await supabase
+    .from("round_scenarios")
+    .select("round_id")
+    .eq("scenario_id", scenarioId);
+  const roundIds = [...new Set((memberships ?? []).map((r) => r.round_id as string))];
+  if (roundIds.length === 0) return { blocked: null, warnings };
+
+  const [{ data: rounds }, { data: picks }] = await Promise.all([
+    supabase.from("rounds").select("id, starts_at").in("id", roundIds),
+    supabase.from("round_scenarios").select("round_id, scenario_id").in("round_id", roundIds),
+  ]);
+
+  // 이 회차들에 편성된 다른 시나리오의 배점을 모은다. 고치는 시나리오는 새 값으로 센다.
+  const otherIds = [
+    ...new Set(
+      (picks ?? [])
+        .map((p) => p.scenario_id as string)
+        .filter((sid) => sid !== scenarioId),
+    ),
+  ];
+  const { data: otherSteps } = otherIds.length
+    ? await supabase
+        .from("scenario_steps")
+        .select("scenario_id, difficulty, points")
+        .in("scenario_id", otherIds)
+    : { data: [] as { scenario_id: string; difficulty: number; points: number | null }[] };
+
+  const pointsByScenario = new Map<string, number>();
+  pointsByScenario.set(
+    scenarioId,
+    steps.reduce((sum, st) => sum + stepPoints(st), 0),
+  );
+  for (const st of otherSteps ?? []) {
+    const sid = st.scenario_id as string;
+    pointsByScenario.set(sid, (pointsByScenario.get(sid) ?? 0) + stepPoints(st));
+  }
+
+  const now = Date.now();
+  for (const round of rounds ?? []) {
+    const members = (picks ?? [])
+      .filter((p) => p.round_id === round.id)
+      .map((p) => p.scenario_id as string);
+    const total = members.reduce((sum, sid) => sum + (pointsByScenario.get(sid) ?? 0), 0);
+    if (total === ROUND_MAX_SCORE) continue;
+
+    const started = Date.parse(round.starts_at as string) <= now;
+    const msg = `이 시나리오가 편성된 회차의 만점이 ${total}점이 됩니다(${ROUND_MAX_SCORE}점이어야 합니다).`;
+    if (started) {
+      return {
+        blocked: `${msg} 이미 시작한 회차라 배점을 바꿀 수 없습니다.`,
+        warnings,
+      };
+    }
+    warnings.push(`${msg} 회차가 열리기 전에 맞춰주세요.`);
+  }
+  return { blocked: null, warnings };
+}
+
 export async function PATCH(request: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
@@ -403,6 +476,13 @@ export async function PATCH(request: Request) {
 
   const supabase = getSupabaseAdmin();
   const { steps, ...scenario } = parsed;
+
+  // 쓰기 전에 본다 — 막을 거라면 시나리오를 건드리지 않은 채로 돌려보내야 한다.
+  const totals = await checkRoundTotals(supabase, id, steps);
+  if (totals.blocked) {
+    return NextResponse.json({ error: totals.blocked }, { status: 400 });
+  }
+
   const { error } = await supabase
     .from("scenarios")
     .update({ ...scenario, updated_at: new Date().toISOString() })
@@ -428,7 +508,10 @@ export async function PATCH(request: Request) {
     );
   }
   await logAudit(supabase, "update", updated.id, updated);
-  return NextResponse.json({ scenario: updated, warnings });
+  return NextResponse.json({
+    scenario: updated,
+    warnings: [...warnings, ...totals.warnings],
+  });
 }
 
 export async function DELETE(request: Request) {

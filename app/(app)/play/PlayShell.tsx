@@ -21,6 +21,7 @@ export default function PlayShell({
   doneTitle,
   doneLink,
   initialScore,
+  allowRestart = true,
 }: {
   // start()가 오디오 잠금을 풀고 시나리오를 시작한다.
   tutorial: (start: () => void) => ReactNode;
@@ -31,6 +32,11 @@ export default function PlayShell({
   // 이미 푼 사람에게는 문제 대신 결과를 보여준다(#90).
   // 기록은 브라우저에 있어 마운트 뒤에야 알 수 있으므로 나중에 들어와도 반영한다.
   initialScore?: number | null;
+  // "다시" 버튼. 유형을 확인하는 개발용 경로에서는 필요하지만,
+  // 한 번만 응시하는 회차(/today)에서는 내걸면 안 된다 —
+  // 이 셸은 시나리오 트리만 새로 마운트할 뿐이라 회차 진행 상태(몇 번째 문제인지,
+  // 지금까지 고른 답)는 그대로 남아 답이 중복으로 쌓인다.
+  allowRestart?: boolean;
 }) {
   const isDesktop = useIsDesktop();
   const [started, setStarted] = useState(false);
@@ -104,13 +110,15 @@ export default function PlayShell({
         </p>
         {doneLink}
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={restart}
-            className="rounded-2xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-foreground active:scale-95"
-          >
-            다시
-          </button>
+          {allowRestart && (
+            <button
+              type="button"
+              onClick={restart}
+              className="rounded-2xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-foreground active:scale-95"
+            >
+              다시
+            </button>
+          )}
           <Link
             href="/"
             className="rounded-2xl bg-surface-muted px-5 py-2.5 text-sm font-bold text-brand active:scale-95"

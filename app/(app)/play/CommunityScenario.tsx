@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { type CommunityScenario } from "@/app/lib/community-scenario";
 import { readMs } from "@/app/lib/scenario-pacing";
-import { type PlanRead } from "@/app/lib/useScenario";
+import { type OnAnswered, type PlanRead } from "@/app/lib/useScenario";
 import { playMessagePop } from "@/app/lib/sfx";
 
 import ReadingScenario from "./ReadingScenario";
@@ -33,7 +33,7 @@ export default function CommunityScenarioView({
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const addItem = (item: FeedItem) => setFeed((prev) => [...prev, item]);

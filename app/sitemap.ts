@@ -13,7 +13,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${BASE_URL}/test`,
+      // 실제 입구는 회차 페이지다(#100). v1 /test 는 미들웨어가 프로덕션에서 404로 막으므로
+      // 여기 적어 두면 없는 주소를 색인하라고 알리는 꼴이 된다.
+      url: `${BASE_URL}/today`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,

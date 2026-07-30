@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { type EmailMessage } from "@/app/lib/email-scenario";
+import { sanitizeHtml } from "@/app/lib/sanitize-html";
 
 // 유형별 표면이 그리는 카드들 (#96에서 모았다).
 // 원래는 각 표면 파일 안에 있었는데, 문제 다시 보기가 같은 모양으로 지문을 보여줘야 해서
@@ -38,7 +39,7 @@ export function DocCard({
       {html?.trim() ? (
         <div
           className="scenario-html text-[15px] leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
         />
       ) : (
         <div className="mt-3 flex flex-col gap-2 whitespace-pre-line text-[15px] leading-relaxed">
@@ -108,7 +109,7 @@ export function MessageCard({ msg }: { msg: EmailMessage }) {
     return (
       <div
         className="scenario-html animate-rise border-b border-border pb-3 text-[15px] leading-relaxed last:border-b-0"
-        dangerouslySetInnerHTML={{ __html: msg.html }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(msg.html) }}
       />
     );
   }
@@ -346,7 +347,7 @@ export function HtmlBlock({ html, card }: { html: string; card?: boolean }) {
       className={`scenario-html animate-rise text-[15px] leading-relaxed ${
         card ? "rounded-2xl border border-border bg-surface-muted/40 p-4" : ""
       }`}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
 }

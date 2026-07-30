@@ -59,6 +59,16 @@ export interface AnswerResult {
   gained: number;
 }
 
+// 고른 답을 위로 흘려보내는 콜백. 표면들이 그대로 전달만 하므로 형태를 한 곳에 둔다.
+// 정답(answerIndex)도 같이 넘긴다 — 채점이 끝난 뒤 "문제 다시 보기"(#96)가 이 값을 쓴다.
+// 서버에서 다시 내려받지 않는 이유: 그러려면 회차 전체의 정답을 한 번에 돌려주는 응답이
+// 필요한데, 그 응답이 곧 문제를 풀지 않고도 정답을 얻는 길이 된다.
+export type OnAnswered = (
+  stepKey: string,
+  choiceIndex: number | null,
+  answerIndex: number,
+) => void;
+
 export function useScenario<S extends ScenarioStep>({
   steps,
   onFinish,
@@ -75,7 +85,7 @@ export function useScenario<S extends ScenarioStep>({
   steps: S[];
   onFinish: (score: number) => void;
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
   reveal: (
     step: S,
     index: number,
@@ -131,7 +141,7 @@ export function useScenario<S extends ScenarioStep>({
         revealed = graded.answerIndex;
       }
 
-      onAnswered?.(step.id ?? "", choiceIndex);
+      onAnswered?.(step.id ?? "", choiceIndex, revealed);
 
       const isCorrect = choiceIndex !== null && choiceIndex === revealed;
       const gained = isCorrect ? stepPoints(step) : 0;

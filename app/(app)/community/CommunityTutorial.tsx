@@ -1,6 +1,5 @@
 "use client";
 
-import TutorialExample from "../play/TutorialExample";
 import TutorialShell from "../play/TutorialShell";
 
 // 커뮤니티 유형 시작 화면.

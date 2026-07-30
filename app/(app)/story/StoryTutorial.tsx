@@ -1,6 +1,5 @@
 "use client";
 
-import TutorialExample from "../play/TutorialExample";
 import TutorialShell from "../play/TutorialShell";
 
 // 서사 읽기 유형 시작 화면.

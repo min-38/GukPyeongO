@@ -105,7 +105,7 @@ export default function Comments({
 
   return (
     <section className="mt-10">
-      <h3 className="text-xl font-extrabold">💬 댓글</h3>
+      <h2 className="text-xl font-extrabold">💬 댓글</h2>
 
       {/* 댓글은 회차에 묶인다(#100). 마감이 지나면 목록이 비므로 미리 알려 준다. */}
       <p className="mt-1 text-xs text-muted">
@@ -139,7 +139,7 @@ export default function Comments({
           maxLength={MAX_NICKNAME_LENGTH}
           placeholder="닉네임"
           aria-label="닉네임"
-          className="h-10 w-full rounded-xl border-2 border-border bg-surface px-3 text-sm font-bold outline-none transition-colors focus:border-brand sm:w-48"
+          className="h-10 w-full rounded-xl border-2 border-border bg-surface px-3 text-base font-bold outline-none transition-colors focus:border-brand sm:w-48"
         />
         <label className="mb-1 mt-3 block text-xs font-bold text-muted">
           댓글
@@ -173,7 +173,9 @@ export default function Comments({
           <li className="py-6 text-center text-sm text-muted">불러오는 중...</li>
         ) : comments.length === 0 ? (
           <li className="py-6 text-center text-sm text-muted">
-            아직 댓글이 없어요. 첫 댓글을 남겨보세요. ✍️
+            {error
+              ? "댓글을 불러오지 못했어요."
+              : "아직 댓글이 없어요. 첫 댓글을 남겨보세요. ✍️"}
           </li>
         ) : (
           comments.map((c) => (

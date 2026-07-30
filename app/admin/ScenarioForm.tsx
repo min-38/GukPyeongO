@@ -9,6 +9,7 @@ import {
   type AdminScenarioStep,
   correctRate,
   isBodylessKind,
+  removeChoice,
   SCENARIO_KIND_LABELS,
   SCENARIO_KINDS,
   SCENARIO_STATUS_LABELS,
@@ -261,14 +262,7 @@ function StepEditor({
             {step.choices.length > 2 && (
               <button
                 type="button"
-                onClick={() => {
-                  const next = step.choices.filter((_, j) => j !== i);
-                  onChange({
-                    ...step,
-                    choices: next,
-                    answerIndex: Math.min(step.answerIndex, next.length - 1),
-                  });
-                }}
+                onClick={() => onChange(removeChoice(step, i))}
                 className="text-xs text-muted"
               >
                 ✕
@@ -468,27 +462,36 @@ export default function ScenarioForm({
     else delete payload.readSec;
 
     setSaving(true);
-    const res = await fetch("/api/admin/scenarios", {
-      method: saved ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(saved ? { id: saved.id } : {}),
-        title,
-        slug,
-        kind,
-        status,
-        sortOrder,
-        payload,
-        steps,
-      }),
-    });
-    setSaving(false);
-
-    const data = (await res.json()) as {
+    let res: Response;
+    let data: {
       scenario?: AdminScenario;
       error?: string;
       warnings?: string[];
     };
+    try {
+      res = await fetch("/api/admin/scenarios", {
+        method: saved ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(saved ? { id: saved.id } : {}),
+          title,
+          slug,
+          kind,
+          status,
+          sortOrder,
+          payload,
+          steps,
+        }),
+      });
+      data = await res.json();
+    } catch {
+      // 여기서 빠져나가면 "저장 중…"에 잠긴 채 새로고침 전까지 다시 저장할 수 없다.
+      // 새로고침하면 쓰던 내용이 통째로 날아가므로, 버튼을 반드시 되돌려 준다.
+      return setError("저장하지 못했습니다. 연결을 확인하고 다시 눌러주세요.");
+    } finally {
+      setSaving(false);
+    }
+
     if (!res.ok || !data.scenario) {
       return setError(data.error ?? "저장에 실패했습니다.");
     }

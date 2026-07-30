@@ -123,3 +123,22 @@ export function correctRate(step: AdminScenarioStep): number | null {
   if (step.attempts <= 0) return null;
   return Math.round((step.correctCount / step.attempts) * 100);
 }
+
+// 보기 하나를 지운다. 뒤쪽 보기가 한 칸씩 당겨지므로 정답 자리도 같이 당겨야 한다 —
+// 자리만 밀리고 정답이 그대로 남으면 엉뚱한 보기가 조용히 정답이 된다.
+// 정답 자체를 지운 경우에는 가리킬 보기가 없어지므로 첫 보기로 돌려 다시 고르게 한다.
+export function removeChoice(
+  step: AdminScenarioStep,
+  index: number,
+): AdminScenarioStep {
+  return {
+    ...step,
+    choices: step.choices.filter((_, j) => j !== index),
+    answerIndex:
+      step.answerIndex === index
+        ? 0
+        : step.answerIndex > index
+          ? step.answerIndex - 1
+          : step.answerIndex,
+  };
+}

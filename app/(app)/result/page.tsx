@@ -95,6 +95,8 @@ function resultMode(r: StoredResult): QuizMode {
 export default function ResultPage() {
   const result = useStoredResult();
   const [copied, setCopied] = useState(false);
+  // 공유·복사가 모두 막힌 환경에서 안내를 띄운다.
+  const [shareFailed, setShareFailed] = useState(false);
   const isDesktop = useIsDesktop();
 
   // 결과 공유: 지원 기기는 네이티브 공유 시트, 아니면 링크 복사 폴백.
@@ -119,7 +121,10 @@ export default function ResultPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // 복사도 불가한 환경은 조용히 무시
+      // http 환경·구형 브라우저에서는 클립보드가 막힌다.
+      // 조용히 넘기면 버튼이 고장난 것처럼 보이므로 주소만이라도 알려 준다.
+      setShareFailed(true);
+      setTimeout(() => setShareFailed(false), 4000);
     }
   }
 
@@ -138,10 +143,10 @@ export default function ResultPage() {
           아직 응시한 결과가 없어요.
         </p>
         <Link
-          href="/test"
+          href="/today"
           className="flex h-12 items-center justify-center rounded-2xl bg-brand px-6 text-base font-bold text-brand-foreground shadow-lg shadow-brand/30 active:scale-95"
         >
-          테스트 하러 가기
+          이 주의 문제 풀러 가기
         </Link>
       </main>
     );
@@ -260,6 +265,11 @@ export default function ResultPage() {
               {copied ? <CheckIcon /> : <ShareIcon />}
             </button>
           </div>
+          {shareFailed && (
+            <p role="status" className="mt-2 text-center text-xs text-muted">
+              공유가 막힌 환경이에요. 주소창의 링크를 복사해 주세요.
+            </p>
+          )}
         </div>
 
         {/* 오른쪽 전체: 댓글 (데스크톱) */}

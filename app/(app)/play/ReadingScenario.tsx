@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 
-import { type ScenarioStep, useScenario, type PlanRead } from "@/app/lib/useScenario";
+import { type OnAnswered, type ScenarioStep, useScenario, type PlanRead } from "@/app/lib/useScenario";
 
 import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
 
@@ -32,7 +32,7 @@ export default function ReadingScenario<S extends ReadingStep>({
   steps: S[];
   onFinish: (score: number) => void;
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
   revealOnce: (open: () => void, plan: PlanRead) => () => void;
   // 2번째 스텝부터 콘텐츠를 더 여는 유형(이메일)만 넘긴다. 없으면 문제만 바뀐다.
   revealNext?: (

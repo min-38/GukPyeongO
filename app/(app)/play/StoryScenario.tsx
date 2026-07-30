@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { playMessagePop } from "@/app/lib/sfx";
 import { type StoryScenario } from "@/app/lib/story-scenario";
-import { type PlanRead } from "@/app/lib/useScenario";
+import { type OnAnswered, type PlanRead } from "@/app/lib/useScenario";
 
 import ReadingScenario from "./ReadingScenario";
 import { HtmlBlock } from "./SurfaceCards";
@@ -24,7 +24,7 @@ export default function StoryScenarioView({
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   const [shown, setShown] = useState(false);
 

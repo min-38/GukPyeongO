@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { type ScheduledScenario } from "@/app/lib/schedule.server";
-import { SCENARIO_KIND_LABELS } from "@/app/lib/scenario-admin";
 import {
   GRADE_TITLES,
   type GradeRank,
@@ -28,7 +27,6 @@ interface GradeResponse {
   typeStats: { type: string; correct: number; total: number }[];
   finishedAt: string;
   rank?: GradeRank;
-  review: ReviewStep[];
 }
 
 import PlayShell from "../play/PlayShell";
@@ -55,34 +53,47 @@ export default function TodayPlay({
   // 문제마다 그 유형의 읽는 법을 먼저 보여준다(#93). 유형이 섞여 나오기 때문(#87).
   const [kindReady, setKindReady] = useState(false);
   const [scoreSoFar, setScoreSoFar] = useState(0);
-  // 고른 답을 모아 둔다. 점수는 서버가 다시 계산하므로 여기서 만든 값은 보내지 않는다.
-  const answersRef = useRef<
-    { slug: string; stepKey: string; choiceIndex: number | null }[]
-  >([]);
+  // 문제를 풀며 알게 된 내 답과 정답. "문제 다시 보기"(#96)가 이 값을 읽는다.
+  // 점수는 서버가 저장해 둔 답안으로 다시 계산하므로 여기서 만든 값은 보내지 않는다.
+  const answersRef = useRef<ReviewStep[]>([]);
   // 이번 회차에 이미 푼 기록. 있으면 문제 대신 결과부터 보여준다(#90).
   const seenScore = useRoundScore(roundId);
   // 채점 중 화면. 결과 페이지로 넘어갈 때까지 이 화면을 붙잡는다.
   const [grading, setGrading] = useState(false);
+  // 채점을 못 받은 경우. 그냥 두면 "채점 중" 화면에 갇힌다.
+  const [gradeError, setGradeError] = useState<{
+    message: string;
+    retry: boolean;
+  } | null>(null);
 
   const total = scenarios.length;
   const current = scenarios[Math.min(index, total - 1)];
-  const kinds = [...new Set(scenarios.map((s) => s.kind))]
-    .map((k) => SCENARIO_KIND_LABELS[k])
-    .join(" · ");
 
   // 회차가 끝나면 서버에 답을 보내 등급을 받고 결과 화면으로 넘긴다.
   // 채점이 순식간에 끝나도 최소 시간은 보여준다 — 결과가 툭 튀어나오면 뭘 한 건지 모른다.
   const GRADING_MIN_MS = 3000;
   async function gradeAndGo() {
+    setGradeError(null);
     setGrading(true);
     const shown = new Promise((r) => setTimeout(r, GRADING_MIN_MS));
     try {
+      // 답은 이미 문항을 풀 때 서버에 남았다(/api/scenario-answer).
+      // 여기서는 어느 회차를 끝냈는지만 알려주고, 점수는 그 기록으로 계산된다.
       const res = await fetch("/api/today-grade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersRef.current, roundId }),
+        body: JSON.stringify({ roundId }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        await shown;
+        setGrading(false);
+        setGradeError(
+          res.status === 409
+            ? { message: "이미 응시한 회차예요.", retry: false }
+            : { message: "채점을 마치지 못했어요.", retry: true },
+        );
+        return;
+      }
       const g = (await res.json()) as GradeResponse;
 
       // 결과 화면은 v1 채점 응답 모양을 그대로 읽는다. 없는 값(반응 속도 등)은 비워 둔다.
@@ -103,7 +114,7 @@ export default function TodayPlay({
         gradeToken: g.gradeToken,
         roundId: g.roundId,
         finishedAt: g.finishedAt,
-        review: g.review,
+        review: answersRef.current,
         ...(g.rank ? { rank: g.rank } : {}),
         perQuestion: [],
         typeLabels: Object.fromEntries(
@@ -117,10 +128,51 @@ export default function TodayPlay({
       await shown;
       router.push("/result");
     } catch {
-      // 채점을 못 받아도 완료 화면의 점수는 남는다.
       await shown;
       setGrading(false);
+      setGradeError({
+        message: "채점을 마치지 못했어요. 연결을 확인해 주세요.",
+        retry: true,
+      });
     }
+  }
+
+  if (gradeError) {
+    return (
+      <main className="flex h-[100dvh] flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="text-5xl">😵</span>
+        <p className="font-display text-2xl">{gradeError.message}</p>
+        <p className="text-sm text-muted">
+          {gradeError.retry
+            ? "답을 낸 기록은 서버에 남아 있어요. 다시 시도해 주세요."
+            : "이 회차의 결과는 결과 화면에서 볼 수 있어요."}
+        </p>
+        <div className="flex gap-3">
+          {gradeError.retry ? (
+            <button
+              type="button"
+              onClick={() => void gradeAndGo()}
+              className="rounded-2xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-foreground active:scale-95"
+            >
+              다시 시도
+            </button>
+          ) : (
+            <Link
+              href="/result"
+              className="rounded-2xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-foreground active:scale-95"
+            >
+              결과 보기
+            </Link>
+          )}
+          <Link
+            href="/"
+            className="rounded-2xl bg-surface-muted px-5 py-2.5 text-sm font-bold text-brand active:scale-95"
+          >
+            처음으로
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (grading) {
@@ -136,6 +188,8 @@ export default function TodayPlay({
   return (
     <PlayShell
       initialScore={seenScore}
+      // 한 회차는 한 번만 응시한다 — 여기서 다시 풀 길을 열어두면 안 된다.
+      allowRestart={false}
       doneTitle="이 주의 문제 끝!"
       doneLink={
         <Link
@@ -230,11 +284,12 @@ export default function TodayPlay({
             kind={current.kind}
             scenario={current.content}
             slug={current.slug}
-            onAnswered={(stepId, choiceIndex) =>
+            onAnswered={(stepKey, choiceIndex, answerIndex) =>
               answersRef.current.push({
                 slug: current.slug,
-                stepKey: stepId,
+                stepKey,
                 choiceIndex,
+                answerIndex,
               })
             }
             onFinish={(score) => {

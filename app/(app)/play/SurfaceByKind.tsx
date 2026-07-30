@@ -4,6 +4,7 @@ import {
   SCENARIO_KIND_TITLES,
   type ScenarioKind,
 } from "@/app/lib/scenario-admin";
+import { type OnAnswered } from "@/app/lib/useScenario";
 
 import ChatScenarioView from "./ChatScenario";
 import CommunityScenarioView from "./CommunityScenario";
@@ -28,7 +29,7 @@ export default function SurfaceByKind({
   slug?: string;
   onFinish: (score: number) => void;
   // 회차 채점(#89)을 위해 고른 답을 위로 흘려보낸다.
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   // 상단바 이름은 유형에서 나온다(#99) — 지문에 적힌 게시판 이름·방 제목은 쓰지 않는다.
   const common = {

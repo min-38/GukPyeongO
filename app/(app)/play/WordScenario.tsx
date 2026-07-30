@@ -1,6 +1,6 @@
 "use client";
 
-import { type ScenarioStep } from "@/app/lib/useScenario";
+import { type OnAnswered, type ScenarioStep } from "@/app/lib/useScenario";
 
 import ReadingScenario from "./ReadingScenario";
 import { WordFace } from "./SurfaceCards";
@@ -28,7 +28,7 @@ export default function WordScenario({
   label: string;
   onFinish: (score: number) => void;
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   return (
     <ReadingScenario

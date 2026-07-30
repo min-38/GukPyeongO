@@ -5,7 +5,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { type ChatScenario, dateMark, showsTime } from "@/app/lib/chat-scenario";
 import { readMs, scheduleTyping } from "@/app/lib/scenario-pacing";
 import { playMessagePop, playSendPop } from "@/app/lib/sfx";
-import { type AnswerResult, useScenario } from "@/app/lib/useScenario";
+import { type AnswerResult, type OnAnswered, useScenario } from "@/app/lib/useScenario";
 
 import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
 import { type Bubble, ChatBubble, DateDivider } from "./SurfaceCards";
@@ -39,7 +39,7 @@ export default function ChatScenario({
   onFinish: (score: number) => void;
   // DB에서 온 시나리오면 정답 판정을 서버에 맡긴다(#83).
   slug?: string;
-  onAnswered?: (stepId: string, choiceIndex: number | null) => void;
+  onAnswered?: OnAnswered;
 }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [typing, setTyping] = useState(false);

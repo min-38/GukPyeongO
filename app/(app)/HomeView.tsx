@@ -11,9 +11,11 @@ import {
   type Source,
   sourceText,
 } from "@/app/lib/literacy-facts";
+import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 import { useRoundScore } from "@/app/lib/today-result";
 
 import Footer from "./Footer";
+import GradeCharacter from "./GradeCharacter";
 
 // 색 섹션을 데스크톱에서 화면 전체 폭으로 확장 (좌우 그라데이션 노출 방지).
 // 모바일/태블릿은 컨테이너(카드) 폭을 그대로 채운다.
@@ -29,7 +31,7 @@ function SourceLine({
 }) {
   const text = sourceText(source);
   return (
-    <p className={`text-xs text-muted/70 ${className}`}>
+    <p className={`text-xs text-muted ${className}`}>
       {source.url ? (
         <a
           href={source.url}
@@ -181,89 +183,6 @@ function Reveal({
   );
 }
 
-// 국평오 시험이 어떻게 굴러가는지 세 장 (#105).
-// 캐릭터 미리보기가 있던 자리다 — 캐릭터는 예쁘지만 무슨 시험인지는 알려주지 않았다.
-const SYSTEM_SLIDES = [
-  {
-    step: "출제",
-    title: "8가지 유형",
-    desc: "공지사항 · 신문 · 커뮤니티 · 메신저 · 이메일 · 서사 · 계약서 · 사용설명서. 실제로 읽는 글을 그대로 옮겼습니다.",
-    foot: "문제는 일주일마다 새로 올라옵니다",
-  },
-  {
-    step: "채점",
-    title: "100점 만점",
-    desc: "한 회차가 100점입니다. 문항마다 배점이 달라 어려운 문항의 무게가 점수에 반영됩니다.",
-    foot: "지문을 읽을 시간은 따로 드립니다",
-  },
-  {
-    step: "등급",
-    title: "1~9등급",
-    desc: "맞힌 개수가 아니라 득점률로 등급을 냅니다. 수능 국어 영역 등급 기준을 참고했습니다.",
-    foot: "등급마다 문해력 캐릭터가 따라옵니다",
-  },
-];
-
-const SLIDE_MS = 4500;
-
-function SystemSlides() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const t = window.setInterval(
-      () => setIndex((i) => (i + 1) % SYSTEM_SLIDES.length),
-      SLIDE_MS,
-    );
-    return () => window.clearInterval(t);
-  }, []);
-
-  return (
-    <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
-      {/* 넘기는 자리. 카드 폭만큼 잘라내고 트랙을 옆으로 민다. */}
-      <div className="overflow-hidden">
-        <div
-          className="flex transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${index * 100}%)` }}
-        >
-          {SYSTEM_SLIDES.map((s) => (
-            <div key={s.step} className="w-full shrink-0 px-0.5">
-              <p className="text-xs font-bold tracking-[0.2em] text-brand">
-                {s.step}
-              </p>
-              <p className="mt-2 font-display text-4xl leading-tight tracking-tight">
-                {s.title}
-              </p>
-              {/* 장마다 글 길이가 달라 높이가 튄다 — 가장 긴 장에 맞춰 자리를 잡아둔다. */}
-              <p className="mt-4 min-h-[6rem] text-sm leading-relaxed text-muted">
-                {s.desc}
-              </p>
-              <p className="mt-4 border-t border-border pt-4 text-xs text-muted/70">
-                {s.foot}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 눌러서 바로 넘길 수도 있게 — 자동으로 넘어가기를 기다리지 않아도 된다. */}
-      <div className="mt-6 flex justify-center gap-2">
-        {SYSTEM_SLIDES.map((s, i) => (
-          <button
-            key={s.step}
-            type="button"
-            onClick={() => setIndex(i)}
-            aria-label={`${s.step} 보기`}
-            aria-current={i === index}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? "w-6 bg-brand" : "w-1.5 bg-border"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // 회차 마감을 날짜로 읽는다. 몇 시까지인지는 홈에서 알 필요 없다 — 언제까지인지만 알면 된다.
 const endLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("ko-KR", {
@@ -299,6 +218,8 @@ export default function HomeView({
   const ctaHref = solved ? "/result" : "/today";
   // 회차는 일주일씩 열린다 — 마감일은 버튼 바로 위에 크게, 주기는 아래에 작게(#104).
   const deadline = ready && roundEndsAt ? endLabel(roundEndsAt) : null;
+  const [activeGrade, setActiveGrade] = useState(5);
+  const theme = gradeTheme(activeGrade);
 
   // 히어로 아래로 스크롤하면 하단 고정 CTA 표시
   const heroRef = useRef<HTMLElement>(null);
@@ -308,6 +229,7 @@ export default function HomeView({
       const bottom = heroRef.current?.getBoundingClientRect().bottom ?? 1;
       setShowSticky(bottom < 0);
     };
+    onScroll(); // 스크롤된 위치로 새로고침해도 바로 반영되게 한 번 먼저 본다
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -329,7 +251,9 @@ export default function HomeView({
               </span>
 
               <div className="flex flex-col items-center gap-4 lg:items-start">
-                <h1 className="font-display text-5xl leading-[1.2] tracking-tight lg:text-7xl">
+                {/* 글줄은 왼쪽 맞춤 — 가운데 맞춤이면 국/평/오가 줄마다 어긋난다.
+                    블록 자체는 부모(items-center)가 가운데로 세운다. */}
+                <h1 className="text-left font-display text-5xl leading-[1.2] tracking-tight lg:text-7xl">
                   <span className="text-brand">국</span>민 문해력
                   <br />
                   <span className="text-brand">평</span>균을
@@ -340,11 +264,42 @@ export default function HomeView({
                   <span className="text-brand">내 문해력은 몇 등급?</span>
                 </p>
               </div>
-{/* 
-              <p className="max-w-xs text-base leading-relaxed text-muted lg:max-w-md lg:text-lg">
-                회원가입 없이 바로 시작.
-                <br /> 1~9등급으로 결과가 딱 나와요.
-              </p> */}
+              {/* 등급을 눌러(또는 마우스를 올려) 오른쪽 카드의 캐릭터를 바꿔 본다.
+                  캐릭터 9종을 한 번에 늘어놓으면 결과 화면의 재미가 먼저 새어나간다 —
+                  한 번에 하나씩만 보여준다. */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onMouseEnter={() => setActiveGrade(g)}
+                    onClick={() => setActiveGrade(g)}
+                    // 숫자만 있으면 스크린리더가 "1"로만 읽는다. 무엇을 고르는 버튼인지 밝힌다.
+                    aria-label={`${g}등급 캐릭터 보기`}
+                    aria-pressed={g === activeGrade}
+                    className={`grid h-11 w-11 place-items-center rounded-lg text-sm font-bold transition-colors lg:h-11 lg:w-11 lg:text-base ${
+                      g === activeGrade
+                        ? "bg-brand text-brand-foreground"
+                        : "bg-surface-muted text-muted"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+
+              {/* 모바일에는 오른쪽 카드가 없다 — 고른 등급을 한 줄로 보여준다. */}
+              <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-muted lg:hidden">
+                {activeGrade}등급 ·
+                <GradeCharacter
+                  grade={activeGrade}
+                  priority={false}
+                  className="h-6 w-6"
+                />
+                <span style={{ color: theme.color }}>
+                  {GRADE_TITLES[activeGrade]}
+                </span>
+              </p>
             </div>
 
             {/* 이번 회차 응시자 수(#105). 먼저 푼 사람이 있다는 것만 알려준다. */}
@@ -387,9 +342,32 @@ export default function HomeView({
             </div>
           </div>
 
-          {/* 데스크톱 우측 — 시험이 어떻게 굴러가는지 세 장으로 넘겨 보여준다(#105). */}
+          {/* 데스크톱 우측 등급 미리보기 카드. 왼쪽 등급 버튼과 연동된다. */}
           <div className="hidden lg:flex lg:items-center lg:justify-center">
-            <SystemSlides />
+            <div className="animate-float w-full max-w-sm rounded-[2rem] border border-border bg-surface p-8 text-center shadow-[0_20px_60px_-20px_rgba(76,29,149,0.35)]">
+              <GradeCharacter
+                grade={activeGrade}
+                className="mx-auto h-32 w-32"
+              />
+              <p className="mt-3 text-sm font-bold tracking-widest text-muted">
+                나의 문해력 캐릭터
+              </p>
+              <p
+                className="mt-1 font-display text-4xl leading-tight tracking-tight transition-colors"
+                style={{ color: theme.color }}
+              >
+                {GRADE_TITLES[activeGrade]}
+              </p>
+              <p
+                className="mt-3 inline-block rounded-full px-4 py-1.5 text-sm font-extrabold text-white transition-colors"
+                style={{ backgroundColor: theme.color }}
+              >
+                {activeGrade}등급
+              </p>
+              <p className="mt-4 text-sm text-muted">
+                등급 배지에 마우스를 올려보세요. 당신은?
+              </p>
+            </div>
           </div>
 
           {/* 데스크톱 스크롤 유도 (절대배치 — CTA가 좌측이라 하단 중앙 비어 있음) */}
@@ -419,7 +397,7 @@ export default function HomeView({
               <Reveal key={c.word} delay={i * 110}>
                 <div className="flex h-full flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm">
                   <span className="w-fit rounded-full bg-brand/10 px-3 py-0.5 text-xs font-bold text-brand">
-                    "{c.word}"
+                    &ldquo;{c.word}&rdquo;
                   </span>
                   <p className="text-sm text-muted">
                     공지문:{" "}
@@ -648,7 +626,7 @@ export default function HomeView({
           하단 고정 CTA (히어로 지나친 후 표시)
       ──────────────────────────────────────────── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-6 pb-5 pt-12 transition-all duration-300 sm:left-1/2 sm:max-w-xl sm:-translate-x-1/2 lg:hidden ${
+        className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-gradient-to-t from-background via-background/80 to-transparent px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-12 transition-all duration-300 sm:left-1/2 sm:max-w-xl sm:-translate-x-1/2 lg:hidden ${
           showSticky
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-4 opacity-0"

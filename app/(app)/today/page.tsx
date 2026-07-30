@@ -7,6 +7,12 @@ import TodayPlay from "./TodayPlay";
 // 회차가 바뀌므로 캐시하지 않는다.
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "이 주의 문제",
+  description: "일주일마다 새로 올라오는 실생활 문해력 문제를 풀어보세요.",
+  alternates: { canonical: "/today" },
+};
+
 export default async function TodayPage() {
   const round = await getCurrentRound();
   const scenarios = round ? await getRoundScenarios(round.id) : [];

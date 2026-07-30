@@ -9,8 +9,15 @@ import {
   scoreSubmission,
 } from "./scoring";
 
-const mc = (type: AnswerKey[string]["type"], answerIndex: number) =>
-  ({ type, format: "multiple_choice", answerIndex, answers: [] }) as const;
+const mc = (
+  type: AnswerKey[string]["type"],
+  answerIndex: number,
+): AnswerKey[string] => ({
+  type,
+  format: "multiple_choice",
+  answerIndex,
+  answers: [],
+});
 
 const answerKey: AnswerKey = {
   q1: mc("time", 0),

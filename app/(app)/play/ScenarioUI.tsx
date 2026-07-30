@@ -121,7 +121,7 @@ export function AnswerPanel({
               onClick={() => setCollapsed((v) => !v)}
               aria-expanded={!collapsed}
               aria-label={collapsed ? "선택지 펼치기" : "선택지 접기"}
-              className="absolute right-0 top-0 grid h-6 w-6 place-items-center rounded-full text-muted hover:bg-surface-muted lg:hidden"
+              className="absolute -right-2.5 -top-2.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-surface-muted lg:hidden"
             >
               {/* 같은 그림을 뒤집어 쓴다 — ▴▾ 글자는 폰트마다 크기가 달라 접기/펴기가 짝이 안 맞는다. */}
               <svg
@@ -160,14 +160,21 @@ export function AnswerPanel({
           테두리로 소리치지 않고 배경을 옅게 깔아 표시한다. 고르기 전과 칸 크기가 같아야
           정답이 열릴 때 목록이 흔들리지 않는다 — 테두리 두께와 여백을 그대로 맞춘다. */}
       {stage === "answered" && (
-        <div className={`flex-col gap-2 ${hidden ? "hidden lg:flex" : "flex"}`}>
+        <div
+          className={`flex-col gap-2 ${hidden ? "hidden lg:flex" : "flex"}`}
+          // 정답이 열린 것을 색으로만 알리면 화면을 못 보는 사람에게는 아무 일도 안 일어난다.
+          role="status"
+        >
           {choices.map((choice, i) => {
             const isAnswer = i === answerIndex;
             const isWrongPick = i === picked && !correct;
+            // 초록·빨강 배경만으로 나누면 색을 구별하기 어려운 사람은 읽어낼 수 없다(WCAG 1.4.1).
+            // 글로도 같은 것을 말해 준다.
+            const mark = isAnswer ? "정답" : isWrongPick ? "내가 고른 오답" : null;
             return (
               <div
                 key={i}
-                className={`w-full rounded-2xl border-2 px-4 py-4 text-[15px] font-medium ${
+                className={`flex w-full items-start gap-2 rounded-2xl border-2 px-4 py-4 text-[15px] font-medium ${
                   isAnswer
                     ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                     : isWrongPick
@@ -175,7 +182,15 @@ export function AnswerPanel({
                       : "border-border text-muted opacity-60"
                 }`}
               >
-                {choice}
+                {mark && (
+                  <span aria-hidden className="shrink-0 font-bold">
+                    {isAnswer ? "\u2713" : "\u2715"}
+                  </span>
+                )}
+                <span className="min-w-0">
+                  {mark && <span className="sr-only">{mark}: </span>}
+                  {choice}
+                </span>
               </div>
             );
           })}

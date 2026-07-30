@@ -23,7 +23,13 @@ export function middleware(request: NextRequest) {
   // ADMIN_ENABLED 환경변수가 없으면 /admin 전체를 404로 막는다.
   // 로컬: .env.local에 ADMIN_ENABLED=1 → 접근 허용
   // 프로덕션: Vercel 환경변수 미설정 → 404
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+  // 화면만 막으면 어드민 API는 그대로 열려 있어, 어드민 전체 보안이 비밀번호 하나에 걸린다.
+  // 같은 환경 스위치로 API도 함께 닫는다.
+  if (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/api/admin/")
+  ) {
     return process.env.ADMIN_ENABLED ? NextResponse.next() : notFound();
   }
 
@@ -45,6 +51,7 @@ export const config = {
   matcher: [
     "/admin",
     "/admin/:path*",
+    "/api/admin/:path*",
     "/play",
     "/play/:path*",
     "/news",

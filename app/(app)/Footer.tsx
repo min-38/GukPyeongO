@@ -31,7 +31,7 @@ export default function Footer({ className = "" }: { className?: string }) {
             문의 contact@gukpyeongo.site
           </a>
         </nav>
-        <p className="text-muted/70">
+        <p className="text-muted">
           © 2026 국평오 · 회원가입 없이 즐기는 문해력 테스트
         </p>
       </div>
