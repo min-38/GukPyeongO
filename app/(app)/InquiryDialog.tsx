@@ -82,7 +82,9 @@ export default function InquiryDialog() {
       <dialog
         ref={ref}
         aria-labelledby="inquiry-title"
-        className="w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-border bg-surface p-0 text-left text-foreground backdrop:bg-black/40"
+        // m-auto 로 가운데를 잡는다 — <dialog> 는 브라우저 기본 margin:auto 로 가운데 오는데
+        // Tailwind 초기화가 margin 을 0으로 되돌려 좌상단에 붙어 버린다.
+        className="m-auto max-h-[calc(100dvh-2rem)] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-border bg-surface p-0 text-left text-foreground backdrop:bg-black/40"
       >
         <form onSubmit={submit} className="flex flex-col gap-3 p-6">
           <div className="flex items-start justify-between gap-3">
