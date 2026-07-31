@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Black_Han_Sans, Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
+
+// 애드센스 게시자 ID. 소유 확인용 스크립트를 심어야 심사가 시작된다
+// (등록만 해두면 "검토 필요"에서 멈춰 있다).
+// 승인 전에는 광고가 뜨지 않으므로 지금 넣어둬도 화면은 그대로다.
+const ADSENSE_CLIENT = "ca-pub-3592494210740135";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,6 +82,13 @@ export default function RootLayout({
           (공개 페이지: 폰 프레임 / 관리자: 넓은 레이아웃) */}
       <body className="flex min-h-full justify-center overflow-x-hidden sm:p-6">
         {children}
+        {/* 렌더링을 막지 않도록 화면이 그려진 뒤에 불러온다 — 소유 확인에는 지장이 없다. */}
+        <Script
+          async
+          strategy="afterInteractive"
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+          crossOrigin="anonymous"
+        />
       </body>
     </html>
   );
