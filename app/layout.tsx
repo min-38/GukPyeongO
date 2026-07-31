@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Black_Han_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,6 +10,18 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// 한글 임팩트용 디스플레이 폰트.
+// 구글에서 <link>로 받아오면 스타일시트가 렌더링을 막아 첫 화면이 그만큼 늦는다
+// (측정값 750ms). next/font는 빌드 때 받아 우리 도메인에서 내보내므로 그 왕복이 사라진다.
+const blackHanSans = Black_Han_Sans({
+  variable: "--font-black-han-sans",
+  // 구글은 이 한글 폰트를 여러 조각으로 쪼개면서 전부 latin 으로 이름 붙였다.
+  // unicode-range 를 보면 한글이 들어 있고, latin 하나로 전체가 받아진다.
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
 });
 
 const title = "국평오 테스트 — 이 주의 문해력 문제";
@@ -58,23 +70,8 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${blackHanSans.variable} h-full antialiased`}
     >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        {/* 한글 임팩트용 디스플레이 폰트. App Router 루트 레이아웃의 <head>는
-            전 페이지에 적용되므로 no-page-custom-font 경고는 해당 없음. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       {/* 카드 셸은 각 라우트 그룹 레이아웃에서 폭을 다르게 적용한다
           (공개 페이지: 폰 프레임 / 관리자: 넓은 레이아웃) */}
       <body className="flex min-h-full justify-center overflow-x-hidden sm:p-6">
