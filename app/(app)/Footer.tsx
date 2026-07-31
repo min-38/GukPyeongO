@@ -39,7 +39,7 @@ export default function Footer({ className = "" }: { className?: string }) {
           </a>
         </nav>
         <p className="text-muted">
-          © 2026 국평오 · 회원가입 없이 즐기는 문해력 테스트
+          © 2026 국평오 · 국민 문해력 평균을 오르게
         </p>
       </div>
     </footer>
