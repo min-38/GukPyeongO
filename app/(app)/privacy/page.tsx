@@ -96,14 +96,7 @@ export default function PrivacyPage() {
             <h2 className="font-display text-xl">5. 문의</h2>
             <p className="mt-3">
               개인정보 관련 문의를 포함한 모든 문의는 화면 아래 &lsquo;문의
-              하기&rsquo;로 보내주세요. 메일이 편하시면{" "}
-              <a
-                href="mailto:contact@gukpyeongo.site"
-                className="font-bold text-brand hover:underline"
-              >
-                contact@gukpyeongo.site
-              </a>
-              로 보내주셔도 됩니다.
+              하기&rsquo;로 보내주세요.
             </p>
           </section>
         </div>
