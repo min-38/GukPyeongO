@@ -11,9 +11,13 @@ import { playCorrect, playCountTick, playWrong } from "./sfx";
 
 export type ScenarioStage = "replaying" | "answering" | "answered";
 
-// 지문을 훑는 동안 남은 시간을 상단바에 보여주려면 표면이 그 길이를 알려줘야 한다(#99).
-// 표면이 콘텐츠를 띄우는 시점에 plan(ms)을 부르고, 훅이 초를 세며 건너뛰기를 받는다.
-export type PlanRead = (ms: number) => void;
+// 지문을 훑는 동안 남은 시간을 보여주려면 표면이 그 길이를 알려줘야 한다(#99).
+// 표면이 재생을 시작할 때 plan()을 부르고, 훅이 초를 세며 건너뛰기를 받는다.
+//   openMs   — 지금부터 몇 ms 뒤에 문제가 열리는지(카운트다운이 0이 되는 시각)
+//   showFrom — 지문이 화면에 뜨는 시각. 그 전까지는 남은 초를 감춘다.
+//              '다 읽었어요' 버튼이 지문보다 먼저 튀어나오면 읽을 것도 없는데
+//              다 읽었냐고 묻는 꼴이 된다. 0이면 즉시 보인다(지문 없는 어휘 유형).
+export type PlanRead = (openMs: number, showFrom?: number) => void;
 
 // 유형별 문제 스텝의 최소 공통 형태.
 // answerIndex는 서버 채점(#83)으로 오면 클라이언트에 내려오지 않는다.
@@ -52,6 +56,15 @@ const SCORE_POP_MS = 1000; // 점수 애니메이션 길이 (globals.css의 scor
 // 남은 시간이 이만큼일 때 한 번 알린다. 상단 타이머가 빨갛게 변하는 시점과 같은 값이라
 // 눈으로 보든 소리로 듣든 같은 순간에 알아챈다(ScenarioUI의 remaining <= 5).
 const WARN_SEC = 5;
+// 벽시계를 얼마나 자주 들여다보는가. 1초보다 촘촘히 봐야 숨은 탭에서 돌아온 순간
+// 곧바로 남은 시간이 맞춰진다. 하는 일이 뺄셈 하나뿐이라 비용은 없다.
+const TIME_TICK_MS = 250;
+const READ_TICK_MS = 250;
+// 지문이 뜨고 나서 '다 읽었어요'까지의 뜸. 같이 튀어나오면 읽기도 전에 다 읽었냐고 묻는 꼴이라
+// 지문을 한 박자 먼저 눈에 넣게 둔다.
+// ponytail: 읽기 시간이 이 뜸보다 짧으면 버튼이 잠깐 떴다 사라진다.
+// 지금 가장 짧은 읽기 시간(readMs 하한 900ms)이 두 덩어리라 실제로는 안 걸린다.
+const READ_BUTTON_LEAD_IN_MS = 1000;
 
 export interface AnswerResult {
   choiceIndex: number | null; // null = 무응답(시간 초과)
@@ -212,17 +225,24 @@ export function useScenario<S extends ScenarioStep>({
     };
     openRef.current = open;
 
-    const plan: PlanRead = (ms) => {
+    const plan: PlanRead = (openMs, showFrom = 0) => {
       // 같은 스텝에서 두 번 불려도 시계가 겹치지 않게 먼저 멈춘다.
       if (readTickRef.current !== null)
         window.clearInterval(readTickRef.current);
-      if (ms <= 0) return;
-      let left = Math.ceil(ms / 1000);
-      setReadLeft(left);
-      readTickRef.current = window.setInterval(() => {
-        left -= 1;
-        setReadLeft(left > 0 ? left : 0);
-      }, 1000);
+      if (openMs <= 0) return;
+      // 째깍을 세지 않고 벽시계로 계산한다 — 아래 제한시간과 같은 이유다.
+      const startedAt = Date.now();
+      const endsAt = startedAt + openMs;
+      // 지문이 뜬 뒤 한 박자 두고 버튼을 올린다. showFrom이 0이면(지문 없는 유형) 뜸도 없다.
+      const showAt =
+        startedAt + showFrom + (showFrom > 0 ? READ_BUTTON_LEAD_IN_MS : 0);
+      const tick = () => {
+        const now = Date.now();
+        if (now < showAt) return; // 아직 지문만 볼 때다 — 버튼은 나중에
+        setReadLeft(Math.max(0, Math.ceil((endsAt - now) / 1000)));
+      };
+      readTickRef.current = window.setInterval(tick, READ_TICK_MS);
+      tick(); // showFrom이 0이면 기다리지 않고 바로 보인다
     };
 
     const cleanup = revealRef.current(step, stepIndex, open, plan);
@@ -241,23 +261,32 @@ export function useScenario<S extends ScenarioStep>({
   }, [stage]);
 
   // 제한시간 타이머 — 선택지가 열린 뒤(answering)부터. 초과 시 무응답 처리.
+  //
+  // 째깍 수를 세지 않고 벽시계(Date.now)로 남은 시간을 계산한다.
+  // 브라우저는 화면에 안 보이는 탭의 타이머를 크게 늦춘다(크롬은 1분에 한 번까지).
+  // 1초마다 left를 1씩 깎던 옛 방식은 그동안 깎이지 않아 시계가 사실상 멈췄고,
+  // 탭을 옮겨 답을 찾아본 뒤 돌아와도 시간이 그대로 남아 있었다.
+  // 이제 돌아온 첫 째깍에 실제 흐른 시간이 반영되고, 이미 지났으면 무응답 처리된다.
   useEffect(() => {
     if (stage !== "answering" || step.timeLimitSec <= 0) return;
-    let left = step.timeLimitSec;
-    const tick = setInterval(() => {
-      left -= 1;
-      setRemaining(left > 0 ? left : 0);
+    const endsAt = Date.now() + step.timeLimitSec * 1000;
+    let warned = false;
+    let id = 0;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      setRemaining(left);
       // 제한시간이 원래 짧은 문항은 시작하자마자 울리게 되므로 건너뛴다.
-      if (left === WARN_SEC && step.timeLimitSec > WARN_SEC) playCountTick();
-    }, 1000);
-    const deadline = window.setTimeout(
-      () => answer(null),
-      step.timeLimitSec * 1000,
-    );
-    return () => {
-      clearInterval(tick);
-      clearTimeout(deadline);
+      if (!warned && left <= WARN_SEC && step.timeLimitSec > WARN_SEC) {
+        warned = true;
+        playCountTick();
+      }
+      if (left === 0) {
+        window.clearInterval(id);
+        answer(null); // answer 안의 lockRef가 중복 호출을 막는다
+      }
     };
+    id = window.setInterval(tick, TIME_TICK_MS);
+    return () => window.clearInterval(id);
   }, [stage, step.timeLimitSec, answer]);
 
   return {

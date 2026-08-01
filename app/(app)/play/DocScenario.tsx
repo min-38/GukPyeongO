@@ -42,10 +42,10 @@ export default function DocScenarioView({
         setDocShown(true);
       }, OPENING_DELAY_MS),
     );
-    // 지문에 읽기 시간이 적혀 있으면 그걸 쓴다(#99). 없으면 글 길이로 계산한다.
     const openAt = OPENING_DELAY_MS + readWindow;
-    // 시계는 화면에 들어온 순간부터 돈다 — 지문이 뜨길 기다렸다 걸면 잠깐 없다가 생긴다(#99).
-    plan(openAt);
+    // 남은 초는 문서가 뜨는 순간부터 보인다 — 그 전에 띄우면 지문도 없는데
+    // '다 읽었어요' 버튼만 먼저 서 있게 된다.
+    plan(openAt, OPENING_DELAY_MS);
     timers.push(window.setTimeout(open, openAt));
     return () => timers.forEach(clearTimeout);
   };

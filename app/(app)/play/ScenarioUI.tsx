@@ -13,8 +13,6 @@ export function ScenarioTopBar({
   total,
   stage,
   remaining,
-  readLeft,
-  onSkipRead,
 }: {
   label: string;
   stepIndex: number;
@@ -22,9 +20,6 @@ export function ScenarioTopBar({
   stage: ScenarioStage;
   // null = 제한시간 없음(튜토리얼 예시) — 타이머를 아예 감춘다.
   remaining: number | null;
-  // 지문을 훑는 동안 남은 초(#99). 누르면 남은 연출을 건너뛰고 바로 문제로 간다.
-  readLeft?: number | null;
-  onSkipRead?: () => void;
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between">
@@ -36,25 +31,6 @@ export function ScenarioTopBar({
           {stepIndex + 1}
           <span className="text-muted"> / {total}</span>
         </span>
-        {/* 읽는 시간 — 누르면 건너뛴다. */}
-        {stage === "replaying" &&
-          readLeft !== null &&
-          readLeft !== undefined && (
-            <button
-              type="button"
-              onClick={onSkipRead}
-              aria-label="다 읽었어요 — 문제로 넘어가기"
-              className="group grid place-items-center rounded-full bg-surface-muted px-3 py-1 text-sm font-bold tabular-nums text-foreground transition-colors hover:bg-red-500 hover:text-white active:scale-95"
-            >
-              {/* 두 글자를 같은 칸에 겹쳐 둔다 — 안 그러면 호버할 때 알약 폭이 줄어든다. */}
-              <span className="col-start-1 row-start-1 group-hover:invisible">
-                📖 {readLeft}s
-              </span>
-              <span className="invisible col-start-1 row-start-1 group-hover:visible">
-                스킵
-              </span>
-            </button>
-          )}
 
         {/* 제한시간 — 답을 고르면 멈춘 채로 남는다(#99). 사라지면 몇 초에 풀었는지 알 수 없다. */}
         {(stage === "answering" || stage === "answered") &&
@@ -71,6 +47,39 @@ export function ScenarioTopBar({
           )}
       </div>
     </div>
+  );
+}
+
+// 읽는 시간 — 지문 바로 아래에 전체폭으로 세운다(#99).
+// 상단바 알약으로 두면 유형·진행도 알약에 묻혀 누를 수 있는 것인 줄 모른다.
+// 지문을 다 읽은 눈이 그대로 내려오는 자리이고, 읽기가 끝나면 사라지면서
+// 같은 자리를 선택지가 이어받는다 — 다음에 누를 곳이 항상 여기다.
+//
+// readLeft 는 open() 이 stopReadClock() 으로 null 을 넣어 끄므로 stage 를 따로 안 본다.
+export function SkipReadButton({
+  readLeft,
+  onSkip,
+}: {
+  // 지문을 훑는 동안 남은 초. null/undefined = 읽는 시간 없음(어휘·튜토리얼).
+  readLeft?: number | null;
+  onSkip?: () => void;
+}) {
+  if (readLeft === null || readLeft === undefined) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onSkip}
+      aria-label="다 읽었어요 — 문제로 넘어가기"
+      className="mt-4 flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border-2 border-border bg-surface-muted text-base font-bold transition-colors hover:bg-surface active:scale-[0.99]"
+    >
+      다 읽었어요
+      {/* 남은 초는 매초 바뀐다. 읽어 주면 초마다 말이 끊기므로 화면에만 둔다 —
+          버튼 이름(aria-label)은 고정이라 스크린리더에는 조용하다. */}
+      <span aria-hidden className="text-sm font-medium tabular-nums text-muted">
+        {readLeft}초
+      </span>
+    </button>
   );
 }
 

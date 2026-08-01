@@ -7,7 +7,7 @@ import { readMs, scheduleTyping } from "@/app/lib/scenario-pacing";
 import { playMessagePop, playSendPop } from "@/app/lib/sfx";
 import { type AnswerResult, type OnAnswered, useScenario } from "@/app/lib/useScenario";
 
-import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
+import { AnswerPanel, ScenarioTopBar, SkipReadButton } from "./ScenarioUI";
 import { type Bubble, ChatBubble, DateDivider } from "./SurfaceCards";
 
 const OPENING_DELAY_MS = 500; // 화면 진입 후 첫 메시지까지
@@ -171,8 +171,6 @@ export default function ChatScenario({
         total={s.total}
         stage={s.stage}
         remaining={s.remaining}
-        readLeft={s.readLeft}
-        onSkipRead={s.skipRead}
       />
 
       {/* 대화 영역 — 시나리오 내내 누적. 여기만 스크롤(스크롤바 감춤). */}
@@ -202,6 +200,8 @@ export default function ChatScenario({
         {typing && <TypingIndicator />}
         <div ref={endRef} />
       </div>
+
+      <SkipReadButton readLeft={s.readLeft} onSkip={s.skipRead} />
 
       <AnswerPanel
         prompt={step.prompt}

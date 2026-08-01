@@ -30,8 +30,8 @@ export default function StoryScenarioView({
 
   // 긴 지문이라 공용 readMs(상한 2.6초)를 쓰지 않고 읽기 시간을 따로 준다.
   const revealOnce = (open: () => void, plan: PlanRead) => {
-    // 시계는 화면에 들어온 순간부터 돈다(#99).
-    plan(OPENING_DELAY_MS + scenario.readSec * 1000);
+    // 남은 초는 지문이 뜨는 순간부터 보인다(#99).
+    plan(OPENING_DELAY_MS + scenario.readSec * 1000, OPENING_DELAY_MS);
     const timers: number[] = [];
 
     timers.push(

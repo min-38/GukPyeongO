@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 
 import { type OnAnswered, type ScenarioStep, useScenario, type PlanRead } from "@/app/lib/useScenario";
 
-import { AnswerPanel, ScenarioTopBar } from "./ScenarioUI";
+import { AnswerPanel, ScenarioTopBar, SkipReadButton } from "./ScenarioUI";
 
 // 읽기형 유형(커뮤니티·문서) 공용 골격.
 // 콘텐츠(게시물·문서)를 처음에 한 번 보여주고, 이후 스텝은 문제만 바꾼다.
@@ -82,8 +82,6 @@ export default function ReadingScenario<S extends ReadingStep>({
         total={s.total}
         stage={s.stage}
         remaining={s.remaining}
-        readLeft={s.readLeft}
-        onSkipRead={s.skipRead}
       />
 
       {/* 콘텐츠 영역 — 넘칠 때만 여기서 스크롤(스크롤바 감춤). 위에서부터 읽으므로 자동스크롤 없음.
@@ -97,6 +95,8 @@ export default function ReadingScenario<S extends ReadingStep>({
         // 지문이 없는 유형(어휘)은 빈 자리를 남기는 대신 문항을 화면 가운데에 세운다.
         <div className="flex-1" />
       )}
+
+      <SkipReadButton readLeft={s.readLeft} onSkip={s.skipRead} />
 
       <AnswerPanel
         prompt={step.prompt}

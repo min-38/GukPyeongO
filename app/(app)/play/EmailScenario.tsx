@@ -58,8 +58,8 @@ export default function EmailScenarioView({
     plan: PlanRead,
   ) => {
     const timers: number[] = [];
-    // 시계는 화면에 들어온 순간부터 돈다(#99).
-    plan(OPENING_DELAY_MS + readMsFor(from, to));
+    // 남은 초는 메일이 열리는 순간부터 보인다(#99).
+    plan(OPENING_DELAY_MS + readMsFor(from, to), OPENING_DELAY_MS);
     timers.push(
       window.setTimeout(() => {
         playMessagePop();

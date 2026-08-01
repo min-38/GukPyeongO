@@ -64,7 +64,8 @@ export default function CommunityScenarioView({
       const htmlOpenAt = scenario.readSec
         ? OPENING_DELAY_MS + scenario.readSec * 1000
         : at + readMs(commentsHtml ?? "");
-      plan(htmlOpenAt);
+      // 남은 초는 원글이 뜨는 순간부터 보인다(#99).
+      plan(htmlOpenAt, OPENING_DELAY_MS);
       timers.push(window.setTimeout(open, htmlOpenAt));
       return () => timers.forEach(clearTimeout);
     }
@@ -94,7 +95,7 @@ export default function CommunityScenarioView({
     const openAt = scenario.readSec
       ? OPENING_DELAY_MS + scenario.readSec * 1000
       : commentsAt + readMs(comments.map((c) => c.text).join(" "));
-    plan(openAt);
+    plan(openAt, OPENING_DELAY_MS);
     timers.push(window.setTimeout(open, openAt));
     return () => timers.forEach(clearTimeout);
   };
