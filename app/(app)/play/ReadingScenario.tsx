@@ -107,6 +107,7 @@ export default function ReadingScenario<S extends ReadingStep>({
         correct={s.correct}
         scorePop={s.scorePop}
         onAnswer={s.answer}
+        onNext={s.goNext ?? undefined}
       />
       {!body && <div className="flex-1" />}
     </div>

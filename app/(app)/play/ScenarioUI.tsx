@@ -92,6 +92,7 @@ export function AnswerPanel({
   correct,
   scorePop,
   onAnswer,
+  onNext,
   collapsible = true,
 }: {
   prompt: string;
@@ -102,6 +103,9 @@ export function AnswerPanel({
   correct: boolean;
   scorePop: number | null;
   onAnswer: (choiceIndex: number) => void;
+  // 틀린 문항에서 손으로 넘길 때만 온다(#110). 없으면 버튼도 없다 —
+  // 맞힌 문항과 문제 다시 보기 화면에서는 넘길 것이 없다.
+  onNext?: () => void;
   // 문제 다시 보기에서는 접기를 안 쓴다(#99) — 지문과 답을 함께 보는 화면이라 접을 일이 없다.
   collapsible?: boolean;
 }) {
@@ -203,6 +207,19 @@ export function AnswerPanel({
               </div>
             );
           })}
+
+          {/* 틀린 문항은 여기서 멈춘다(#110). 왜 틀렸는지 읽을 시간을 손에 맡긴다 —
+              1.8초 뒤 저절로 넘어가면 정답을 공개하는 뜻이 없다. */}
+          {onNext && (
+            <button
+              type="button"
+              onClick={onNext}
+              autoFocus
+              className="mt-1 w-full rounded-2xl bg-brand px-4 py-3 text-[15px] font-bold text-brand-foreground active:scale-[0.99]"
+            >
+              다음
+            </button>
+          )}
         </div>
       )}
     </div>
