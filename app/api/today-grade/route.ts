@@ -176,10 +176,13 @@ export async function POST(request: Request) {
     }
 
     // 점수의 근거는 오직 서버가 남긴 답안이다. 클라이언트가 보낸 값은 쓰지 않는다.
+    // 답안 키에 회차가 들어갔다(#102). 회차로 좁히지 않으면 같은 문항을 다시 편성했을 때
+    // 지난 회차의 선택이 섞여 들어온다.
     const { data: recorded } = await supabase
       .from("scenario_step_answers")
       .select("step_id, choice_index")
       .eq("visitor_id", visitorId)
+      .eq("round_id", roundId)
       .in(
         "step_id",
         steps.map((s) => s.id),
