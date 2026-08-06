@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { type ScheduledScenario } from "@/app/lib/schedule.server";
 import {
@@ -13,6 +13,7 @@ import {
   type StoredResult,
 } from "@/app/lib/quiz";
 import { saveRoundResult, useRoundScore } from "@/app/lib/today-result";
+import { type AnsweredStep, resumeFrom } from "@/app/lib/today-resume";
 
 // 회차 채점 응답 (#89). 정답·배점·만점은 서버가 DB에서 읽어 계산한다.
 // 라우트가 server-only 모듈을 끌고 오므로 타입을 여기서 다시 적는다.
@@ -62,6 +63,28 @@ export default function TodayPlay({
     message: string;
     retry: boolean;
   } | null>(null);
+
+  // 나갔다 돌아온 사람이 어디까지 갔었는지(#109). 못 찾으면 처음부터 — 지금까지와 같다.
+  const [resume, setResume] = useState<{ index: number; score: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    let alive = true;
+    void fetch("/api/today-session")
+      .then((r) => r.json())
+      .then((body: { answered?: AnsweredStep[] }) => {
+        if (!alive) return;
+        const found = resumeFrom(scenarios, body.answered ?? []);
+        if (found.index === 0) return;
+        // 다시 보기 기록도 함께 되살린다 — 안 그러면 결과 화면의 앞부분이 통째로 빈다.
+        answersRef.current = found.review;
+        setResume({ index: found.index, score: found.score });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [scenarios]);
 
   const total = scenarios.length;
   const current = scenarios[Math.min(index, total - 1)];
@@ -247,14 +270,20 @@ export default function TodayPlay({
               ],
             },
           ]}
-          startLabel="시작하기"
+          startLabel={resume ? "이어서 풀기" : "시작하기"}
           onStart={() => {
             // 시작만 하고 이탈한 사람도 세야 이탈 지점이 보인다(#91).
             void fetch("/api/today-session", { method: "POST" });
-            // 다시 하기로 들어와도 처음부터 — 셸이 이 트리를 새로 마운트한다.
-            setIndex(0);
+            // 지문을 다 풀고 채점만 못 받은 채 나갔으면 바로 채점으로 보낸다(#109).
+            if (resume && resume.index >= total) {
+              start();
+              void gradeAndGo();
+              return;
+            }
+            // 이어풀기면 다 푼 지문 다음부터, 아니면 처음부터(#109).
+            setIndex(resume?.index ?? 0);
+            setScoreSoFar(resume?.score ?? 0);
             setKindReady(false);
-            setScoreSoFar(0);
             start();
           }}
         />

@@ -14,6 +14,60 @@ import { getOrCreateVisitorId } from "@/app/lib/visitor.server";
 // body 에 { stage: "reading" } 이 오면 첫 지문 화면에 들어간 시각을 남긴다(#105).
 // 시작과 첫 문항 사이에는 유형 튜토리얼과 지문 전문 두 화면이 있는데, 이 표식 하나로
 // 둘 중 어디서 나갔는지가 갈린다.
+// 이어풀기 (#109). 이번 회차에서 이미 답한 문항을 돌려준다.
+// 답은 이미 서버에 있다 — 브라우저가 잃는 것은 "몇 번째 지문이었나"뿐이라
+// 그걸 여기서 되찾아 준다.
+//
+// 고른 보기와 정답을 함께 내보낸다. 답하는 순간 화면에 이미 공개된 값이라 새로 새는 것이 없고,
+// 아직 답하지 않은 문항은 애초에 여기 담기지 않는다.
+export interface TodayAnswered {
+  slug: string;
+  stepKey: string;
+  choiceIndex: number | null;
+  answerIndex: number;
+}
+
+export async function GET() {
+  try {
+    const round = await getCurrentRound();
+    if (!round) return NextResponse.json({ answered: [] });
+    const visitorId = await getOrCreateVisitorId();
+
+    const { data } = await getSupabaseAdmin()
+      .from("scenario_step_answers")
+      .select(
+        "choice_index, scenario_steps!inner(step_key, answer_index, scenarios!inner(slug))",
+      )
+      .eq("visitor_id", visitorId)
+      .eq("round_id", round.id);
+
+    const rows = (data ?? []) as unknown as {
+      choice_index: number | null;
+      scenario_steps: {
+        step_key: string;
+        answer_index: number;
+        scenarios: { slug: string } | null;
+      } | null;
+    }[];
+
+    const answered: TodayAnswered[] = [];
+    for (const row of rows) {
+      const step = row.scenario_steps;
+      if (!step?.scenarios) continue;
+      answered.push({
+        slug: step.scenarios.slug,
+        stepKey: step.step_key,
+        choiceIndex: row.choice_index,
+        answerIndex: step.answer_index,
+      });
+    }
+    return NextResponse.json({ answered });
+  } catch {
+    // 못 찾으면 처음부터 푼다 — 지금까지와 같다.
+    return NextResponse.json({ answered: [] });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const round = await getCurrentRound();
