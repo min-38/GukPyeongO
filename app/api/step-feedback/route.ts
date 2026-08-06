@@ -28,6 +28,24 @@ async function findStepId(
   return (data as { id: string } | null)?.id ?? null;
 }
 
+// 항의가 어느 회차의 것인지 (#103). 어드민이 "이 사람이 무엇을 골랐나"를 회차까지 맞춰 찾는다.
+// 클라이언트가 보낸 값을 믿지 않고 시작 기록에서 찾는다 —
+// answer_scenario_step 이 답안에 회차를 적을 때 쓰는 방식과 같다.
+async function findRoundId(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  visitorId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("scenario_sessions")
+    .select("round_id")
+    .eq("visitor_id", visitorId)
+    .not("round_id", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { round_id: string } | null)?.round_id ?? null;
+}
+
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -64,16 +82,19 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    // 같은 사람이 같은 문항에 다시 넣으면 덮어쓴다 — 시트를 접었다 펴는 것만으로
+    // 같은 사람이 같은 회차의 같은 문항에 다시 넣으면 덮어쓴다 — 시트를 접었다 펴는 것만으로
     // 항의가 여러 줄 쌓이면 어드민이 같은 말을 반복해 읽는다.
+    // 회차가 다르면 다른 항의다(#103) — 같은 지문을 다시 편성하면 고른 답도 달라진다.
+    const visitorId = await getOrCreateVisitorId();
     const { error } = await supabase.from("step_reports").upsert(
       {
         step_id: stepId,
-        visitor_id: await getOrCreateVisitorId(),
+        visitor_id: visitorId,
+        round_id: await findRoundId(supabase, visitorId),
         reason: b.reason,
         detail: detail || null,
       },
-      { onConflict: "step_id,visitor_id" },
+      { onConflict: "step_id,visitor_id,round_id" },
     );
     if (error) {
       return NextResponse.json(
