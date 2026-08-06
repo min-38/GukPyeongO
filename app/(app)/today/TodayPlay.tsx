@@ -259,43 +259,59 @@ export default function TodayPlay({
           }}
         />
       )}
-      renderScenario={(onFinish) =>
-        !kindReady ? (
-          <TutorialByKind
-            key={`tutorial-${index}`}
-            kind={current.kind}
-            scenario={current.content}
-            onStart={() => setKindReady(true)}
-          />
-        ) : (
-          <SurfaceByKind
-            // 시나리오가 바뀌면 표면을 새로 마운트해 재생을 처음부터 돌린다.
-            key={index}
-            kind={current.kind}
-            scenario={current.content}
-            slug={current.slug}
-            onAnswered={(stepKey, choiceIndex, answerIndex) =>
-              answersRef.current.push({
-                slug: current.slug,
-                stepKey,
-                choiceIndex,
-                answerIndex,
-              })
-            }
-            onFinish={(score) => {
-              const sum = scoreSoFar + score;
-              if (index + 1 >= total) {
-                saveRoundResult({ roundId, score: sum });
-                void gradeAndGo();
-                return onFinish(sum);
+      renderScenario={(onFinish) => (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* 끝이 안 보이면 지문이 바뀌는 자리에서 나간다(#100).
+              문항이 아니라 지문 단위로 센다 — 문항 수는 지문마다 다르고 미리 알려주지 않는다.
+              막대는 같은 말을 다시 하는 그림이라 읽어주지 않는다. */}
+          <div className="mb-3 shrink-0">
+            <p className="mb-1 text-xs text-muted">
+              지문 {index + 1} / {total}
+            </p>
+            <div aria-hidden className="h-1 rounded-full bg-surface-muted">
+              <div
+                className="h-full rounded-full bg-brand transition-[width] duration-300"
+                style={{ width: `${((index + 1) / total) * 100}%` }}
+              />
+            </div>
+          </div>
+          {!kindReady ? (
+            <TutorialByKind
+              key={`tutorial-${index}`}
+              kind={current.kind}
+              scenario={current.content}
+              onStart={() => setKindReady(true)}
+            />
+          ) : (
+            <SurfaceByKind
+              // 시나리오가 바뀌면 표면을 새로 마운트해 재생을 처음부터 돌린다.
+              key={index}
+              kind={current.kind}
+              scenario={current.content}
+              slug={current.slug}
+              onAnswered={(stepKey, choiceIndex, answerIndex) =>
+                answersRef.current.push({
+                  slug: current.slug,
+                  stepKey,
+                  choiceIndex,
+                  answerIndex,
+                })
               }
-              setScoreSoFar(sum);
-              setIndex(index + 1);
-              setKindReady(false);
-            }}
-          />
-        )
-      }
+              onFinish={(score) => {
+                const sum = scoreSoFar + score;
+                if (index + 1 >= total) {
+                  saveRoundResult({ roundId, score: sum });
+                  void gradeAndGo();
+                  return onFinish(sum);
+                }
+                setScoreSoFar(sum);
+                setIndex(index + 1);
+                setKindReady(false);
+              }}
+            />
+          )}
+        </div>
+      )}
     />
   );
 }
