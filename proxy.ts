@@ -21,7 +21,7 @@ const RETIRED_ROUTES: Record<string, string> = {
   "/test": "/today",
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const notFound = () =>
     NextResponse.rewrite(new URL("/not-found", request.url));
