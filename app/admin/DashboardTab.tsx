@@ -295,7 +295,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
 
         <Panel
           title="분류별 정답률"
-          desc={`낮은 순 ${types.length}개${typesTotal > types.length ? ` · 전체 ${typesTotal}개 분류 중` : ""}`}
+          desc={`이번 회차 · 낮은 순 ${types.length}개${typesTotal > types.length ? ` · 전체 ${typesTotal}개 분류 중` : ""}`}
         >
           {types.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted">
@@ -337,7 +337,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
 
         <Panel
           title="난이도 눈금 점검"
-          desc="난이도가 올라갈수록 정답률이 떨어져야 맞다"
+          desc="이번 회차 · 난이도가 올라갈수록 정답률이 떨어져야 맞다"
         >
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={difficulty}>
@@ -377,7 +377,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
         <Stat
           label="문항 표본"
           value={`${typesAttempts}회`}
-          hint="누적 시도 수"
+          hint="이번 회차 시도 수"
         />
       </div>
 

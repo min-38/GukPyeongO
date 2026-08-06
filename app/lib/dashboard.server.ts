@@ -93,8 +93,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         db.from("dashboard_grade_stats").select("round_id, grade, count"),
         db.from("dashboard_hour_stats").select("hour, started"),
         db.from("dashboard_visitor_stats").select("visitors, repeat_visitors").maybeSingle(),
-        db.from("dashboard_type_stats").select("type, attempts, correct"),
-        db.from("dashboard_difficulty_stats").select("difficulty, attempts, correct"),
+        // 분류·난이도는 이번 회차만 본다(#108). 누적으로 보면 지난 회차가 수치를 지배해
+        // "이번에 어느 분류가 약했나"가 묻힌다. 회차는 아래에서 정해지므로 여기서는 다 읽고 거른다.
+        db.from("dashboard_type_stats").select("type, attempts, correct, round_id"),
+        db
+          .from("dashboard_difficulty_stats")
+          .select("difficulty, attempts, correct, round_id"),
         db
           .from("dashboard_step_quality")
           .select(
@@ -151,6 +155,26 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
     const hourRows = (hours.data ?? []) as { hour: number; started: number }[];
 
+    // 분류·난이도는 이번 회차 것만 남긴다(#108). 회차가 없으면 볼 것도 없다.
+    const ofRound = <T extends { round_id: string | null }>(rows: T[]) =>
+      currentRow ? rows.filter((r) => r.round_id === currentRow.round_id) : [];
+    const typeRows = ofRound(
+      (types.data ?? []) as unknown as {
+        type: string;
+        attempts: number;
+        correct: number;
+        round_id: string | null;
+      }[],
+    );
+    const difficultyRows = ofRound(
+      (difficulty.data ?? []) as unknown as {
+        difficulty: number;
+        attempts: number;
+        correct: number;
+        round_id: string | null;
+      }[],
+    );
+
     return {
       rounds: [...roundRows].reverse().map(toMetrics),
       current: currentRow
@@ -165,11 +189,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         visitors: visitors.data?.visitors ?? 0,
         repeatVisitors: visitors.data?.repeat_visitors ?? 0,
       },
-      types: ((types.data ?? []) as unknown as {
-        type: string;
-        attempts: number;
-        correct: number;
-      }[])
+      types: typeRows
         .map((t) => ({
           key: t.type,
           attempts: t.attempts,
@@ -178,14 +198,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         }))
         .sort((a, b) => a.rate - b.rate)
         .slice(0, TYPE_LIMIT),
-      typesTotal: (types.data ?? []).length,
-      typesAttempts: ((types.data ?? []) as unknown as { attempts: number }[])
-        .reduce((n, t) => n + t.attempts, 0),
-      difficulty: ((difficulty.data ?? []) as unknown as {
-        difficulty: number;
-        attempts: number;
-        correct: number;
-      }[])
+      typesTotal: typeRows.length,
+      typesAttempts: typeRows.reduce((n, t) => n + t.attempts, 0),
+      difficulty: difficultyRows
         .map((d) => ({
           key: `${d.difficulty}난이도`,
           attempts: d.attempts,
