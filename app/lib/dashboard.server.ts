@@ -46,6 +46,8 @@ export interface DashboardData {
   // 분류는 자유 입력이라 수십 개까지 늘어난다 — 낮은 순 10개만 보낸다.
   types: RateBucket[];
   typesTotal: number;
+  // 자르기 전 전체 분류의 시도 합계(#101). types 를 더하면 하위 10개만 세게 된다.
+  typesAttempts: number;
   difficulty: RateBucket[];
   hardSteps: StepQuality[];
   readiness: {
@@ -171,6 +173,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         .sort((a, b) => a.rate - b.rate)
         .slice(0, TYPE_LIMIT),
       typesTotal: (types.data ?? []).length,
+      typesAttempts: ((types.data ?? []) as unknown as { attempts: number }[])
+        .reduce((n, t) => n + t.attempts, 0),
       difficulty: ((difficulty.data ?? []) as unknown as {
         difficulty: number;
         attempts: number;

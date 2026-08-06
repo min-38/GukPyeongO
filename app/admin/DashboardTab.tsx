@@ -26,16 +26,24 @@ import { CARD, FIGURE, LABEL } from "./ui";
 
 const AXIS = { fontSize: 11, fill: "var(--muted)" };
 
-// 툴팁은 recharts 기본 스타일이 앱과 겉돈다 — 카드 모양만 맞춰준다.
+// 그래프 위에 커서를 올렸을 때 뜨는 말풍선. recharts 기본 스타일이 앱과 겉돌아 카드 모양을 맞춘다.
+// 글자색을 안 정하면 Recharts 가 선 색을 그대로 글자에 쓴다 — 옅은 색 계열은 배경에 묻힌다.
+// 값과 이름은 항상 본문색으로, 축 이름만 흐리게 둔다.
 const TOOLTIP_STYLE = {
   contentStyle: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: "0.75rem",
     fontSize: "12px",
+    color: "var(--foreground)",
   },
-  labelStyle: { color: "var(--muted)" },
+  labelStyle: { color: "var(--muted)", marginBottom: "0.25rem" },
+  itemStyle: { color: "var(--foreground)", padding: 0 },
 } as const;
+
+// 막대 위에 커서를 올릴 때 깔리는 판. 기본값은 너무 진해 막대를 덮어버린다.
+// 선/영역 차트에는 주지 않는다 — 거기 커서는 세로선이라 fill 을 넣으면 선이 사라진다.
+const BAR_CURSOR = { fill: "var(--border)", fillOpacity: 0.35 } as const;
 
 function rate(finished: number, started: number): string {
   if (started === 0) return "—";
@@ -100,6 +108,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
     visitors,
     types,
     typesTotal,
+    typesAttempts,
     difficulty,
     hardSteps,
     readiness,
@@ -185,6 +194,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
               <Area
                 type="monotone"
                 dataKey="시작"
+                unit="명"
                 stroke="var(--brand)"
                 fill="var(--brand)"
                 fillOpacity={0.15}
@@ -192,6 +202,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
               <Area
                 type="monotone"
                 dataKey="완주"
+                unit="명"
                 stroke="#10b981"
                 fill="#10b981"
                 fillOpacity={0.2}
@@ -216,12 +227,14 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
               <Line
                 type="monotone"
                 dataKey="완주율"
+                unit="%"
                 stroke="#10b981"
                 dot={false}
               />
               <Line
                 type="monotone"
                 dataKey="평균점수"
+                unit="점"
                 stroke="var(--brand)"
                 dot={false}
               />
@@ -241,8 +254,8 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
                   axisLine={false}
                   width={28}
                 />
-                <Tooltip {...TOOLTIP_STYLE} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <Tooltip {...TOOLTIP_STYLE} cursor={BAR_CURSOR} />
+                <Bar dataKey="count" name="인원" unit="명" radius={[4, 4, 0, 0]}>
                   {gradeData.map((d) => (
                     <Cell key={d.grade} fill={d.color} />
                   ))}
@@ -262,8 +275,14 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
               <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis dataKey="hour" tick={AXIS} tickLine={false} interval={2} />
               <YAxis tick={AXIS} tickLine={false} axisLine={false} width={28} />
-              <Tooltip {...TOOLTIP_STYLE} />
-              <Bar dataKey="started" fill="var(--brand)" radius={[4, 4, 0, 0]} />
+              <Tooltip {...TOOLTIP_STYLE} cursor={BAR_CURSOR} />
+              <Bar
+                dataKey="started"
+                name="시작"
+                unit="명"
+                fill="var(--brand)"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </Panel>
@@ -297,8 +316,14 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
                   axisLine={false}
                   width={80}
                 />
-                <Tooltip {...TOOLTIP_STYLE} />
-                <Bar dataKey="rate" fill="var(--brand)" radius={[0, 4, 4, 0]} />
+                <Tooltip {...TOOLTIP_STYLE} cursor={BAR_CURSOR} />
+                <Bar
+                  dataKey="rate"
+                  name="정답률"
+                  unit="%"
+                  fill="var(--brand)"
+                  radius={[0, 4, 4, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -319,8 +344,14 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
                 width={28}
                 domain={[0, 100]}
               />
-              <Tooltip {...TOOLTIP_STYLE} />
-              <Bar dataKey="rate" fill="var(--brand)" radius={[4, 4, 0, 0]} />
+              <Tooltip {...TOOLTIP_STYLE} cursor={BAR_CURSOR} />
+              <Bar
+                dataKey="rate"
+                name="정답률"
+                unit="%"
+                fill="var(--brand)"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </Panel>
@@ -339,7 +370,7 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
         />
         <Stat
           label="문항 표본"
-          value={`${types.reduce((n, t) => n + t.attempts, 0)}회`}
+          value={`${typesAttempts}회`}
           hint="누적 시도 수"
         />
       </div>
