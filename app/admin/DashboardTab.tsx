@@ -140,7 +140,13 @@ export default function DashboardTab({ data }: { data: DashboardData | null }) {
       />
 
       <div className="grid grid-cols-4 gap-3">
-        <Stat label="시작" value={`${current?.started ?? 0}명`} />
+        <Stat
+          label="시작"
+          value={`${current?.started ?? 0}명`}
+          // 시작 버튼만 누르고 지문도 못 본 사람이 몇인지(#105).
+          // 둘 차이가 크면 유형 튜토리얼이 앞을 막고 있다는 뜻이다.
+          hint={`지문까지 ${current?.reading ?? 0}명`}
+        />
         <Stat label="완주" value={`${current?.finished ?? 0}명`} />
         <Stat
           label="완주율"

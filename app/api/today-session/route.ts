@@ -4,18 +4,41 @@ import { getCurrentRound } from "@/app/lib/schedule.server";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 import { getOrCreateVisitorId } from "@/app/lib/visitor.server";
 
-// 회차 시작 기록 (#91, #100).
+// 회차 시작 기록 (#91, #100, #105).
 // 완료(채점)만 남기면 시작하고 이탈한 사람이 보이지 않는다. 시작 시점에 한 줄 남긴다.
 // 같은 사람이 여러 번 눌러도 (round_id, visitor_id) 유니크로 한 줄이다.
 //
 // 이 행은 "회차가 열려 있을 때 시작했다"는 증거이기도 하다 — 풀던 중에 마감이 지나도
 // 채점을 받아주는 근거로 /api/today-grade 가 이 행을 본다.
-export async function POST() {
+//
+// body 에 { stage: "reading" } 이 오면 첫 지문 화면에 들어간 시각을 남긴다(#105).
+// 시작과 첫 문항 사이에는 유형 튜토리얼과 지문 전문 두 화면이 있는데, 이 표식 하나로
+// 둘 중 어디서 나갔는지가 갈린다.
+export async function POST(request: Request) {
   try {
     const round = await getCurrentRound();
     if (!round) return NextResponse.json({ ok: false });
     const visitorId = await getOrCreateVisitorId();
-    await getSupabaseAdmin()
+    const db = getSupabaseAdmin();
+
+    // 본문은 없을 수도 있다(시작 기록은 빈 POST 다).
+    const stage = await request
+      .json()
+      .then((b: unknown) => (b as { stage?: unknown }).stage)
+      .catch(() => undefined);
+
+    if (stage === "reading") {
+      // 이미 값이 있으면 덮지 않는다 — 요청이 중복돼도 처음 들어간 시각이 남는다.
+      await db
+        .from("scenario_sessions")
+        .update({ first_reading_at: new Date().toISOString() })
+        .eq("round_id", round.id)
+        .eq("visitor_id", visitorId)
+        .is("first_reading_at", null);
+      return NextResponse.json({ ok: true });
+    }
+
+    await db
       .from("scenario_sessions")
       .upsert(
         { round_id: round.id, visitor_id: visitorId },

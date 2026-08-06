@@ -280,7 +280,19 @@ export default function TodayPlay({
               key={`tutorial-${index}`}
               kind={current.kind}
               scenario={current.content}
-              onStart={() => setKindReady(true)}
+              onStart={() => {
+                // 첫 지문 화면에 들어간 시각을 남긴다(#105). 시작과 첫 문항 사이에서
+                // 유형 튜토리얼에서 나갔는지, 지문을 읽다 나갔는지를 이 표식이 가른다.
+                // 두 번째 지문부터는 답안으로 이미 보이므로 첫 지문에서만 부른다.
+                if (index === 0) {
+                  void fetch("/api/today-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ stage: "reading" }),
+                  });
+                }
+                setKindReady(true);
+              }}
             />
           ) : (
             <SurfaceByKind

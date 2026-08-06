@@ -12,6 +12,8 @@ export interface RoundMetrics {
   roundId: string;
   label: string; // 회차 시작 일시(KST)
   started: number;
+  // 첫 지문 화면까지 들어온 사람(#105). 시작 → 지문 진입 → 완주로 앞머리 이탈이 갈린다.
+  reading: number;
   finished: number;
   avgScore: number | null;
   avgSeconds: number | null;
@@ -83,7 +85,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       await Promise.all([
         db
           .from("dashboard_round_stats")
-          .select("round_id, starts_at, ends_at, started, finished, avg_score, avg_seconds")
+          .select(
+            "round_id, starts_at, ends_at, started, reading, finished, avg_score, avg_seconds",
+          )
           .order("starts_at", { ascending: false })
           .limit(RECENT_ROUNDS),
         db.from("dashboard_grade_stats").select("round_id, grade, count"),
@@ -110,6 +114,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       starts_at: string;
       ends_at: string;
       started: number;
+      reading: number;
       finished: number;
       avg_score: number | null;
       avg_seconds: number | null;
@@ -119,6 +124,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       roundId: r.round_id,
       label: label(r.starts_at),
       started: r.started,
+      reading: r.reading,
       finished: r.finished,
       avgScore: r.avg_score,
       avgSeconds: r.avg_seconds,
