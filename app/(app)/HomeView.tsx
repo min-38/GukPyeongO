@@ -16,7 +16,6 @@ import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 import { useRoundScore } from "@/app/lib/today-result";
 
 import Footer from "./Footer";
-import PastRounds from "./PastRounds";
 import GradeCharacter from "./GradeCharacter";
 
 // 색 섹션을 데스크톱에서 화면 전체 폭으로 확장 (좌우 그라데이션 노출 방지).
@@ -209,6 +208,10 @@ export default function HomeView({
   // 이번 회차를 끝낸 사람 수(#105).
   finished: number;
 }) {
+  // 마감된 회차가 하나도 없으면 지난 회차로 보내는 줄을 접는다(#114).
+  // 누적 인원은 여기서 적지 않는다 — 바로 위에 이번 회차 응시자 수가 이미 있어서
+  // 비슷한 숫자를 두 번 말하는 꼴이 된다. 그 숫자는 /rounds 가 맡는다.
+  const hasPastRounds = (history?.rounds.length ?? 0) > 0;
   // 편성이 비어 있으면 문제로 보낼 게 없다 — 버튼 문구로 알린다(#90).
   const ready = todayCount > 0;
   // 이미 푼 사람에게는 결과를 보여준다. 기록은 브라우저에만 있다.
@@ -221,7 +224,7 @@ export default function HomeView({
       : "이 주의 문제 풀기";
   // 이미 푼 사람을 문제 화면으로 보내면 "이 주의 문제 끝!"만 다시 본다(#97).
   const ctaHref = solved ? "/result" : "/today";
-  // 회차는 일주일씩 열린다 — 마감일은 버튼 바로 위에 크게, 주기는 아래에 작게(#104).
+  // 회차는 정해진 기간 동안 열린다 — 마감일은 버튼 바로 위에 크게 둔다(#104).
   const deadline = ready && roundEndsAt ? endLabel(roundEndsAt) : null;
   const [activeGrade, setActiveGrade] = useState(5);
   const theme = gradeTheme(activeGrade);
@@ -272,24 +275,34 @@ export default function HomeView({
               {/* 등급을 눌러(또는 마우스를 올려) 오른쪽 카드의 캐릭터를 바꿔 본다.
                   캐릭터 9종을 한 번에 늘어놓으면 결과 화면의 재미가 먼저 새어나간다 —
                   한 번에 하나씩만 보여준다. */}
-              <div className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-start">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onMouseEnter={() => setActiveGrade(g)}
-                    onClick={() => setActiveGrade(g)}
-                    // 숫자만 있으면 스크린리더가 "1"로만 읽는다. 무엇을 고르는 버튼인지 밝힌다.
-                    aria-label={`${g}등급 캐릭터 보기`}
-                    aria-pressed={g === activeGrade}
-                    className={`grid h-11 w-11 place-items-center rounded-lg text-sm font-bold transition-colors lg:h-11 lg:w-11 lg:text-base ${
-                      g === activeGrade
-                        ? "bg-brand text-brand-foreground"
-                        : "bg-surface-muted text-muted"
-                    }`}
-                  >
-                    {g}
-                  </button>
+              {/* 모바일은 1~4 / 5~9 두 줄로 끊는다. flex-wrap 에 맡기면 화면 폭에 따라
+                  7+2 처럼 어중간하게 접혀 줄바꿈 자리가 매번 달라진다.
+                  lg 에서는 두 묶음이 나란히 붙어 예전처럼 한 줄이다. */}
+              <div className="flex flex-col items-center gap-1.5 lg:flex-row lg:flex-wrap lg:justify-start">
+                {[
+                  [1, 2, 3, 4],
+                  [5, 6, 7, 8, 9],
+                ].map((row) => (
+                  <div key={row[0]} className="flex gap-1.5">
+                    {row.map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onMouseEnter={() => setActiveGrade(g)}
+                        onClick={() => setActiveGrade(g)}
+                        // 숫자만 있으면 스크린리더가 "1"로만 읽는다. 무엇을 고르는 버튼인지 밝힌다.
+                        aria-label={`${g}등급 캐릭터 보기`}
+                        aria-pressed={g === activeGrade}
+                        className={`grid h-11 w-11 place-items-center rounded-lg text-sm font-bold transition-colors lg:h-11 lg:w-11 lg:text-base ${
+                          g === activeGrade
+                            ? "bg-brand text-brand-foreground"
+                            : "bg-surface-muted text-muted"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
 
@@ -336,9 +349,16 @@ export default function HomeView({
                 →
               </span>
             </Link>
-            <p className="mt-3 text-center text-xs text-muted lg:text-left lg:text-sm">
-              문제는 일주일마다 바뀝니다
-            </p>
+            {/* 첫 화면에서 다 결정된다(#114). 여기 있던 "일주일마다 바뀝니다"는
+                편성이 정하는 것이라 화면이 약속할 수 없다 — 대신 쌓인 기록으로 보낸다.
+                기록이 없으면 아무 말도 하지 않는다. */}
+            {hasPastRounds && (
+              <p className="mt-3 text-center text-xs text-muted lg:text-left lg:text-sm">
+                <Link href="/rounds" className="font-bold underline">
+                  이전 회차는 어땠을까요?
+                </Link>
+              </p>
+            )}
 
             {/* 모바일 스크롤 유도 (정상 흐름 — 캡션과 겹치지 않음) */}
             <div className="mt-5 flex flex-col items-center gap-0.5 text-brand lg:hidden">
@@ -424,11 +444,13 @@ export default function HomeView({
           {/* 사례마다 보도 출처가 다르다 — 같은 기사는 한 번만 적는다. */}
           <Reveal delay={500}>
             <div className="mt-8 flex flex-col items-center gap-1">
-              {[...new Map(CASES.map((c) => [c.source.label, c.source])).values()].map(
-                (s) => (
-                  <SourceLine key={s.label} source={s} />
-                ),
-              )}
+              {[
+                ...new Map(
+                  CASES.map((c) => [c.source.label, c.source]),
+                ).values(),
+              ].map((s) => (
+                <SourceLine key={s.label} source={s} />
+              ))}
             </div>
           </Reveal>
         </section>
@@ -519,9 +541,8 @@ export default function HomeView({
             <figure className="mt-10 w-full max-w-md rounded-2xl bg-surface p-5 shadow-sm">
               <PisaChart />
               <figcaption className="mt-2 text-center text-xs text-muted/80">
-                한국 PISA 읽기 평균 (500점 만점) ·{" "}
-                {PISA_READING.series[0].year} →{" "}
-                {PISA_READING.series[PISA_READING.series.length - 1].year}
+                한국 PISA 읽기 평균 (500점 만점) · {PISA_READING.series[0].year}{" "}
+                → {PISA_READING.series[PISA_READING.series.length - 1].year}
               </figcaption>
             </figure>
           </Reveal>
@@ -585,10 +606,6 @@ export default function HomeView({
         {/* ────────────────────────────────────────────
             5. 최하단 CTA
         ──────────────────────────────────────────── */}
-        {/* 지난 회차 기록은 마지막 밀기 바로 앞에 둔다(#113) —
-            "굴러가고 있구나"를 보고 나서 시작 버튼을 만나게. */}
-        {history && <PastRounds history={history} />}
-
         <section className="flex min-h-[55vh] flex-col items-center justify-center px-6 py-24 text-center">
           <Reveal>
             <p className="text-xs font-bold tracking-[0.2em] text-brand">
@@ -604,9 +621,16 @@ export default function HomeView({
                   ? "이번 회차를 이미 푸셨어요 · 결과 다시 보기"
                   : `이번 회차 ${todayCount}문제 · 즉시 채점 · 무료`}
             </p>
-            <p className="mt-1 text-xs text-muted/70">
-              문제는 일주일마다 바뀝니다
-            </p>
+            {/* 지난 회차는 목록이 아니라 숫자 하나로만 말한다(#114).
+                링크만 두면 대부분 누르지 않는다 — 신뢰 신호는 보이는 것이 일이다.
+                "일주일마다 바뀝니다"가 있던 자리다 — 회차가 쌓인 기록이 같은 말을 더 세게 한다. */}
+            {hasPastRounds && (
+              <p className="mt-2 text-sm text-muted">
+                <Link href="/rounds" className="font-bold underline">
+                  이전 회차는 어땠을까요?
+                </Link>
+              </p>
+            )}
           </Reveal>
           <Reveal delay={200}>
             {deadline && (

@@ -3,19 +3,21 @@
 import { gradeTheme } from "@/app/lib/quiz";
 import { type PublicHistory } from "@/app/lib/history.server";
 
-// 홈에 여는 지난 회차 기록 (#113).
+// 지난 회차 목록 (#113, #114).
 // 처음 들어온 사람에게 "이 서비스 굴러가고 있구나"를 보여준다.
 // 매주 돌아간다는 것은 문장이 아니라 이력으로 말해야 믿는다.
+// 홈이 아니라 /rounds 가 이 목록을 연다 — 회차가 쌓일수록 길어져 홈의 CTA를 밀어냈다.
 //
-// 여기 없는 것들에 이유가 있다 — 완주율·재방문율·회차별 응시자 수는
-// 지금 숫자로 보여주면 오히려 한산해 보인다(app/lib/history.server.ts).
+// 회차별로는 완주 수만 적는다. 시작 수를 나란히 두면 완주율이 그대로 계산되는데,
+// 22%라는 그 값은 공개하지 않기로 했다(app/lib/history.server.ts).
+// 완주 수는 등급 분포 막대의 합과 같아서 화면 안에서 앞뒤가 맞는다.
 
 export default function PastRounds({ history }: { history: PublicHistory }) {
   if (history.rounds.length === 0) return null;
 
   return (
-    <section className="px-6 py-24">
-      <div className="mx-auto max-w-3xl">
+    <section>
+      <div>
         <p className="text-xs font-bold tracking-[0.2em] text-brand">
           지난 회차
         </p>
@@ -25,7 +27,7 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
           풀었어요
         </h2>
         <p className="mt-3 text-sm text-muted">
-          문제는 일주일마다 바뀌고, 지난 회차는 이렇게 쌓였습니다.
+          회차마다 새 문제가 올라옵니다. 지난 회차는 이렇게 쌓였어요.
         </p>
 
         <ul className="mt-8 flex flex-col gap-3">
@@ -41,6 +43,7 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                   <p className="font-bold">{round.label} 회차</p>
                   <p className="text-xs text-muted">
                     지문 {round.scenarios}편 · 문항 {round.steps}개
+                    {solved > 0 && ` · ${solved}명 완주`}
                   </p>
                 </div>
 

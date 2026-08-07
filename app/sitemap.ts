@@ -20,5 +20,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    {
+      // 지난 회차 기록(#114). 매주 한 줄씩 늘어나는 페이지라 검색으로도 들어온다.
+      url: `${BASE_URL}/rounds`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
   ];
 }
