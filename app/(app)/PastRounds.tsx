@@ -12,6 +12,9 @@ import { type PublicHistory } from "@/app/lib/history.server";
 // 22%라는 그 값은 공개하지 않기로 했다(app/lib/history.server.ts).
 // 완주 수는 등급 분포 막대의 합과 같아서 화면 안에서 앞뒤가 맞는다.
 
+// 가장 많은 등급의 막대 높이(px). 결과 화면의 같은 그래프와 맞춘다.
+const MAX_BAR_H = 56;
+
 export default function PastRounds({ history }: { history: PublicHistory }) {
   if (history.rounds.length === 0) return null;
 
@@ -50,7 +53,7 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                 {/* 등급 분포. 인원 숫자는 적지 않는다 — 모양만 보여도 "나만 못한 게 아니다"는 전해진다. */}
                 {solved > 0 && (
                   <div
-                    className="mt-4 flex h-16 items-end gap-1"
+                    className="mt-4 flex items-end gap-1"
                     role="img"
                     aria-label={`등급 분포. ${round.gradeDist
                       .map((c, i) => `${i + 1}등급 ${c}명`)
@@ -61,7 +64,10 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                         <div
                           className="w-full rounded-t"
                           style={{
-                            height: `${Math.max(2, (count / most) * 100)}%`,
+                            // px 로 잡는다. % 로 두면 막대가 통째로 안 보인다 —
+                            // 막대를 감싼 칸은 items-end 라 늘어나지 않아 높이가 확정되지
+                            // 않고, 확정되지 않은 부모에 대한 % 높이는 0이 된다.
+                            height: `${Math.max(2, (count / most) * MAX_BAR_H)}px`,
                             // 무채색(--surface-muted)으로 두면 라이트 테마에서 흰 카드에 묻혀
                             // 막대가 통째로 안 보인다. 등급색을 쓰고 내 등급이 아닌 것만
                             // 알파로 낮춘다 — 40%는 흰 배경에서도 남는 진하기다.
