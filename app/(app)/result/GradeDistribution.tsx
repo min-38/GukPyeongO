@@ -33,7 +33,8 @@ export default function GradeDistribution({
               style={{
                 height: `${Math.max(2, (count / max) * MAX_H)}px`,
                 // 내 등급만 진하게. 나머지는 같은 색을 알파로 낮춘다 — 등급색은 그대로 읽히게.
-                backgroundColor: `${gradeTheme(i + 1).color}${i + 1 === grade ? "" : "33"}`,
+                // 20%는 라이트 테마의 흰 배경에서 막대가 묻혀 40%로 둔다.
+                backgroundColor: `${gradeTheme(i + 1).color}${i + 1 === grade ? "" : "66"}`,
               }}
             />
           </div>

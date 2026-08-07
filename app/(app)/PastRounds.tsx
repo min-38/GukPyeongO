@@ -62,10 +62,12 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                           className="w-full rounded-t"
                           style={{
                             height: `${Math.max(2, (count / most) * 100)}%`,
-                            background:
-                              round.myGrade === i + 1
-                                ? gradeTheme(i + 1).color
-                                : "var(--surface-muted)",
+                            // 무채색(--surface-muted)으로 두면 라이트 테마에서 흰 카드에 묻혀
+                            // 막대가 통째로 안 보인다. 등급색을 쓰고 내 등급이 아닌 것만
+                            // 알파로 낮춘다 — 40%는 흰 배경에서도 남는 진하기다.
+                            background: `${gradeTheme(i + 1).color}${
+                              round.myGrade === i + 1 ? "" : "66"
+                            }`,
                           }}
                         />
                         <span
