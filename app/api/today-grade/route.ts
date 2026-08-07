@@ -48,17 +48,20 @@ export interface TodayGradeResponse {
   rank?: GradeRank;
 }
 
-// 지금까지 응시한 사람들 사이에서 내 득점률이 어디쯤인지 (#95).
-// 모집단은 회차 전체 누적이다. 하루치만 세면 이른 시각 응시자가 한두 명뿐이라 수치가 튄다.
-// 날짜마다 만점이 달라도 득점률(percent 컬럼)로 견주므로 섞어 세도 된다.
+// 같은 회차를 푼 사람들 사이에서 내 득점률이 어디쯤인지 (#115).
+// 모집단은 이 회차 응시자다. 회차마다 문제가 달라 누적으로 세면 다른 문제를 푼 사람과
+// 견주게 된다 — "이번 주 문제에서 내가 어디쯤인가"를 못 본다.
+// 회차 초반이라 사람이 적을 때는 화면이 상위 %를 감춘다(GradeBar의 MIN_POPULATION).
 async function gradeRank(
   supabase: Db,
+  roundId: string,
   percent: number,
 ): Promise<GradeRank | undefined> {
   const rows = () =>
     supabase
       .from("scenario_sessions")
       .select("id", { count: "exact", head: true })
+      .eq("round_id", roundId)
       .not("percent", "is", null);
 
   // ponytail: 등급마다 count 한 번씩(9번) 던진다. percent 인덱스가 받아주는 크기라 그냥 센다.
@@ -231,7 +234,7 @@ export async function POST(request: Request) {
         { onConflict: "round_id,visitor_id" },
       );
       // 내 기록을 넣은 뒤에 센다 — 모집단에 나도 들어가야 "상위 100%"가 성립한다.
-      rank = await gradeRank(supabase, (score / maxScore) * 100);
+      rank = await gradeRank(supabase, roundId, (score / maxScore) * 100);
     } catch {
       // 지표 기록 실패는 무시한다 — 분포 막대만 빠진다
     }

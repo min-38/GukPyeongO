@@ -128,8 +128,8 @@ export default function GradeBar({
 
       <p className="mt-1 text-center text-sm text-muted">
         {rank.total >= MIN_POPULATION
-          ? `금일 응시자 ${rank.total.toLocaleString()}명 중 상위 ${rank.topPercent}%`
-          : `지금까지 ${rank.total.toLocaleString()}명이 응시했어요`}
+          ? `이번 회차 응시자 ${rank.total.toLocaleString()}명 중 상위 ${rank.topPercent}%`
+          : `이번 회차에 ${rank.total.toLocaleString()}명이 응시했어요`}
       </p>
     </div>
   );
