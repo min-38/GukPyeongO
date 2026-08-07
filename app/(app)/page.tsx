@@ -1,3 +1,4 @@
+import { getPublicHistory } from "@/app/lib/history.server";
 import {
   getCurrentRound,
   getRoundFinishedCount,
@@ -18,9 +19,12 @@ export default async function HomePage() {
         getRoundFinishedCount(round.id),
       ])
     : [[], 0];
+  // 지난 회차 기록(#113). 못 읽으면 null — 화면이 그 구획만 접는다.
+  const history = await getPublicHistory();
 
   return (
     <HomeView
+      history={history}
       roundId={round?.id ?? null}
       roundEndsAt={round?.endsAt ?? null}
       finished={finished}

@@ -11,10 +11,12 @@ import {
   type Source,
   sourceText,
 } from "@/app/lib/literacy-facts";
+import { type PublicHistory } from "@/app/lib/history.server";
 import { gradeTheme, GRADE_TITLES } from "@/app/lib/quiz";
 import { useRoundScore } from "@/app/lib/today-result";
 
 import Footer from "./Footer";
+import PastRounds from "./PastRounds";
 import GradeCharacter from "./GradeCharacter";
 
 // 색 섹션을 데스크톱에서 화면 전체 폭으로 확장 (좌우 그라데이션 노출 방지).
@@ -192,11 +194,14 @@ const endLabel = (iso: string) =>
   });
 
 export default function HomeView({
+  history,
   todayCount,
   roundId,
   roundEndsAt,
   finished,
 }: {
+  // 지난 회차 기록(#113). 못 읽었거나 마감된 회차가 없으면 이 구획을 접는다.
+  history: PublicHistory | null;
   todayCount: number;
   // 진행 중인 회차. 회차 사이 빈 기간이면 null이다(#100).
   roundId: string | null;
@@ -580,6 +585,10 @@ export default function HomeView({
         {/* ────────────────────────────────────────────
             5. 최하단 CTA
         ──────────────────────────────────────────── */}
+        {/* 지난 회차 기록은 마지막 밀기 바로 앞에 둔다(#113) —
+            "굴러가고 있구나"를 보고 나서 시작 버튼을 만나게. */}
+        {history && <PastRounds history={history} />}
+
         <section className="flex min-h-[55vh] flex-col items-center justify-center px-6 py-24 text-center">
           <Reveal>
             <p className="text-xs font-bold tracking-[0.2em] text-brand">
