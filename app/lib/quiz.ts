@@ -254,11 +254,29 @@ export interface AdminStepReport {
   detail: string | null;
   status: "open" | "resolved";
   createdAt: string;
+  // 항의를 보고 바로 그 문제를 고치러 갈 수 있어야 한다 — 목록에서 제목만 보고
+  // 시나리오 목록을 다시 뒤지게 하면 어느 문제였는지 놓친다.
+  scenarioId: string;
   scenarioTitle: string;
   stepPrompt: string;
+  // 무엇을 골라서 틀렸는지 봐야 항의가 타당한지 판단할 수 있다.
+  choices: string[];
+  answerIndex: number;
+  // undefined = 고른 기록 없음 · null = 무응답(시간 초과) · 숫자 = 고른 선택지
+  pickedIndex?: number | null;
 }
 
 // 어드민 별점 집계 한 줄 (#96). 다음 문제를 어느 쪽으로 낼지 보는 자리라 문항 단위로 묶는다.
+// 어드민 회차 평가 한 줄 (#112). 문항이 아니라 회차 전체가 어땠는지를 본다 —
+// 난이도·분량이 맞았는지는 문항 하나가 아니라 회차 단위로 판단한다.
+export interface AdminRoundRating {
+  roundId: string;
+  label: string; // 회차 시작 일시(KST)
+  average: number;
+  count: number;
+  comments: string[];
+}
+
 export interface AdminStepRating {
   stepId: string;
   scenarioId: string;

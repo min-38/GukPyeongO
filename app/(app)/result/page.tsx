@@ -17,6 +17,7 @@ import Footer from "../Footer";
 import GradeCharacter from "../GradeCharacter";
 
 import Comments from "./Comments";
+import RoundRating from "./RoundRating";
 import GradeBar from "./GradeBar";
 import GradeDistribution from "./GradeDistribution";
 import useStoredResult from "./useStoredResult";
@@ -278,6 +279,8 @@ export default function ResultPage() {
               />
             </div>
           )}
+          {/* 회차 평가는 댓글 바로 위에 둔다(#112) — 채점을 막 본 사람이 가장 할 말이 많은 자리다. */}
+          {result.roundId && <RoundRating roundId={result.roundId} />}
           <Comments grade={result.grade} gradeToken={result.gradeToken} />
         </div>
       </main>

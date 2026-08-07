@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isAdmin } from "@/app/lib/admin-session.server";
 import {
+  type AdminRoundRating,
   type AdminStepRating,
   type AdminStepReport,
 } from "@/app/lib/quiz";
@@ -178,9 +179,55 @@ export async function GET() {
     }
   }
 
+  // 회차 평가(#112). 회차 수만큼만 나오는 줄이라 평균은 뷰가 내고, 남긴 말만 따로 읽는다.
+  const [roundAgg, roundComments] = await Promise.all([
+    supabase
+      .from("dashboard_round_ratings")
+      .select("round_id, starts_at, average, count")
+      .order("starts_at", { ascending: false })
+      .limit(12),
+    supabase
+      .from("round_ratings")
+      .select("round_id, comment")
+      .not("comment", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(RATING_SCAN_LIMIT),
+  ]);
+
+  const saidByRound = new Map<string, string[]>();
+  for (const row of (roundComments.data ?? []) as {
+    round_id: string;
+    comment: string;
+  }[]) {
+    saidByRound.set(row.round_id, [
+      ...(saidByRound.get(row.round_id) ?? []),
+      row.comment,
+    ]);
+  }
+
+  const roundRatings: AdminRoundRating[] = (
+    (roundAgg.data ?? []) as unknown as {
+      round_id: string;
+      starts_at: string;
+      average: number;
+      count: number;
+    }[]
+  ).map((r) => ({
+    roundId: r.round_id,
+    label: new Date(r.starts_at).toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "2-digit",
+      day: "2-digit",
+    }),
+    average: Number(r.average),
+    count: r.count,
+    comments: saidByRound.get(r.round_id) ?? [],
+  }));
+
   return NextResponse.json({
     reports: reportRows.map((r) => toReport(r, picked)),
     ratings: toRatings((ratings.data ?? []) as unknown as RatingRow[]),
+    roundRatings,
   });
 }
 
