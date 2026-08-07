@@ -116,8 +116,6 @@ export function useScenario<S extends ScenarioStep>({
   const [picked, setPicked] = useState<number | null>(null);
   const [correct, setCorrect] = useState(false);
   const [scorePop, setScorePop] = useState<number | null>(null);
-  // 틀린 문항에서 다음으로 넘어갈 준비가 됐지만 손을 기다리는 중이면 여기 담긴다(#110).
-  const [pendingNext, setPendingNext] = useState<(() => void) | null>(null);
   // 공개할 정답. 서버 채점이면 응답으로 채워지고, mock 폴백이면 스텝이 그대로 갖고 있다.
   const [answerIndex, setAnswerIndex] = useState<number | null>(null);
 
@@ -182,8 +180,7 @@ export function useScenario<S extends ScenarioStep>({
         popTimer = window.setTimeout(() => setScorePop(null), SCORE_POP_MS);
       }
 
-      const advance = () => {
-        setPendingNext(null);
+      const next = () => {
         if (isLast) {
           onFinish(scoreRef.current);
           return;
@@ -191,15 +188,6 @@ export function useScenario<S extends ScenarioStep>({
         lockRef.current = false;
         setStage("replaying"); // 정답 공개는 다음 선택지가 열릴 때까지 유지
         setStepIndex((i) => i + 1);
-      };
-
-      // 틀렸으면 손으로 넘긴다 (#110).
-      // 표면은 연출이 끝나면 next() 를 부르는데, 맞힌 문항은 그대로 넘어가고
-      // 틀린 문항은 여기서 잡아 둔다 — 왜 틀렸는지 읽기도 전에 화면이 넘어가면
-      // 정답을 공개하는 뜻이 없다. 무응답도 못 맞힌 것이라 같이 잡는다.
-      const next = () => {
-        if (isCorrect) advance();
-        else setPendingNext(() => advance);
       };
 
       const cleanupRespond = respondRef.current(
@@ -316,7 +304,5 @@ export function useScenario<S extends ScenarioStep>({
     // 정답 공개용. 서버 채점이면 응답 값, 아니면 스텝이 들고 있던 값.
     answerIndex: answerIndex ?? step.answerIndex ?? -1,
     answer,
-    // 틀린 문항에서 "다음"을 눌러야 넘어간다(#110). 맞힌 문항은 null 이라 버튼이 안 뜬다.
-    goNext: pendingNext,
   };
 }

@@ -212,7 +212,6 @@ export default function ChatScenario({
         correct={s.correct}
         scorePop={s.scorePop}
         onAnswer={s.answer}
-        onNext={s.goNext ?? undefined}
       />
     </div>
   );
