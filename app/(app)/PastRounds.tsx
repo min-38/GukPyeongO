@@ -50,7 +50,9 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                   </p>
                 </div>
 
-                {/* 등급 분포. 인원 숫자는 적지 않는다 — 모양만 보여도 "나만 못한 게 아니다"는 전해진다. */}
+                {/* 등급 분포. 막대 위에 인원을 적는다 — 모양만으로는 1등급이 7명인지
+                    70명인지 알 수 없어 "나만 못한 게 아니다"가 숫자로 안 닿는다.
+                    합은 이미 위에 적힌 완주 수와 같아 새로 공개되는 값은 없다. */}
                 {solved > 0 && (
                   <div
                     className="mt-4 flex items-end gap-1"
@@ -61,6 +63,15 @@ export default function PastRounds({ history }: { history: PublicHistory }) {
                   >
                     {round.gradeDist.map((count, i) => (
                       <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                        <span
+                          className={`text-[10px] tabular-nums ${
+                            round.myGrade === i + 1
+                              ? "font-bold text-brand"
+                              : "text-muted"
+                          }`}
+                        >
+                          {count}
+                        </span>
                         <div
                           className="w-full rounded-t"
                           style={{
