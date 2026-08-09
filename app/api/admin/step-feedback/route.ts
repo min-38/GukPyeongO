@@ -36,6 +36,7 @@ interface ReportRow {
   visitor_id: string | null;
   // 어느 회차에서 낸 항의인지(#103). 회차 밖 항의와 옛 항의는 비어 있다.
   round_id: string | null;
+  rounds: { starts_at: string; ends_at: string } | null;
   scenario_steps: ReportStepJoin | null;
 }
 
@@ -49,10 +50,21 @@ interface RatingRow {
 // ponytail: 최근 500줄만 읽어 JS에서 평균을 낸다. 더 쌓이면 뷰나 집계 테이블로 옮긴다.
 const RATING_SCAN_LIMIT = 500;
 
+// 항의 목록에 붙이는 회차 이름. 시각까지 적을 자리가 없어 날짜만 쓴다 —
+// 회차는 하루에 둘이 열리지 않으므로 날짜만으로 구별된다.
+const roundLabel = (iso: string) =>
+  `${new Date(iso).toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+  })} 회차`;
+
 function toReport(
   row: ReportRow,
   picked: Map<string, number | null>,
+  now: string,
 ): AdminStepReport {
+  const round = row.rounds;
   return {
     id: row.id,
     reason: row.reason,
@@ -68,6 +80,8 @@ function toReport(
     // undefined = 고른 기록이 없음(visitor_id 이전 항의거나 답하기 전에 신고).
     // null = 무응답(시간 초과). 화면에서 둘을 다르게 말해야 한다.
     pickedIndex: lookupPick(picked, row.visitor_id, row.step_id, row.round_id),
+    roundLabel: round ? roundLabel(round.starts_at) : null,
+    isCurrentRound: !!round && round.starts_at <= now && now < round.ends_at,
   };
 }
 
@@ -128,6 +142,7 @@ export async function GET() {
       .from("step_reports")
       .select(
         `id, reason, detail, status, created_at, step_id, visitor_id, round_id, ` +
+          `rounds(starts_at, ends_at), ` +
           `scenario_steps(prompt, scenario_id, choices, answer_index, scenarios(title))`,
       )
       .order("created_at", { ascending: false })
@@ -225,7 +240,7 @@ export async function GET() {
   }));
 
   return NextResponse.json({
-    reports: reportRows.map((r) => toReport(r, picked)),
+    reports: reportRows.map((r) => toReport(r, picked, new Date().toISOString())),
     ratings: toRatings((ratings.data ?? []) as unknown as RatingRow[]),
     roundRatings,
   });
