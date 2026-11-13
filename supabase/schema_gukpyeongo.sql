@@ -13,12 +13,18 @@ begin;
 
 create schema if not exists gukpyeongo;
 
-grant usage on schema gukpyeongo to anon, authenticated, service_role;
+-- 앱은 서버에서 service_role 로만 붙는다. anon key 는 프로젝트의 다른 서비스와 같이 쓰므로
+-- 그 키로는 이 스키마에 아예 닿지 못하게 한다.
+grant usage on schema gukpyeongo to service_role;
+revoke all on schema gukpyeongo from anon, authenticated;
 
--- public 에 Supabase 가 기본으로 걸어 두는 것과 같은 기본 권한. 새로 만드는 테이블에 GRANT 를 빠뜨리지 않게.
-alter default privileges in schema gukpyeongo grant all on tables to anon, authenticated, service_role;
-alter default privileges in schema gukpyeongo grant all on sequences to anon, authenticated, service_role;
-alter default privileges in schema gukpyeongo grant all on functions to anon, authenticated, service_role;
+-- 새로 만드는 테이블에 GRANT 를 빠뜨리지 않게.
+alter default privileges in schema gukpyeongo grant all on tables to service_role;
+alter default privileges in schema gukpyeongo grant all on sequences to service_role;
+alter default privileges in schema gukpyeongo grant all on functions to service_role;
+alter default privileges in schema gukpyeongo revoke all on tables from anon, authenticated;
+alter default privileges in schema gukpyeongo revoke all on sequences from anon, authenticated;
+alter default privileges in schema gukpyeongo revoke all on functions from anon, authenticated, public;
 
 -- public 에는 국평오 것만 있다. 남김없이 옮긴다.
 do $$
@@ -164,6 +170,15 @@ begin
   end if;
 end;
 $function$;
+
+grant all on all tables in schema gukpyeongo to service_role;
+grant all on all sequences in schema gukpyeongo to service_role;
+grant all on all functions in schema gukpyeongo to service_role;
+
+-- public 시절 anon 에 걸려 있던 권한이 따라왔다. 스키마 USAGE 를 막았지만 객체 권한도 걷는다.
+revoke all on all tables in schema gukpyeongo from anon, authenticated;
+revoke all on all sequences in schema gukpyeongo from anon, authenticated;
+revoke all on all functions in schema gukpyeongo from anon, authenticated, public;
 
 commit;
 
