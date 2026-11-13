@@ -11,5 +11,9 @@ export function getSupabaseAdmin() {
   if (!url || !key) {
     throw new Error("Supabase service-role 환경 변수가 설정되지 않았습니다.");
   }
-  return createClient(url, key, { auth: { persistSession: false } });
+  // 같은 Supabase 프로젝트에 다른 서비스가 같이 산다. 국평오 것은 gukpyeongo 스키마에 있다 (#119).
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    db: { schema: "gukpyeongo" },
+  });
 }
