@@ -75,6 +75,7 @@ function PassageLine({ line }: { line: string }) {
 }
 
 const textButton = "inline-flex items-center gap-1 text-sm font-medium text-brand-strong hover:underline";
+const popClass = "animate-pop motion-reduce:animate-none";
 
 const GUIDE = {
   criteria: "인정하는 답과 글자가 같아야 정답입니다. 띄어쓰기까지 같아야 하고, 앞뒤 공백은 지우고 비교합니다.",
@@ -94,6 +95,8 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [rows, setRows] = useState<SubmissionRow[] | null>(null);
   const [modal, setModal] = useState<SubmitResult | null>(null);
+  // 채점할 때마다 결과를 다시 띄운다. 정답 뒤 또 정답이면 글자가 그대로라 채점됐는지 알 수 없다.
+  const [graded, setGraded] = useState(0);
 
   // 입력이 멈추고 1초 뒤 임시 저장(P-07). 화면을 떠날 때 남은 것은 바로 보낸다.
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -175,6 +178,7 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
       }
       const r = data as SubmitResult;
       setResult(r.isCorrect ? "correct" : "wrong");
+      setGraded((n) => n + 1);
       setCount((c) => c + 1);
       if (r.isCorrect) cancelDraft(); // 서버가 임시 답안을 지웠다(P-08). 늦게 도착한 저장이 되살리지 않게.
       if (r.pointsAwarded > 0) setModal(r);
@@ -255,13 +259,13 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
               </strong>
             )}
             {result === "wrong" && (
-              <strong className="inline-flex items-center gap-2 font-display text-[28px] leading-9 font-normal text-red-700 dark:text-red-400">
+              <strong key={graded} className={`inline-flex items-center gap-2 font-display text-[28px] leading-9 font-normal text-red-700 dark:text-red-400 ${graded ? popClass : ""}`}>
                 <Icon name="x" size={24} stroke={3} />
                 오답
               </strong>
             )}
             {result === "correct" && (
-              <strong className="inline-flex items-center gap-2 font-display text-[28px] leading-9 font-normal text-green-700 dark:text-green-400">
+              <strong key={graded} className={`inline-flex items-center gap-2 font-display text-[28px] leading-9 font-normal text-green-700 dark:text-green-400 ${graded ? popClass : ""}`}>
                 <Icon name="check" size={24} stroke={3} />
                 정답
               </strong>
@@ -294,19 +298,22 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
                 {answer.length}/{MAX_ANSWER_LENGTH}
               </span>
             </div>
-            {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
-            {me ? (
-              <button type="button" onClick={submit} disabled={submitting}
-                className="h-12 self-end rounded-2xl border border-brand bg-brand px-6 text-base font-bold text-brand-foreground hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-40">
-                제출
-              </button>
-            ) : (
-              // shortcut: 로그인 화면이 아직 없어 누를 곳이 없다. 로그인을 붙일 때 로그인 페이지로 잇는다(P-10).
-              <button type="button"
-                className="h-12 self-end rounded-2xl border border-brand bg-surface px-6 text-base font-bold text-brand-strong hover:bg-brand/10">
-                로그인하기
-              </button>
-            )}
+            {/* 오류 문구는 버튼 옆에 둔다. 버튼 위에 끼우면 문구가 뜰 때마다 버튼이 밀린다. */}
+            <div className="flex min-h-12 items-center gap-3">
+              {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+              {me ? (
+                <button type="button" onClick={submit} disabled={submitting || !answer.trim()}
+                  className="ml-auto h-12 shrink-0 rounded-2xl border border-brand bg-brand px-6 text-base font-bold text-brand-foreground enabled:hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-40">
+                  제출
+                </button>
+              ) : (
+                // shortcut: 로그인 화면이 아직 없어 누를 곳이 없다. 로그인을 붙일 때 로그인 페이지로 잇는다(P-10).
+                <button type="button"
+                  className="ml-auto h-12 shrink-0 rounded-2xl border border-brand bg-surface px-6 text-base font-bold text-brand-strong hover:bg-brand/10">
+                  로그인하기
+                </button>
+              )}
+            </div>
           </section>
 
           {me && (
