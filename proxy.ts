@@ -13,6 +13,9 @@ const DEV_ONLY_ROUTES = [
   "/email",
   "/contract",
   "/manual",
+  // v2 문제 풀이(GUK-3). 로그인이 붙기 전이라 공개하지 않는다.
+  "/problems",
+  "/api/problems",
 ];
 
 // v1 테스트. 구글이 이미 색인해 둔 주소라 404로 지우면 그동안 쌓인 검색 유입이 통째로 끊긴다.
@@ -74,6 +77,8 @@ export const config = {
     "/email/:path*",
     "/contract",
     "/manual",
+    "/problems/:path*",
+    "/api/problems/:path*",
     "/test",
   ],
 };

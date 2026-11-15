@@ -5,6 +5,7 @@ project_id = "gukpyeongo"
 
 [api]
 port = 54421
+schemas = ["public", "graphql_public", "gukpyeongo"]
 
 [db]
 port = 54422

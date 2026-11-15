@@ -174,7 +174,22 @@ export default function FeedbackTab() {
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-red-500">{r.reason}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-bold text-red-500">{r.reason}</span>
+                    {/* 어느 회차 항의인지(#118). 진행 중인 회차는 지금 고쳐야 하는 것이라
+                        색으로 앞세우고, 지난 회차는 날짜만 조용히 적는다. */}
+                    {r.roundLabel && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-medium ${
+                          r.isCurrentRound
+                            ? "bg-brand/10 text-brand"
+                            : "bg-surface-muted text-muted"
+                        }`}
+                      >
+                        {r.isCurrentRound ? `${r.roundLabel} · 진행 중` : r.roundLabel}
+                      </span>
+                    )}
+                  </span>
                   <button
                     onClick={() =>
                       setStatus(

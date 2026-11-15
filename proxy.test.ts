@@ -45,6 +45,13 @@ describe("개발용 경로 차단", () => {
     for (const s of SLUGS) expect(blocked(s)).toBe(true);
   });
 
+  it("v2 문제 풀이 화면과 API도 프로덕션에서는 404", () => {
+    for (const p of ["/problems/1", "/api/problems/1/submissions", "/api/problems/1/draft"]) {
+      expect(matched(p)).toBe(true);
+      expect(blocked(p)).toBe(true);
+    }
+  });
+
   it("실제 입구는 막지 않는다", () => {
     expect(blocked("/today")).toBe(false);
     expect(blocked("/result")).toBe(false);

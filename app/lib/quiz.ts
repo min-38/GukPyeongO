@@ -264,6 +264,12 @@ export interface AdminStepReport {
   answerIndex: number;
   // undefined = 고른 기록 없음 · null = 무응답(시간 초과) · 숫자 = 고른 선택지
   pickedIndex?: number | null;
+  // 어느 회차에서 나온 항의인지(#118). 같은 문항을 다시 편성하면 항의가 회차별로 쌓여
+  // 이게 없으면 지금 고쳐야 할 것과 이미 지난 것이 한 줄에 섞인다.
+  // 회차가 없던 시절의 항의는 null.
+  roundLabel: string | null;
+  // 진행 중인 회차의 항의인지. 라벨만으로는 어느 게 이번 것인지 매번 날짜를 따져야 한다.
+  isCurrentRound: boolean;
 }
 
 // 어드민 별점 집계 한 줄 (#96). 다음 문제를 어느 쪽으로 낼지 보는 자리라 문항 단위로 묶는다.
