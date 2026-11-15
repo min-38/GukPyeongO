@@ -93,6 +93,7 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
   const [submitting, setSubmitting] = useState(false);
   const [count, setCount] = useState(me?.submissionCount ?? 0);
   const [guide, setGuide] = useState<keyof typeof GUIDE | null>(null);
+  const [shownGuide, setShownGuide] = useState<keyof typeof GUIDE>("criteria");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [rows, setRows] = useState<SubmissionRow[] | null>(null);
   const [modal, setModal] = useState<SubmitResult | null>(null);
@@ -277,18 +278,29 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
           </section>
 
           <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-6">
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor="answer" className="text-sm font-bold">답안</label>
-              <div className="flex gap-4">
-                {(["criteria", "help"] as const).map((k) => (
-                  <button key={k} type="button" aria-expanded={guide === k}
-                    onClick={() => setGuide(guide === k ? null : k)} className={textButton}>
-                    {k === "criteria" ? "채점 기준" : "도움말"}
-                  </button>
-                ))}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="answer" className="text-sm font-bold">답안</label>
+                <div className="flex gap-4">
+                  {(["criteria", "help"] as const).map((k) => (
+                    <button key={k} type="button" aria-expanded={guide === k}
+                      onClick={() => {
+                        setGuide(guide === k ? null : k);
+                        if (guide !== k) setShownGuide(k);
+                      }} className={textButton}>
+                      {k === "criteria" ? "채점 기준" : "도움말"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* 높이를 0fr↔1fr로 바꿔 부드럽게 펼치고 접는다. 접히는 동안에도 글이 보이게 마지막 설명을 남겨 둔다. */}
+              <div aria-hidden={!guide}
+                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${guide ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <p className="mt-3 rounded-xl bg-surface-muted px-4 py-3 text-sm leading-5">{GUIDE[shownGuide]}</p>
+                </div>
               </div>
             </div>
-            {guide && <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm leading-5">{GUIDE[guide]}</p>}
             <div className="flex flex-col gap-1.5">
               <textarea
                 id="answer"
