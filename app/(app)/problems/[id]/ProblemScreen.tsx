@@ -76,6 +76,7 @@ function PassageLine({ line }: { line: string }) {
 
 const textButton = "inline-flex items-center gap-1 text-sm font-medium text-brand-strong hover:underline";
 const popClass = "animate-pop motion-reduce:animate-none";
+const MIN_GRADING_MS = 1000;
 
 const GUIDE = {
   criteria: "인정하는 답과 글자가 같아야 정답입니다. 띄어쓰기까지 같아야 하고, 앞뒤 공백은 지우고 비교합니다.",
@@ -170,6 +171,9 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answer: checked.answer }),
       });
+      // 응답을 받고도 1초 더 채점 중을 보여 준다. 너무 빠르면 결과가 바뀐 걸 못 본다.
+      // 클릭부터가 아니라 응답부터 재야 서버의 1초 제한(P-12)에 걸리지 않는다 — 서버는 응답 전에 제출 시각을 남긴다.
+      await new Promise((r) => setTimeout(r, MIN_GRADING_MS));
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setResult(before);
