@@ -183,3 +183,15 @@ body {
 .no-rise * {
   animation: none;
 }
+
+/* 누르는 곳은 손가락 커서로 바꾼다. Tailwind 4 기본값은 버튼에도 화살표를 둔다.
+   한 곳에서 정해 두면 버튼마다 cursor-pointer를 붙이다 빠뜨리는 일이 없다. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input:is([type="checkbox"], [type="radio"], [type="submit"], [type="button"]):not(:disabled),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+}
