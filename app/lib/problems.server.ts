@@ -2,7 +2,11 @@ import "server-only";
 
 import {
   fillBlank,
+  LIST_PAGE_SIZE,
   type Level,
+  type ListQuery,
+  type ListResult,
+  type ListStatus,
   type ProblemView,
   type SubmissionRow,
   type SubmitResult,
@@ -102,4 +106,35 @@ export async function listSubmissions(userId: string, problemId: number): Promis
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => ({ answer: r.answer, isCorrect: r.is_correct, createdAt: r.created_at }));
+}
+
+// 문제 목록 한 페이지와 유형별 탭 수(GUK-9). 페이지가 범위를 넘으면 rows가 비고 total은 0이다.
+export async function listProblems(userId: string | null, query: ListQuery): Promise<ListResult> {
+  const db = getSupabaseAdmin();
+  const [list, counts] = await Promise.all([
+    db.rpc("list_problems", {
+      p_user: userId,
+      p_q: query.q || null,
+      p_kind: query.kind,
+      p_level: query.level,
+      p_unsolved: query.unsolved,
+      p_sort: query.sort,
+      p_limit: LIST_PAGE_SIZE,
+      p_offset: (query.page - 1) * LIST_PAGE_SIZE,
+    }),
+    db.rpc("problem_kind_counts", { p_user: userId }),
+  ]);
+  if (list.error) throw list.error;
+  if (counts.error) throw counts.error;
+
+  const rows = (list.data ?? []) as {
+    id: number; title: string; kind: string; level: number; rate: number | null; status: string; total: number;
+  }[];
+  return {
+    rows: rows.map((r) => ({
+      id: r.id, title: r.title, kind: r.kind, level: r.level as Level, rate: r.rate, status: r.status as ListStatus,
+    })),
+    total: rows.length ? Number(rows[0].total) : 0,
+    kindCounts: Object.fromEntries(((counts.data ?? []) as { kind: string; n: number }[]).map((c) => [c.kind, Number(c.n)])),
+  };
 }
