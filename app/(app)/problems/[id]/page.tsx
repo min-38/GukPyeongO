@@ -14,7 +14,7 @@ export default async function ProblemPage({ params }: { params: Promise<{ id: st
   // 없는 문제이거나 내린 문제는 404(문제 풀이 명세서 예외 처리).
   if (!Number.isSafeInteger(id) || id <= 0) notFound();
 
-  const view = await getProblemView(id, getCurrentUserId());
+  const view = await getProblemView(id, await getCurrentUserId());
   if (!view) notFound();
 
   return <ProblemScreen view={view} />;

@@ -1,9 +1,14 @@
 import Link from "next/link";
 
+import { getCurrentProfile } from "@/app/lib/account.server";
+
+import AccountMenu from "./AccountMenu";
+
 // v2 헤더(문제 목록 웹 시안). 목록과 풀이 화면이 같이 쓴다.
 // 데스크톱에서는 가운데 칸(max-w-6xl)과 body 여백을 넘어 화면 끝까지 흰 띠로 깐다.
-// shortcut: 랭킹, 커뮤니티, 로그인은 화면이 아직 없어 누를 수 없게 둔다. 그 작업 때 링크로 바꾼다.
-export default function ProblemsLayout({ children }: { children: React.ReactNode }) {
+// shortcut: 랭킹, 커뮤니티는 화면이 아직 없어 누를 수 없게 둔다. 그 작업 때 링크로 바꾼다.
+export default async function ProblemsLayout({ children }: { children: React.ReactNode }) {
+  const profile = await getCurrentProfile();
   return (
     <>
       <header className="border-b border-border bg-surface lg:-mt-6 lg:mx-[calc(50%-50vw)]">
@@ -24,14 +29,7 @@ export default function ProblemsLayout({ children }: { children: React.ReactNode
               </button>
             </nav>
           </div>
-          <button
-            type="button"
-            disabled
-            title="준비 중입니다"
-            className="h-11 rounded-2xl border border-brand px-5 text-[15px] font-bold text-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            로그인/회원가입
-          </button>
+          <AccountMenu nickname={profile?.nickname ?? null} />
         </div>
       </header>
       {children}

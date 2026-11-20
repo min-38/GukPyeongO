@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { loginDraftKey, loginHref } from "@/app/lib/account";
 import {
   BLANK,
   checkAnswer,
@@ -123,10 +125,31 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 비로그인일 때 쓴 답안은 이 탭에 잠시 둔다. 로그인하고 돌아오면 칸에 채우고 서버에 저장한다(로그인/회원가입 명세서 A-08).
+  // 서버에 저장된 답안이 있어도 이 답안을 채운다.
+  const loginDraft = loginDraftKey(view.id);
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(loginDraft);
+      if (saved && me) sessionStorage.removeItem(loginDraft);
+    } catch {}
+    if (!saved) return;
+    setAnswer(saved); // eslint-disable-line react-hooks/set-state-in-effect -- 브라우저에만 있는 값이라 첫 렌더에 넣을 수 없다.
+    if (me) sendDraft(saved);
+    // 처음 한 번만.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onChange = (value: string) => {
     setAnswer(value);
     setError(null);
-    if (!me) return; // 비로그인은 저장하지 않는다.
+    if (!me) {
+      try {
+        sessionStorage.setItem(loginDraft, value);
+      } catch {}
+      return; // 비로그인은 서버에 저장하지 않는다.
+    }
     if (draftTimer.current) clearTimeout(draftTimer.current);
     pendingDraft.current = value;
     draftTimer.current = setTimeout(() => {
@@ -324,11 +347,11 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
                   제출
                 </button>
               ) : (
-                // shortcut: 로그인 화면이 아직 없어 누를 곳이 없다. 로그인을 붙일 때 로그인 페이지로 잇는다(P-10).
-                <button type="button"
-                  className="ml-auto h-12 shrink-0 rounded-2xl border border-brand bg-surface px-6 text-base font-bold text-brand-strong hover:bg-brand/10">
+                // 로그인하면 이 문제로 돌아온다(P-10).
+                <Link href={loginHref(`/problems/${view.id}`)}
+                  className="ml-auto flex h-12 shrink-0 items-center rounded-2xl border border-brand bg-surface px-6 text-base font-bold text-brand-strong hover:bg-brand/10">
                   로그인하기
-                </button>
+                </Link>
               )}
             </div>
           </section>

@@ -9,7 +9,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!Number.isSafeInteger(id) || id <= 0) {
     return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
   }
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   let body: { answer?: unknown };

@@ -11,13 +11,13 @@ import {
   type SubmissionRow,
   type SubmitResult,
 } from "@/app/lib/problems";
+import { getCurrentProfile } from "@/app/lib/account.server";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 // 지금 로그인한 사용자. 사용자를 아는 곳은 여기 하나다.
-// shortcut: 로그인이 없어 개발 중에만 DEV_USER_ID(개발용 사용자)를 쓴다. 로그인을 붙일 때 Supabase Auth 세션으로 바꾼다.
-export function getCurrentUserId(): string | null {
-  if (process.env.NODE_ENV !== "development") return null;
-  return process.env.DEV_USER_ID || null;
+// 가입(profiles)까지 마쳐야 사용자로 본다. 가입 전이면 비로그인과 같다(로그인/회원가입 명세서 A-06).
+export async function getCurrentUserId(): Promise<string | null> {
+  return (await getCurrentProfile())?.userId ?? null;
 }
 
 // 문제 화면 데이터. 인정 답과 빈칸 글자는 담지 않는다(P-03).

@@ -13,7 +13,7 @@ function problemId(raw: string) {
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = problemId((await params).id);
   if (!id) return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   try {
@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = problemId((await params).id);
   if (!id) return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
-  const userId = getCurrentUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   let body: { answer?: unknown };

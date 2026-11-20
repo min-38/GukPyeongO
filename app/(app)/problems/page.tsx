@@ -36,7 +36,7 @@ export default async function ProblemsPage({
   const { query, invalid } = parseListQuery(params);
   if (invalid) redirect(listHref(query));
 
-  const result = await listProblems(getCurrentUserId(), query);
+  const result = await listProblems(await getCurrentUserId(), query);
   // 페이지가 범위를 넘으면 1페이지로.
   if (result.rows.length === 0 && query.page > 1) redirect(listHref({ ...query, page: 1 }));
 

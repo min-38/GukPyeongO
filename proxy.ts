@@ -1,3 +1,4 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 // 개발 중에만 열어두는 slug 경로 (#87).
@@ -13,10 +14,19 @@ const DEV_ONLY_ROUTES = [
   "/email",
   "/contract",
   "/manual",
-  // v2 문제 풀이(GUK-3). 로그인이 붙기 전이라 공개하지 않는다.
+  // v2 문제 풀이(GUK-3)와 로그인/회원가입(GUK-12). 운영 DB에 v2 문제가 없어 아직 공개하지 않는다.
   "/problems",
   "/api/problems",
+  "/login",
+  "/signup",
+  "/auth",
+  "/api/me",
+  "/api/nicknames",
+  "/api/auth",
 ];
+
+// 로그인 세션을 쓰는 경로. 만료된 토큰을 여기서 갱신해 쿠키에 다시 쓴다(서버 컴포넌트는 쿠키를 쓸 수 없다).
+const SESSION_ROUTES = DEV_ONLY_ROUTES.slice(DEV_ONLY_ROUTES.indexOf("/problems"));
 
 // v1 테스트. 구글이 이미 색인해 둔 주소라 404로 지우면 그동안 쌓인 검색 유입이 통째로 끊긴다.
 // 없애는 대신 이 주의 문제로 넘겨 색인 가치와 방문자를 그대로 옮긴다.
@@ -24,7 +34,10 @@ const RETIRED_ROUTES: Record<string, string> = {
   "/test": "/today",
 };
 
-export function proxy(request: NextRequest) {
+const under = (pathname: string, routes: string[]) =>
+  routes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
+export function proxy(request: NextRequest): NextResponse | Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const notFound = () =>
     NextResponse.rewrite(new URL("/not-found", request.url));
@@ -49,17 +62,33 @@ export function proxy(request: NextRequest) {
   }
 
   // slug 경로는 개발 중에만 열어둔다. 배포에서는 /admin 과 마찬가지로 404.
-  if (
-    DEV_ONLY_ROUTES.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`),
-    )
-  ) {
-    return process.env.NODE_ENV === "development"
-      ? NextResponse.next()
-      : notFound();
+  if (under(pathname, DEV_ONLY_ROUTES)) {
+    if (process.env.NODE_ENV !== "development") return notFound();
+    if (under(pathname, SESSION_ROUTES)) return refreshSession(request);
   }
 
   return NextResponse.next();
+}
+
+async function refreshSession(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return NextResponse.next();
+
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (list) => {
+        for (const { name, value } of list) request.cookies.set(name, value);
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of list) response.cookies.set(name, value, options);
+      },
+    },
+  });
+  // 검증하면서 만료된 토큰을 갱신한다. 결과는 각 화면과 API가 다시 확인한다.
+  await supabase.auth.getClaims();
+  return response;
 }
 
 export const config = {
@@ -79,6 +108,12 @@ export const config = {
     "/manual",
     "/problems/:path*",
     "/api/problems/:path*",
+    "/login",
+    "/signup",
+    "/auth/:path*",
+    "/api/me",
+    "/api/nicknames/:path*",
+    "/api/auth/:path*",
     "/test",
   ],
 };
