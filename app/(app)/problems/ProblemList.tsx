@@ -84,7 +84,34 @@ function rememberFromList(id: number) {
 }
 
 const tabBase = "h-11 rounded-full border px-[18px] text-[15px]";
-const selectClass = "h-11 rounded-xl border border-[#8e88ad] bg-surface px-3 text-sm focus:border-brand focus:outline-none dark:border-border";
+
+// 기본 화살표는 칸 끝에 붙어 지워 두고, 안쪽 여백을 둔 화살표를 따로 그린다.
+function Select({ id, label, value, onChange, children }: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="relative inline-flex">
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-11 min-w-32 cursor-pointer appearance-none rounded-xl border border-[#8e88ad] bg-surface pr-10 pl-4 text-sm font-medium hover:border-brand focus:border-brand focus:outline-none dark:border-border"
+      >
+        {children}
+      </select>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-muted">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </span>
+  );
+}
 
 export default function ProblemList({ query, result }: { query: ListQuery; result: ListResult }) {
   const router = useRouter();
@@ -176,29 +203,22 @@ export default function ProblemList({ query, result }: { query: ListQuery; resul
             />
             안 푼 문제만 보기
           </label>
-          <label htmlFor="problem-level" className="sr-only">Level</label>
-          <select
+          <Select
             id="problem-level"
-            value={query.level ?? ""}
-            onChange={(e) => go({ level: e.target.value ? (Number(e.target.value) as Level) : null })}
-            className={selectClass}
+            label="Level"
+            value={query.level ? String(query.level) : ""}
+            onChange={(v) => go({ level: v ? (Number(v) as Level) : null })}
           >
             <option value="">Level 전체</option>
             <option value="1">Level 1</option>
             <option value="2">Level 2</option>
             <option value="3">Level 3</option>
-          </select>
-          <label htmlFor="problem-sort" className="sr-only">정렬</label>
-          <select
-            id="problem-sort"
-            value={query.sort}
-            onChange={(e) => go({ sort: e.target.value as ListSort })}
-            className={selectClass}
-          >
+          </Select>
+          <Select id="problem-sort" label="정렬" value={query.sort} onChange={(v) => go({ sort: v as ListSort })}>
             {(Object.keys(LIST_SORTS) as ListSort[]).map((s) => (
               <option key={s} value={s}>{LIST_SORTS[s]}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
