@@ -5,6 +5,8 @@ project_id = "gukpyeongo"
 
 [api]
 port = 54421
+# 소셜 로그인 공급자가 돌려보낼 주소(…/auth/v1/callback)의 호스트. 네이버는 127.0.0.1 콜백을 받지 않아 localhost로 둔다.
+external_url = "http://localhost:54421"
 schemas = ["public", "graphql_public", "gukpyeongo"]
 
 [db]
@@ -33,3 +35,5 @@ skip_nonce_check = false
 enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_KAKAO_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_KAKAO_SECRET)"
+# 카카오 이메일은 선택 동의다. 동의하지 않아도 로그인되고 따로 계정이 된다(로그인/회원가입 명세서 A-02).
+email_optional = true
