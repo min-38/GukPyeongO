@@ -42,6 +42,7 @@ export default function SignupScreen({
   const [year, setYear] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   // 입력이 멈추고 0.5초 뒤 쓸 수 있는 닉네임인지 확인한다(A-04). 늦게 온 옛 응답은 버린다.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,7 +107,7 @@ export default function SignupScreen({
         }),
       });
       if (res.ok) {
-        router.replace(next); // 가입이 끝났다. 보던 화면으로 돌아간다(A-07).
+        setDone(true); // 가입이 끝났다. 완료 문구를 보여 주고, 계속하기를 누르면 보던 화면으로 돌아간다(A-07).
         return;
       }
       if (res.status === 409) setCheck("taken"); // 누른 순간 다른 사람이 먼저 가져갔다.
@@ -116,6 +117,28 @@ export default function SignupScreen({
     }
     setSubmitting(false);
   };
+
+  if (done) {
+    return (
+      <div className="-mt-5 flex flex-col gap-8">
+        <div role="status" className="flex flex-col items-center gap-3 text-center">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-green-700 dark:text-green-400">
+            <circle cx="12" cy="12" r="9.5" />
+            <path d="M7.5 12.5l3 3 6-6.5" />
+          </svg>
+          <h1 className="text-xl font-bold">가입이 완료되었습니다.</h1>
+          <p className="break-keep text-sm text-muted">{nickname}님, 반갑습니다.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.replace(next)}
+          className="h-[52px] rounded-2xl bg-brand text-base font-bold text-brand-foreground hover:bg-brand-strong"
+        >
+          계속하기
+        </button>
+      </div>
+    );
+  }
 
   const invalid = check === "format" || check === "taken";
   const message = MESSAGE[check];
