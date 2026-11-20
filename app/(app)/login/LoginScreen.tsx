@@ -89,13 +89,16 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
                 onClick={() => start(p.id)}
                 disabled={pending !== null}
                 aria-busy={busy}
-                className={`flex h-[52px] items-center justify-center gap-2.5 rounded-xl text-base font-bold ${BUTTON[p.id]} ${busy ? "cursor-progress" : "disabled:cursor-not-allowed disabled:opacity-40"}`}
+                className={`relative flex h-[52px] items-center justify-center rounded-xl px-14 text-base font-bold ${BUTTON[p.id]} ${busy ? "cursor-progress" : "disabled:cursor-not-allowed disabled:opacity-40"}`}
               >
-                {busy ? (
-                  <span aria-hidden="true" className="size-5 animate-spin rounded-full border-[2.5px] border-current border-t-transparent motion-reduce:[animation-duration:2.4s]" />
-                ) : (
-                  <Mark id={p.id} />
-                )}
+                {/* 아이콘은 세 버튼 모두 같은 자리(왼쪽 끝), 글자는 가운데. */}
+                <span className="absolute left-4 flex size-6 items-center justify-center">
+                  {busy ? (
+                    <span aria-hidden="true" className="size-5 animate-spin rounded-full border-[2.5px] border-current border-t-transparent motion-reduce:[animation-duration:2.4s]" />
+                  ) : (
+                    <Mark id={p.id} />
+                  )}
+                </span>
                 {busy ? `${p.label} 로그인 중` : `${p.label}로 시작하기`}
               </button>
             );
