@@ -67,7 +67,7 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
     <>
       <div className="-mt-5 flex items-center gap-4">
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
-        <h1 className="text-base font-medium tracking-[0.12em] text-muted">로그인</h1>
+        <h1 className="font-display text-lg tracking-[0.12em] text-muted">로그인</h1>
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
       </div>
 
