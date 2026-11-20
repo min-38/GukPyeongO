@@ -73,7 +73,8 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
 
       <div className="flex flex-col gap-4">
         {message && (
-          <p role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+          // break-keep: 줄이 바뀌어도 낱말 중간에서 끊지 않는다("주세/요" 방지).
+          <p role="alert" className="flex items-start gap-2 break-keep rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" className="shrink-0">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7.5v5.5M12 16.5v.01" />

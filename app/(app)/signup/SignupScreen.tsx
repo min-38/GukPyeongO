@@ -141,7 +141,7 @@ export default function SignupScreen({
             className={`h-12 w-full rounded-xl bg-surface px-4 text-base outline-none ${invalid ? "border-2 border-red-700 px-[15px] dark:border-red-400" : "border border-[#8e88ad] focus:border-2 focus:border-brand focus:px-[15px] dark:border-muted"}`}
           />
           <div className="flex items-start justify-between gap-3">
-            <p id="nickname-message" aria-live="polite" className={`flex items-center gap-1 text-[13px] font-medium leading-5 ${message.className}`}>
+            <p id="nickname-message" aria-live="polite" className={`flex items-center gap-1 break-keep text-[13px] font-medium leading-5 ${message.className}`}>
               {check === "ok" && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 12l5 5 9-10" />
@@ -217,7 +217,7 @@ export default function SignupScreen({
         </div>
 
         <div className="flex flex-col gap-2">
-          {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+          {error && <p role="alert" className="break-keep text-sm text-red-700 dark:text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={!canSubmit}
