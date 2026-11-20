@@ -1,5 +1,6 @@
 "use client";
 
+import { Label, Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -34,6 +35,7 @@ const icon = {
     </>
   ),
   check: <path d="M5 12l5 5 9-10" />,
+  down: <path d="M6 9l6 6 6-6" />,
   pencil: <path d="M4 20h4l10-10-4-4L4 16v4z" />,
   empty: (
     <>
@@ -84,32 +86,19 @@ function rememberFromList(id: number) {
 }
 
 const tabBase = "h-11 rounded-full border px-[18px] text-[15px]";
+const tabOn = `${tabBase} border-brand bg-brand font-bold text-brand-foreground`;
+const tabOff = `${tabBase} border-transparent bg-brand/10 font-medium text-brand-strong hover:bg-brand/15`;
+// Level 버튼의 점. 표의 레벨 글자색과 같다.
+const LEVEL_DOT = { 1: "bg-blue-600", 2: "bg-violet-700", 3: "bg-orange-700" } as const;
+const LEVELS: (Level | null)[] = [null, 1, 2, 3];
 
-// 기본 화살표는 칸 끝에 붙어 지워 두고, 안쪽 여백을 둔 화살표를 따로 그린다.
-function Select({ id, label, value, onChange, children }: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: React.ReactNode;
-}) {
+// 검색 상자 안의 한 줄. 줄 앞에 이름을 붙여 유형과 Level 줄을 가른다.
+function FilterRow({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
-    <span className="relative inline-flex">
-      <label htmlFor={id} className="sr-only">{label}</label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 min-w-32 cursor-pointer appearance-none rounded-xl border border-[#8e88ad] bg-surface pr-10 pl-4 text-sm font-medium hover:border-brand focus:border-brand focus:outline-none dark:border-border"
-      >
-        {children}
-      </select>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-muted">
-        <path d="M6 9l6 6 6-6" />
-      </svg>
-    </span>
+    <div role="group" aria-labelledby={id} className="flex items-start gap-3">
+      <span id={id} className="w-12 shrink-0 text-[13px] leading-11 font-bold text-muted">{label}</span>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
   );
 }
 
@@ -163,26 +152,37 @@ export default function ProblemList({ query, result }: { query: ListQuery; resul
             <Icon name="search" size={20} stroke={2.2} />
           </button>
         </form>
-        <div role="group" aria-label="유형" className="flex flex-wrap gap-2">
-          {tabs.map((t) => {
-            const on = t.kind === query.kind;
+        <FilterRow id="filter-kind" label="유형">
+          {tabs.map((t) => (
+            <button
+              key={t.label}
+              type="button"
+              aria-pressed={t.kind === query.kind}
+              onClick={() => go({ kind: t.kind })}
+              className={t.kind === query.kind ? tabOn : tabOff}
+            >
+              {t.label}({t.n})
+            </button>
+          ))}
+        </FilterRow>
+        <div className="h-px bg-border" />
+        <FilterRow id="filter-level" label="Level">
+          {LEVELS.map((lv) => {
+            const on = lv === query.level;
             return (
               <button
-                key={t.label}
+                key={lv ?? "all"}
                 type="button"
                 aria-pressed={on}
-                onClick={() => go({ kind: t.kind })}
-                className={
-                  on
-                    ? `${tabBase} border-brand bg-brand font-bold text-brand-foreground`
-                    : `${tabBase} border-transparent bg-brand/10 font-medium text-brand-strong hover:bg-brand/15`
-                }
+                onClick={() => go({ level: lv })}
+                className={`${on ? tabOn : tabOff} inline-flex items-center gap-2`}
               >
-                {t.label}({t.n})
+                {lv && <span aria-hidden="true" className={`size-2 rounded-full ${on ? "bg-white" : LEVEL_DOT[lv]}`} />}
+                {lv ? `Level ${lv}` : "전체"}
               </button>
             );
           })}
-        </div>
+        </FilterRow>
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
@@ -193,7 +193,7 @@ export default function ProblemList({ query, result }: { query: ListQuery; resul
             총 <span className="text-brand-strong">{result.total}</span> 문제
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
@@ -203,22 +203,33 @@ export default function ProblemList({ query, result }: { query: ListQuery; resul
             />
             안 푼 문제만 보기
           </label>
-          <Select
-            id="problem-level"
-            label="Level"
-            value={query.level ? String(query.level) : ""}
-            onChange={(v) => go({ level: v ? (Number(v) as Level) : null })}
-          >
-            <option value="">Level 전체</option>
-            <option value="1">Level 1</option>
-            <option value="2">Level 2</option>
-            <option value="3">Level 3</option>
-          </Select>
-          <Select id="problem-sort" label="정렬" value={query.sort} onChange={(v) => go({ sort: v as ListSort })}>
-            {(Object.keys(LIST_SORTS) as ListSort[]).map((s) => (
-              <option key={s} value={s}>{LIST_SORTS[s]}</option>
-            ))}
-          </Select>
+          {/* 펼친 목록까지 꾸미려고 기본 select 대신 Headless UI Listbox를 쓴다. 키보드 조작과 스크린 리더 안내는 라이브러리가 맡는다. */}
+          <Listbox value={query.sort} onChange={(s: ListSort) => go({ sort: s })}>
+            <Label className="sr-only">정렬</Label>
+            <ListboxButton className="group flex h-11 min-w-39 items-center justify-between gap-6 rounded-xl border border-[#8e88ad] bg-surface pr-3.5 pl-4 text-sm font-medium hover:border-brand focus:outline-none data-focus:border-brand data-open:border-brand data-open:ring-3 data-open:ring-brand/15 dark:border-border">
+              {LIST_SORTS[query.sort]}
+              <span className="text-muted transition-transform duration-150 motion-reduce:transition-none group-data-open:rotate-180 group-data-open:text-brand-strong">
+                <Icon name="down" size={16} stroke={2.2} />
+              </span>
+            </ListboxButton>
+            <ListboxOptions
+              anchor="bottom end"
+              className="z-10 flex w-50 flex-col gap-0.5 rounded-xl border border-border bg-surface p-1.5 shadow-[0_16px_32px_-12px_rgba(76,29,149,0.28)] [--anchor-gap:8px] focus:outline-none"
+            >
+              {(Object.keys(LIST_SORTS) as ListSort[]).map((s) => (
+                <ListboxOption
+                  key={s}
+                  value={s}
+                  className="group flex h-10 cursor-pointer items-center justify-between rounded-lg px-3 text-sm font-medium data-focus:bg-surface-muted data-selected:font-bold data-selected:text-brand-strong"
+                >
+                  {LIST_SORTS[s]}
+                  <span className="invisible group-data-selected:visible">
+                    <Icon name="check" size={16} stroke={2.6} />
+                  </span>
+                </ListboxOption>
+              ))}
+            </ListboxOptions>
+          </Listbox>
         </div>
       </div>
 
