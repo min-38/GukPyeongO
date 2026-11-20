@@ -1,12 +1,13 @@
-import { NextRequest } from "next/server";
+import { NextRequest, type NextResponse } from "next/server";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { config, proxy } from "./proxy";
 
 const ORIGIN = "https://gukpyeongo.test";
 
+// 개발 환경의 세션 경로만 비동기다. 테스트(NODE_ENV=test)에서는 늘 바로 돌려준다.
 function get(pathname: string) {
-  return proxy(new NextRequest(new URL(pathname, ORIGIN)));
+  return proxy(new NextRequest(new URL(pathname, ORIGIN))) as NextResponse;
 }
 
 // 막혔는지는 not-found로 다시 쓰였는지로 본다(NextResponse.rewrite).
@@ -47,6 +48,16 @@ describe("개발용 경로 차단", () => {
 
   it("v2 문제 풀이 화면과 API도 프로덕션에서는 404", () => {
     for (const p of ["/problems/1", "/api/problems/1/submissions", "/api/problems/1/draft"]) {
+      expect(matched(p)).toBe(true);
+      expect(blocked(p)).toBe(true);
+    }
+  });
+
+  it("로그인/회원가입 화면과 API도 프로덕션에서는 404", () => {
+    for (const p of [
+      "/login", "/signup", "/auth/callback", "/auth/dev-login",
+      "/api/me", "/api/nicknames/check", "/api/auth/oauth", "/api/auth/logout",
+    ]) {
       expect(matched(p)).toBe(true);
       expect(blocked(p)).toBe(true);
     }

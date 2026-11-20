@@ -2,18 +2,22 @@ import "server-only";
 
 import {
   fillBlank,
+  LIST_PAGE_SIZE,
   type Level,
+  type ListQuery,
+  type ListResult,
+  type ListStatus,
   type ProblemView,
   type SubmissionRow,
   type SubmitResult,
 } from "@/app/lib/problems";
+import { getCurrentProfile } from "@/app/lib/account.server";
 import { getSupabaseAdmin } from "@/app/lib/supabase-admin.server";
 
 // 지금 로그인한 사용자. 사용자를 아는 곳은 여기 하나다.
-// shortcut: 로그인이 없어 개발 중에만 DEV_USER_ID(개발용 사용자)를 쓴다. 로그인을 붙일 때 Supabase Auth 세션으로 바꾼다.
-export function getCurrentUserId(): string | null {
-  if (process.env.NODE_ENV !== "development") return null;
-  return process.env.DEV_USER_ID || null;
+// 가입(profiles)까지 마쳐야 사용자로 본다. 가입 전이면 비로그인과 같다(로그인/회원가입 명세서 A-06).
+export async function getCurrentUserId(): Promise<string | null> {
+  return (await getCurrentProfile())?.userId ?? null;
 }
 
 // 문제 화면 데이터. 인정 답과 빈칸 글자는 담지 않는다(P-03).
@@ -102,4 +106,35 @@ export async function listSubmissions(userId: string, problemId: number): Promis
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => ({ answer: r.answer, isCorrect: r.is_correct, createdAt: r.created_at }));
+}
+
+// 문제 목록 한 페이지와 유형별 탭 수(GUK-9). 페이지가 범위를 넘으면 rows가 비고 total은 0이다.
+export async function listProblems(userId: string | null, query: ListQuery): Promise<ListResult> {
+  const db = getSupabaseAdmin();
+  const [list, counts] = await Promise.all([
+    db.rpc("list_problems", {
+      p_user: userId,
+      p_q: query.q || null,
+      p_kind: query.kind,
+      p_level: query.level,
+      p_unsolved: query.unsolved,
+      p_sort: query.sort,
+      p_limit: LIST_PAGE_SIZE,
+      p_offset: (query.page - 1) * LIST_PAGE_SIZE,
+    }),
+    db.rpc("problem_kind_counts", { p_user: userId }),
+  ]);
+  if (list.error) throw list.error;
+  if (counts.error) throw counts.error;
+
+  const rows = (list.data ?? []) as {
+    id: number; title: string; kind: string; level: number; rate: number | null; status: string; total: number;
+  }[];
+  return {
+    rows: rows.map((r) => ({
+      id: r.id, title: r.title, kind: r.kind, level: r.level as Level, rate: r.rate, status: r.status as ListStatus,
+    })),
+    total: rows.length ? Number(rows[0].total) : 0,
+    kindCounts: Object.fromEntries(((counts.data ?? []) as { kind: string; n: number }[]).map((c) => [c.kind, Number(c.n)])),
+  };
 }

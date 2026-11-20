@@ -7,10 +7,10 @@ import { getCurrentUserId, saveDraft } from "@/app/lib/problems.server";
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   if (!Number.isSafeInteger(id) || id <= 0) {
-    return NextResponse.json({ error: "찾을 수 없는 문제예요" }, { status: 404 });
+    return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
   }
-  const userId = getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요" }, { status: 401 });
+  const userId = await getCurrentUserId();
+  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   let body: { answer?: unknown };
   try {
@@ -28,6 +28,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return new NextResponse(null, { status: 204 });
   } catch {
     // 없는 문제(FK 위반)도 여기로 온다. 임시 저장 실패는 화면이 조용히 넘긴다.
-    return NextResponse.json({ error: "저장하지 못했어요" }, { status: 500 });
+    return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   }
 }
