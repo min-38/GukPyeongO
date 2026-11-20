@@ -1,12 +1,12 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
-import type { Provider } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 import { PROVIDERS, type ProviderId } from "@/app/lib/account";
 
-// shortcut: 버튼 색과 로고는 시안 그대로 비슷하게 그린 것이다. 운영에 열기 전에 각 회사의 공식 로그인 버튼 리소스로 바꾼다.
+// 구글 G는 공식 버튼 묶음(signin-assets.zip)의 것을 잘라 쓴다(public/icons/google-g.svg).
+// shortcut: 카카오 말풍선과 네이버 N은 비슷하게 그린 것이다. 각 회사 개발자 콘솔의 공식 로그인 리소스를 받으면 바꾼다.
 const BUTTON: Record<ProviderId, string> = {
   google: "border border-[#747775] bg-white text-[#1f1f1f]",
   kakao: "bg-[#fee500] text-black/85",
@@ -14,6 +14,7 @@ const BUTTON: Record<ProviderId, string> = {
 };
 
 function Mark({ id }: { id: ProviderId }) {
+  if (id === "google") return <Image src="/icons/google-g.svg" alt="" width={20} height={20} unoptimized />;
   if (id === "kakao") {
     return (
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
@@ -22,15 +23,14 @@ function Mark({ id }: { id: ProviderId }) {
     );
   }
   return (
-    <span aria-hidden="true" className={`inline-flex size-5 items-center justify-center font-[Arial,sans-serif] ${id === "google" ? "text-[19px] font-bold text-[#4285f4]" : "text-[17px] font-black"}`}>
-      {id === "google" ? "G" : "N"}
+    <span aria-hidden="true" className="inline-flex size-5 items-center justify-center font-[Arial,sans-serif] text-[17px] font-black">
+      N
     </span>
   );
 }
 
 export default function LoginScreen({ next, error }: { next: string; error: string | null }) {
   const [pending, setPending] = useState<ProviderId | null>(null);
-  const [failed, setFailed] = useState(false);
 
   // 소셜 로그인 페이지에서 뒤로 가기로 돌아오면 브라우저가 떠나기 전 화면을 그대로 보여 줄 수 있다. 로딩을 푼다.
   useEffect(() => {
@@ -41,25 +41,11 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
     return () => window.removeEventListener("pageshow", onShow);
   }, []);
 
-  // 같은 탭에서 소셜 로그인 페이지로 넘어간다. 넘어갈 때까지 버튼을 막고 누른 버튼에 로딩을 띄운다.
-  const start = async (provider: ProviderId) => {
+  // 같은 탭에서 소셜 로그인 페이지로 넘어간다(/auth/login이 시작한다). 넘어갈 때까지 버튼을 막고 누른 버튼에 로딩을 띄운다.
+  const start = (provider: ProviderId) => {
     setPending(provider);
-    setFailed(false);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    );
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider as Provider,
-      options: { redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
-    });
-    if (error) {
-      setPending(null);
-      setFailed(true);
-    }
+    location.assign(`/auth/login?provider=${encodeURIComponent(provider)}&next=${encodeURIComponent(next)}`);
   };
-
-  const message = failed ? "로그인하지 못했습니다. 다시 시도해 주세요." : error;
 
   return (
     <>
@@ -70,13 +56,13 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
       </div>
 
       <div className="flex flex-col gap-4">
-        {message && (
+        {error && (
           <p role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" className="shrink-0">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7.5v5.5M12 16.5v.01" />
             </svg>
-            {message}
+            {error}
           </p>
         )}
         <div className="flex flex-col gap-3">

@@ -11,9 +11,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "로그인", robots: { index: false } };
 
+// 사용자가 취소한 것 말고는 원인(공급자 설정 오류, 코드 교환 실패 등)을 밝히지 않고 서버 오류 하나로 알린다.
 const ERRORS = {
   cancel: "로그인을 취소했습니다.",
-  failed: "로그인하지 못했습니다. 다시 시도해 주세요.",
+  server: "서버에 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
 } as const;
 
 export default async function LoginPage({
