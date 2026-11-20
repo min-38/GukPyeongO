@@ -12,22 +12,22 @@ function problemId(raw: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = problemId((await params).id);
-  if (!id) return NextResponse.json({ error: "찾을 수 없는 문제예요" }, { status: 404 });
+  if (!id) return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
   const userId = getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   try {
     return NextResponse.json({ submissions: await listSubmissions(userId, id) });
   } catch {
-    return NextResponse.json({ error: "이력을 불러오지 못했어요" }, { status: 500 });
+    return NextResponse.json({ error: "이력을 불러오지 못했습니다." }, { status: 500 });
   }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = problemId((await params).id);
-  if (!id) return NextResponse.json({ error: "찾을 수 없는 문제예요" }, { status: 404 });
+  if (!id) return NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
   const userId = getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "다시 로그인해 주세요." }, { status: 401 });
 
   let body: { answer?: unknown };
   try {
@@ -42,11 +42,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const outcome = await submitAnswer(userId, id, checked.answer);
     if (outcome.status !== "ok") {
       return outcome.status === "too_fast"
-        ? NextResponse.json({ error: "잠시 후 다시 제출해 주세요" }, { status: 429 })
-        : NextResponse.json({ error: "찾을 수 없는 문제예요" }, { status: 404 });
+        ? NextResponse.json({ error: "잠시 후 다시 제출해 주세요." }, { status: 429 })
+        : NextResponse.json({ error: "찾을 수 없는 문제입니다." }, { status: 404 });
     }
     return NextResponse.json(outcome.result);
   } catch {
-    return NextResponse.json({ error: "제출하지 못했어요. 다시 시도해 주세요" }, { status: 500 });
+    return NextResponse.json({ error: "제출하지 못했습니다. 다시 시도해 주세요." }, { status: 500 });
   }
 }

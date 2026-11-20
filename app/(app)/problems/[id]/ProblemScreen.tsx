@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   BLANK,
   checkAnswer,
+  FROM_LIST_KEY,
+  LEVEL_CLASS,
   MAX_ANSWER_LENGTH,
   type ProblemView,
   type SubmissionRow,
@@ -15,13 +17,6 @@ import { SCENARIO_KIND_LABELS, type ScenarioKind } from "@/app/lib/scenario-admi
 
 // 시안: 문제 풀이 웹 시안(claude.ai Design 캔버스). 상태 5개를 이 화면 하나가 오간다.
 type Result = "none" | "grading" | "wrong" | "correct";
-
-// Level 마다 글자색이 다르다. 흰 바탕에서 4.5:1 이상.
-const LEVEL_CLASS = {
-  1: "text-blue-600 dark:text-blue-400",
-  2: "text-violet-700 dark:text-violet-400",
-  3: "text-orange-700 dark:text-orange-400",
-} as const;
 
 const RESULT_BOX: Record<Result, string> = {
   none: "border-border bg-surface",
@@ -80,7 +75,7 @@ const MIN_GRADING_MS = 1000;
 
 const GUIDE = {
   criteria: "인정하는 답과 글자가 같아야 정답입니다. 띄어쓰기까지 같아야 하고, 앞뒤 공백은 지우고 비교합니다.",
-  help: "지문을 읽고 발문이 묻는 답을 답안 칸에 직접 써서 제출하세요. 틀려도 몇 번이든 다시 낼 수 있고, 처음 맞히면 점수를 받습니다.",
+  help: "지문을 읽고 발문이 묻는 답을 답안 칸에 직접 써서 제출해 주세요. 틀려도 몇 번이든 다시 낼 수 있고, 처음 맞히면 점수를 받습니다.",
 };
 
 export default function ProblemScreen({ view }: { view: ProblemView }) {
@@ -178,7 +173,7 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setResult(before);
-        setError(data.error ?? "제출하지 못했어요. 다시 시도해 주세요");
+        setError(data.error ?? "제출하지 못했습니다. 다시 시도해 주세요.");
         return;
       }
       const r = data as SubmitResult;
@@ -190,15 +185,21 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
       if (historyOpen) loadHistory();
     } catch {
       setResult(before);
-      setError("제출하지 못했어요. 다시 시도해 주세요");
+      setError("제출하지 못했습니다. 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // 목록에서 이 문제를 눌러 왔으면 기록으로 돌아가 같은 조건과 페이지를 보인다.
+  // 주소로 바로 들어왔으면 목록으로 간다(목록이 저장된 조건으로 연다). 문제 리스트 명세서 흐름 6.
   const back = () => {
-    if (window.history.length > 1) router.back();
-    else router.push("/");
+    let fromList = false;
+    try {
+      fromList = sessionStorage.getItem(FROM_LIST_KEY) === String(view.id);
+    } catch {}
+    if (fromList && window.history.length > 1) router.back();
+    else router.push("/problems");
   };
 
   const kindLabel = SCENARIO_KIND_LABELS[view.passage.kind as ScenarioKind] ?? view.passage.kind;
@@ -307,7 +308,7 @@ export default function ProblemScreen({ view }: { view: ProblemView }) {
                 value={answer}
                 maxLength={MAX_ANSWER_LENGTH}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="답을 입력하세요"
+                placeholder="답을 입력해 주세요."
                 className="h-[120px] w-full resize-none rounded-2xl border border-[#8e88ad] bg-surface p-4 text-base leading-6 outline-none placeholder:text-muted focus:border-2 focus:border-brand focus:p-[15px] dark:border-muted"
               />
               <span className="self-end text-xs font-medium text-muted tabular-nums">
