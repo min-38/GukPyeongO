@@ -55,8 +55,8 @@ describe("개발용 경로 차단", () => {
 
   it("로그인/회원가입 화면과 API도 프로덕션에서는 404", () => {
     for (const p of [
-      "/login", "/signup", "/auth/login", "/auth/callback", "/auth/dev-login",
-      "/api/me", "/api/nicknames/check", "/api/auth/logout",
+      "/login", "/signup", "/auth/callback", "/auth/dev-login",
+      "/api/me", "/api/nicknames/check", "/api/auth/oauth", "/api/auth/logout",
     ]) {
       expect(matched(p)).toBe(true);
       expect(blocked(p)).toBe(true);

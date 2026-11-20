@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-import { PROVIDERS, type ProviderId } from "@/app/lib/account";
+import { PROVIDERS, type ProviderId, SERVER_ERROR } from "@/app/lib/account";
 
 // 구글 G는 공식 버튼 묶음(signin-assets.zip)의 것을 잘라 쓴다(public/icons/google-g.svg).
 // shortcut: 카카오 말풍선과 네이버 N은 비슷하게 그린 것이다. 각 회사 개발자 콘솔의 공식 로그인 리소스를 받으면 바꾼다.
@@ -31,6 +31,7 @@ function Mark({ id }: { id: ProviderId }) {
 
 export default function LoginScreen({ next, error }: { next: string; error: string | null }) {
   const [pending, setPending] = useState<ProviderId | null>(null);
+  const [message, setMessage] = useState(error);
 
   // 소셜 로그인 페이지에서 뒤로 가기로 돌아오면 브라우저가 떠나기 전 화면을 그대로 보여 줄 수 있다. 로딩을 푼다.
   useEffect(() => {
@@ -41,10 +42,25 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
     return () => window.removeEventListener("pageshow", onShow);
   }, []);
 
-  // 같은 탭에서 소셜 로그인 페이지로 넘어간다(/auth/login이 시작한다). 넘어갈 때까지 버튼을 막고 누른 버튼에 로딩을 띄운다.
-  const start = (provider: ProviderId) => {
+  // 같은 탭에서 소셜 로그인 페이지로 넘어간다. 넘어갈 때까지 버튼을 막고 누른 버튼에 로딩을 띄운다.
+  // 시작하지 못하면 다른 화면으로 가지 않고 이 화면에 서버 오류 문구만 띄운다.
+  const start = async (provider: ProviderId) => {
     setPending(provider);
-    location.assign(`/auth/login?provider=${encodeURIComponent(provider)}&next=${encodeURIComponent(next)}`);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/auth/oauth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, next }),
+      });
+      const body = (await res.json()) as { url?: string };
+      if (res.ok && body.url) {
+        location.assign(body.url);
+        return;
+      }
+    } catch {}
+    setPending(null);
+    setMessage(SERVER_ERROR);
   };
 
   return (
@@ -56,13 +72,13 @@ export default function LoginScreen({ next, error }: { next: string; error: stri
       </div>
 
       <div className="flex flex-col gap-4">
-        {error && (
+        {message && (
           <p role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" className="shrink-0">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7.5v5.5M12 16.5v.01" />
             </svg>
-            {error}
+            {message}
           </p>
         )}
         <div className="flex flex-col gap-3">

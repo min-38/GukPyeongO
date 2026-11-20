@@ -34,6 +34,9 @@ export const signupHref = (next: string) => `/signup?next=${encodeURIComponent(n
 // 비로그인일 때 쓴 답안을 로그인하고 돌아올 때까지 이 탭에 둔다(A-08).
 export const loginDraftKey = (problemId: number) => `problems:loginDraft:${problemId}`;
 
+// 사용자가 취소한 것 말고는 로그인 오류의 원인(공급자 설정 오류 등)을 밝히지 않고 이 문구 하나로 알린다.
+export const SERVER_ERROR = "서버에 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
 // 로그인 수단(A-01). 버튼 순서는 구글, 카카오, 네이버.
 export const PROVIDERS = [
   { id: "google", label: "구글" },

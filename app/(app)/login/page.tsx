@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { safeNext } from "@/app/lib/account";
+import { safeNext, SERVER_ERROR } from "@/app/lib/account";
 import { getAuthUserId, pathAfterLogin } from "@/app/lib/account.server";
 
 import AuthShell from "./AuthShell";
@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "로그인", robots: { index: false } };
 
-// 사용자가 취소한 것 말고는 원인(공급자 설정 오류, 코드 교환 실패 등)을 밝히지 않고 서버 오류 하나로 알린다.
+// 소셜 로그인 페이지에서 돌아온 뒤(/auth/callback)의 결과. 그 밖의 오류는 로그인 화면이 직접 띄운다.
 const ERRORS = {
   cancel: "로그인을 취소했습니다.",
-  server: "서버에 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+  server: SERVER_ERROR,
 } as const;
 
 export default async function LoginPage({
